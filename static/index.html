@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PSD Smart Replacer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { font-family: 'Inter', system-ui, sans-serif; }
+  .dz-active  { border-color:#6366f1!important; background:linear-gradient(135deg,#eef2ff,#e0e7ff)!important; }
+  .idz-active { border-color:#6366f1!important; background-color:#eef2ff!important; }
+  @keyframes spin    { to{transform:rotate(360deg);} }
+  @keyframes slideUp { from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);} }
+  .spin     { animation:spin 1s linear infinite; }
+  .slide-up { animation:slideUp .32s cubic-bezier(.16,1,.3,1) both; }
+  .card { transition:box-shadow .18s,transform .18s; }
+  .card:hover { box-shadow:0 4px 22px rgba(0,0,0,.09);transform:translateY(-1px); }
+  .tab-btn.active { background:#6366f1;color:#fff; }
+  .tab-btn        { background:#f1f5f9;color:#64748b; }
+  ::-webkit-scrollbar{width:5px;}
+  ::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:3px;}
+</style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+<!-- NAVBAR -->
+<nav class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+  <div class="max-w-4xl mx-auto px-5 h-14 flex items-center gap-3">
+    <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+      <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01
+             M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+      </svg>
+    </div>
+    <span class="font-semibold text-gray-900 text-sm">PSD Smart Replacer</span>
+    <!-- Tabs -->
+    <div class="ml-auto flex gap-1.5">
+      <button id="tab-so" onclick="switchTab('so')"
+        class="tab-btn active text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
+        Smart Objects
+      </button>
+      <button id="tab-bodegon" onclick="switchTab('bodegon')"
+        class="tab-btn text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
+        Bodegón
+      </button>
+    </div>
+    <div id="badge-no-psapi" class="hidden">
+      <span class="text-xs bg-red-100 text-red-700 border border-red-200 px-2 py-1 rounded-full">⚠ psapi</span>
+    </div>
+  </div>
+</nav>
+
+<main class="max-w-4xl mx-auto px-5 py-8">
+
+<!-- ═══════════════════════════════════════════════════════
+     TAB 1 — SMART OBJECT REPLACER
+═══════════════════════════════════════════════════════ -->
+<div id="panel-so">
+
+  <!-- UPLOAD -->
+  <section id="so-upload" class="slide-up">
+    <div class="text-center mb-8">
+      <h1 class="text-2xl font-bold text-gray-900 mb-2">Reemplaza objetos inteligentes</h1>
+      <p class="text-gray-500 text-sm max-w-md mx-auto">Sube tu .psd o .psb, detectamos los Smart Objects y reemplaza su imagen o renómbrarlos.</p>
+    </div>
+    <div id="so-dz" class="border-2 border-dashed border-gray-300 rounded-2xl p-14 text-center cursor-pointer
+                            hover:border-indigo-400 hover:bg-indigo-50 transition-all group"
+         onclick="document.getElementById('so-file').click()"
+         ondragover="dzOver(event,'so-dz')" ondragleave="dzLeave('so-dz')" ondrop="soDrop(event)">
+      <div class="flex flex-col items-center gap-4 pointer-events-none">
+        <div class="w-16 h-16 bg-indigo-50 group-hover:bg-indigo-100 rounded-2xl flex items-center justify-center transition-colors">
+          <svg class="w-8 h-8 text-indigo-400 group-hover:text-indigo-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-lg font-semibold text-gray-700 group-hover:text-indigo-700 transition-colors">Arrastra tu PSD o PSB aquí</p>
+          <p class="text-gray-400 mt-1 text-sm">o haz clic para seleccionar</p>
+        </div>
+        <div class="flex gap-2">
+          <span class="text-xs font-mono bg-gray-100 text-gray-500 px-3 py-1 rounded-full">.psd</span>
+          <span class="text-xs font-mono bg-gray-100 text-gray-500 px-3 py-1 rounded-full">.psb</span>
+        </div>
+      </div>
+      <input id="so-file" type="file" accept=".psd,.psb" class="hidden">
+    </div>
+  </section>
+
+  <!-- LOADING -->
+  <section id="so-loading" class="hidden py-20 text-center">
+    <div class="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full spin mx-auto mb-4"></div>
+    <p id="so-loading-msg" class="text-gray-700 font-semibold">Analizando...</p>
+    <p class="text-gray-400 text-sm mt-1">Esto puede tardar unos segundos</p>
+  </section>
+
+  <!-- SMART OBJECTS -->
+  <section id="so-objects" class="hidden">
+    <div class="bg-white border border-gray-200 rounded-2xl p-4 mb-5 flex items-center gap-3 card">
+      <div class="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
+        <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="font-semibold text-gray-900 truncate" id="so-doc-name"></p>
+        <p class="text-xs text-gray-400 mt-0.5" id="so-doc-meta"></p>
+      </div>
+      <button onclick="soReset()" class="text-xs text-gray-400 hover:text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-all">Cambiar</button>
+    </div>
+    <div class="flex items-center gap-2 mb-3">
+      <span class="font-semibold text-gray-800">Objetos inteligentes</span>
+      <span id="so-count" class="bg-indigo-600 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">0</span>
+    </div>
+    <div id="so-list" class="space-y-3 mb-28"></div>
+    <div class="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent pt-8 pb-6 px-5 z-40">
+      <div class="max-w-4xl mx-auto">
+        <button id="so-process-btn" onclick="soProcess()"
+                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-2xl shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          Generar PSD modificado
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULT -->
+  <section id="so-result" class="hidden">
+    <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+      <div class="bg-gradient-to-br from-emerald-500 to-teal-500 p-8 text-center">
+        <div class="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
+          <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        <h2 class="text-xl font-bold text-white mb-1">¡PSD listo!</h2>
+        <p id="so-result-summary" class="text-white/80 text-sm"></p>
+      </div>
+      <div class="p-6">
+        <div id="so-result-errors" class="hidden mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3">
+          <p class="font-medium text-amber-700 text-sm mb-1">Advertencias:</p>
+          <ul id="so-errors-list" class="text-xs text-amber-700 list-disc list-inside space-y-0.5"></ul>
+        </div>
+        <div class="flex flex-col gap-2">
+          <a id="so-download-link" href="#"
+             class="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 rounded-xl transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Descargar PSD modificado
+          </a>
+          <button onclick="soReset()" class="text-gray-400 hover:text-gray-700 py-2.5 text-sm transition-colors">Procesar otro archivo →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     TAB 2 — BODEGÓN GENERATOR
+═══════════════════════════════════════════════════════ -->
+<div id="panel-bodegon" class="hidden">
+
+  <!-- UPLOAD STEP -->
+  <section id="bod-upload" class="slide-up">
+    <div class="text-center mb-8">
+      <h1 class="text-2xl font-bold text-gray-900 mb-2">Generador de Bodegón</h1>
+      <p class="text-gray-500 text-sm max-w-lg mx-auto">Sube tus productos, configura el layout y genera la composición automáticamente.</p>
+    </div>
+
+    <div class="space-y-4">
+      <!-- Productos -->
+      <div class="bg-white border border-gray-200 rounded-2xl p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <div class="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+            <span class="text-white text-xs font-bold">1</span>
+          </div>
+          <span class="font-semibold text-gray-800">Imágenes de productos</span>
+          <span class="text-xs text-gray-400">(obligatorio · múltiples)</span>
+        </div>
+
+        <div id="bod-prod-dz"
+             class="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center cursor-pointer
+                    hover:border-indigo-300 hover:bg-indigo-50 transition-all"
+             onclick="document.getElementById('bod-prod-input').click()"
+             ondragover="dzOver(event,'bod-prod-dz')" ondragleave="dzLeave('bod-prod-dz')" ondrop="bodProdDrop(event)">
+          <svg class="w-8 h-8 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4"/>
+          </svg>
+          <p class="text-sm text-gray-500">Arrastra imágenes de productos o haz clic</p>
+          <p class="text-xs text-gray-400 mt-1">PNG · JPG · WebP · TIFF · BMP</p>
+          <input id="bod-prod-input" type="file" multiple
+                 accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp" class="hidden">
+        </div>
+
+        <!-- Thumbnails de productos -->
+        <div id="bod-thumbs" class="hidden mt-4">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs text-gray-500 font-medium"><span id="bod-prod-count">0</span> producto(s) seleccionado(s)</span>
+            <button onclick="bodClearProducts()" class="text-xs text-red-400 hover:text-red-600">Quitar todos</button>
+          </div>
+          <div id="bod-thumb-grid" class="grid grid-cols-5 gap-2 max-h-52 overflow-y-auto"></div>
+        </div>
+      </div>
+
+      <!-- Fondo opcional -->
+      <div class="bg-white border border-gray-200 rounded-2xl p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <div class="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
+            <span class="text-white text-xs font-bold">2</span>
+          </div>
+          <span class="font-semibold text-gray-800">Plantilla / Fondo</span>
+          <span class="text-xs text-gray-400">(opcional)</span>
+        </div>
+        <div id="bod-bg-dz"
+             class="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer
+                    hover:border-indigo-300 hover:bg-indigo-50 transition-all"
+             onclick="document.getElementById('bod-bg-input').click()"
+             ondragover="dzOver(event,'bod-bg-dz')" ondragleave="dzLeave('bod-bg-dz')" ondrop="bodBgDrop(event)">
+          <div id="bod-bg-ph" class="flex items-center justify-center gap-2 text-gray-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            <span class="text-sm">Seleccionar imagen de fondo</span>
+          </div>
+          <div id="bod-bg-pv" class="hidden items-center gap-3">
+            <img id="bod-bg-thumb" src="" class="w-12 h-8 object-cover rounded border border-gray-200 flex-shrink-0">
+            <p id="bod-bg-fname" class="text-sm text-gray-700 truncate flex-1 text-left"></p>
+            <button onclick="bodClearBg(event)" class="text-xs text-red-400 hover:text-red-600 flex-shrink-0">✕</button>
+          </div>
+          <input id="bod-bg-input" type="file" accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp" class="hidden">
+        </div>
+      </div>
+
+      <!-- Configuración -->
+      <div class="bg-white border border-gray-200 rounded-2xl p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
+            <span class="text-white text-xs font-bold">3</span>
+          </div>
+          <span class="font-semibold text-gray-800">Configuración del layout</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <!-- Filas -->
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1.5">Número de filas</label>
+            <div class="flex gap-1.5" id="rows-btns">
+              <button onclick="setRows(0)" data-rows="0"
+                      class="rows-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-indigo-200 bg-indigo-600 text-white transition-all">Auto</button>
+              <button onclick="setRows(1)" data-rows="1"
+                      class="rows-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">1</button>
+              <button onclick="setRows(2)" data-rows="2"
+                      class="rows-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">2</button>
+              <button onclick="setRows(3)" data-rows="3"
+                      class="rows-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">3</button>
+            </div>
+          </div>
+
+          <!-- Aspecto -->
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1.5">Proporción del canvas</label>
+            <div class="flex gap-1.5" id="aspect-btns">
+              <button onclick="setAspect(0,0)" data-aspect="0"
+                      class="aspect-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-indigo-200 bg-indigo-600 text-white transition-all">Auto</button>
+              <button onclick="setAspect(5,3)" data-aspect="5:3"
+                      class="aspect-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">5:3</button>
+              <button onclick="setAspect(16,9)" data-aspect="16:9"
+                      class="aspect-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">16:9</button>
+              <button onclick="setAspect(1,1)" data-aspect="1:1"
+                      class="aspect-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">1:1</button>
+            </div>
+          </div>
+
+          <!-- Altura base -->
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1.5">
+              Altura base de productos
+              <span class="font-normal text-gray-400 ml-1" id="lbl-height">760 px</span>
+            </label>
+            <input type="range" id="cfg-height" min="300" max="2000" value="760" step="10"
+                   class="w-full accent-indigo-600"
+                   oninput="document.getElementById('lbl-height').textContent=this.value+' px'">
+          </div>
+
+          <!-- Gap -->
+          <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1.5">
+              Separación entre productos
+              <span class="font-normal text-gray-400 ml-1" id="lbl-gap">40 px</span>
+            </label>
+            <input type="range" id="cfg-gap" min="0" max="200" value="40" step="5"
+                   class="w-full accent-indigo-600"
+                   oninput="document.getElementById('lbl-gap').textContent=this.value+' px'">
+          </div>
+        </div>
+      </div>
+
+      <!-- Botón generar -->
+      <button id="bod-gen-btn" onclick="bodGenerate()"
+              class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-2xl
+                     shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7"/>
+        </svg>
+        Calcular layout y previsualizar
+      </button>
+    </div>
+  </section>
+
+  <!-- LOADING BODEGON -->
+  <section id="bod-loading" class="hidden py-20 text-center">
+    <div class="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full spin mx-auto mb-4"></div>
+    <p id="bod-loading-msg" class="text-gray-700 font-semibold">Calculando layout...</p>
+    <p class="text-gray-400 text-sm mt-1">Analizando proporciones</p>
+  </section>
+
+  <!-- PREVIEW -->
+  <section id="bod-preview" class="hidden slide-up">
+    <!-- Info bar -->
+    <div class="bg-white border border-gray-200 rounded-2xl p-4 mb-4 flex items-center gap-3 card">
+      <div class="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
+        <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+      </div>
+      <div class="flex-1">
+        <p class="font-semibold text-gray-900 text-sm" id="bod-info-title">Bodegón listo para renderizar</p>
+        <p class="text-xs text-gray-400 mt-0.5" id="bod-info-meta"></p>
+      </div>
+      <button onclick="bodReset()" class="text-xs text-gray-400 hover:text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-all">Reiniciar</button>
+    </div>
+
+    <!-- Canvas preview -->
+    <div class="bg-white border border-gray-200 rounded-2xl p-4 mb-4">
+      <p class="text-xs font-medium text-gray-500 mb-3">Vista previa del layout</p>
+      <div class="overflow-auto rounded-xl bg-gray-50 flex items-center justify-center min-h-40">
+        <canvas id="bod-canvas" class="max-w-full rounded-xl shadow-sm"></canvas>
+      </div>
+    </div>
+
+    <!-- Render buttons -->
+    <div class="grid grid-cols-1 gap-3">
+      <button id="bod-render-btn" onclick="bodRender()"
+              class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-2xl
+                     shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        Generar y descargar PNG
+      </button>
+    </div>
+  </section>
+
+</div><!-- /panel-bodegon -->
+
+</main>
+
+<!-- TOAST -->
+<div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-opacity duration-300 max-w-sm w-full px-4">
+  <div id="toast-inner" class="text-white text-sm font-medium px-5 py-3 rounded-xl shadow-xl text-center bg-red-600"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════
+function switchTab(name) {
+  document.getElementById('panel-so').classList.toggle('hidden', name !== 'so');
+  document.getElementById('panel-bodegon').classList.toggle('hidden', name !== 'bodegon');
+  document.getElementById('tab-so').classList.toggle('active', name === 'so');
+  document.getElementById('tab-bodegon').classList.toggle('active', name === 'bodegon');
+}
+
+// ═══════════════════════════════════════════════════════
+// SHARED UTILS
+// ═══════════════════════════════════════════════════════
+const STEPS_SO = ['so-upload','so-loading','so-objects','so-result'];
+function showSO(id) {
+  STEPS_SO.forEach(s => { const e=document.getElementById(s); e.classList.add('hidden'); e.classList.remove('slide-up'); });
+  const t = document.getElementById(id);
+  t.classList.remove('hidden');
+  requestAnimationFrame(() => t.classList.add('slide-up'));
+}
+
+const STEPS_BOD = ['bod-upload','bod-loading','bod-preview'];
+function showBOD(id) {
+  STEPS_BOD.forEach(s => { const e=document.getElementById(s); e.classList.add('hidden'); e.classList.remove('slide-up'); });
+  const t = document.getElementById(id);
+  t.classList.remove('hidden');
+  requestAnimationFrame(() => t.classList.add('slide-up'));
+}
+
+function dzOver(e, id)  { e.preventDefault(); document.getElementById(id).classList.add('dz-active'); }
+function dzLeave(id)    { document.getElementById(id).classList.remove('dz-active'); }
+
+let _toastTimer = null;
+function toast(msg, type='error') {
+  const w=document.getElementById('toast'), i=document.getElementById('toast-inner');
+  i.className = `text-white text-sm font-medium px-5 py-3 rounded-xl shadow-xl text-center ${type==='error'?'bg-red-600':'bg-amber-500'}`;
+  i.textContent = msg;
+  w.classList.replace('opacity-0','opacity-100');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => w.classList.replace('opacity-100','opacity-0'), 4500);
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ═══════════════════════════════════════════════════════
+// TAB 1 — SMART OBJECT REPLACER
+// ═══════════════════════════════════════════════════════
+let SO_SESSION = null, SO_OBJECTS = [], SO_REPLACEMENTS = [];
+
+document.getElementById('so-file').addEventListener('change', function() { if(this.files[0]) soUpload(this.files[0]); });
+function soDrop(e) { e.preventDefault(); dzLeave('so-dz'); const f=e.dataTransfer?.files?.[0]; if(f) soUpload(f); }
+
+async function soUpload(file) {
+  if (!/\.(psd|psb)$/i.test(file.name)) { toast('Solo .psd o .psb'); return; }
+  document.getElementById('so-loading-msg').textContent = 'Leyendo objetos inteligentes...';
+  showSO('so-loading');
+  const fd = new FormData(); fd.append('file', file);
+  try {
+    const res = await fetch('/api/analyze', {method:'POST',body:fd});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Error');
+    SO_SESSION = data.session_id;
+    SO_OBJECTS = data.smart_objects;
+    SO_REPLACEMENTS = SO_OBJECTS.map(o => ({path:o.path, new_name:'', file:null, file_key:''}));
+    document.getElementById('so-doc-name').textContent = data.filename;
+    const c = data.smart_objects.length;
+    document.getElementById('so-doc-meta').textContent = `${data.width.toLocaleString()} × ${data.height.toLocaleString()} px · ${c} smart object${c!==1?'s':''}`;
+    document.getElementById('so-count').textContent = c;
+    soRenderCards(data.smart_objects);
+    showSO('so-objects');
+  } catch(e) { showSO('so-upload'); toast(e.message); }
+}
+
+function soRenderCards(objects) {
+  const list = document.getElementById('so-list');
+  list.innerHTML = '';
+  if (!objects.length) {
+    list.innerHTML = `<div class="text-center py-12 text-gray-400">
+      <p class="font-semibold">Sin objetos inteligentes</p>
+      <p class="text-sm mt-1">El archivo no contiene SmartObject layers</p></div>`;
+    return;
+  }
+  objects.forEach((obj, i) => {
+    const nested = obj.path.split('/').length > 1;
+    const card = document.createElement('div');
+    card.className = 'bg-white border border-gray-200 rounded-2xl p-4 card slide-up';
+    card.style.animationDelay = `${i*50}ms`;
+    card.innerHTML = `
+      <div class="flex gap-3">
+        <div class="w-8 h-8 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+          <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01
+                 M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-0.5">
+            <span class="font-semibold text-gray-900 truncate text-sm">${esc(obj.name)}</span>
+            ${nested?`<span class="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded shrink-0">anidado</span>`:''}
+          </div>
+          ${nested?`<p class="text-xs text-gray-400 font-mono truncate mb-2">${esc(obj.path)}</p>`:'<div class="mb-2"></div>'}
+          <label class="text-xs font-medium text-gray-500 mb-1 block">Nuevo nombre</label>
+          <input type="text" placeholder="Mantener «${esc(obj.name)}»"
+                 class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition-all placeholder:text-gray-300 mb-3"
+                 oninput="SO_REPLACEMENTS[${i}].new_name=this.value">
+          <label class="text-xs font-medium text-gray-500 mb-1 block">Reemplazar imagen</label>
+          <div id="sidz-${i}" class="border-2 border-dashed border-gray-200 rounded-lg p-3 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50 transition-all"
+               onclick="document.getElementById('si-${i}').click()"
+               ondragover="dzOver(event,'sidz-${i}')" ondragleave="dzLeave('sidz-${i}')"
+               ondrop="soImgDrop(event,${i})">
+            <div id="siph-${i}" class="flex items-center gap-2 text-gray-400 text-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              Seleccionar imagen
+            </div>
+            <div id="sipv-${i}" class="hidden items-center gap-2">
+              <img id="sith-${i}" src="" class="w-10 h-10 object-cover rounded border border-gray-200 flex-shrink-0">
+              <p id="sifn-${i}" class="text-xs text-gray-700 truncate flex-1"></p>
+              <button type="button" class="text-xs text-red-400 hover:text-red-600" onclick="soImgClear(event,${i})">✕</button>
+            </div>
+          </div>
+          <input id="si-${i}" type="file" accept="image/*" class="hidden" onchange="soImgSelect(this.files[0],${i})">
+        </div>
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+function soImgDrop(e, i) { e.preventDefault(); dzLeave(`sidz-${i}`); const f=e.dataTransfer?.files?.[0]; if(f) soImgSelect(f,i); }
+function soImgSelect(file, i) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById(`sith-${i}`).src = ev.target.result;
+    document.getElementById(`sifn-${i}`).textContent = file.name;
+    document.getElementById(`siph-${i}`).classList.add('hidden');
+    const pv=document.getElementById(`sipv-${i}`); pv.classList.remove('hidden'); pv.classList.add('flex');
+  };
+  reader.readAsDataURL(file);
+  SO_REPLACEMENTS[i].file = file;
+  SO_REPLACEMENTS[i].file_key = `${i}_${file.name}`;
+}
+function soImgClear(e, i) {
+  e.stopPropagation();
+  document.getElementById(`siph-${i}`).classList.remove('hidden');
+  const pv=document.getElementById(`sipv-${i}`); pv.classList.add('hidden'); pv.classList.remove('flex');
+  document.getElementById(`si-${i}`).value='';
+  SO_REPLACEMENTS[i].file=null; SO_REPLACEMENTS[i].file_key='';
+}
+
+async function soProcess() {
+  const active = SO_REPLACEMENTS.filter(r => r.file || r.new_name.trim());
+  if (!active.length) { toast('Agrega al menos una imagen o nombre','warn'); return; }
+  const btn = document.getElementById('so-process-btn');
+  btn.disabled=true;
+  btn.innerHTML=`<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full spin"></div> Procesando...`;
+  document.getElementById('so-loading-msg').textContent = 'Generando PSD modificado...';
+  showSO('so-loading');
+  const fd=new FormData();
+  fd.append('session_id',SO_SESSION);
+  fd.append('replacements',JSON.stringify(SO_REPLACEMENTS.map(r=>({path:r.path,new_name:r.new_name.trim(),file_key:r.file_key}))));
+  SO_REPLACEMENTS.forEach(r => { if(r.file) fd.append('files',r.file,r.file_key); });
+  try {
+    const res=await fetch('/api/process',{method:'POST',body:fd});
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.detail||'Error');
+    const c=data.applied.length;
+    document.getElementById('so-result-summary').textContent=`${c} objeto${c!==1?'s':''} reemplazado${c!==1?'s':''} exitosamente`;
+    if(data.errors?.length){
+      document.getElementById('so-result-errors').classList.remove('hidden');
+      document.getElementById('so-errors-list').innerHTML=data.errors.map(e=>`<li>${esc(e)}</li>`).join('');
+    }
+    const link=document.getElementById('so-download-link');
+    link.href=`/api/download/${SO_SESSION}`;
+    link.setAttribute('download',data.filename);
+    showSO('so-result');
+  } catch(e) { showSO('so-objects'); toast(e.message); }
+  finally {
+    btn.disabled=false;
+    btn.innerHTML=`<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Generar PSD modificado`;
+  }
+}
+function soReset() {
+  SO_SESSION=null; SO_OBJECTS=[]; SO_REPLACEMENTS=[];
+  document.getElementById('so-file').value='';
+  document.getElementById('so-result-errors').classList.add('hidden');
+  showSO('so-upload');
+}
+
+// ═══════════════════════════════════════════════════════
+// TAB 2 — BODEGÓN GENERATOR
+// ═══════════════════════════════════════════════════════
+let BOD_SESSION  = null;
+let BOD_FILES    = [];   // [{file, name, w, h, url}]
+let BOD_BG_FILE  = null;
+let BOD_ROWS     = 0;
+let BOD_ASPECT_W = 0;
+let BOD_ASPECT_H = 0;
+let BOD_LAYOUT   = null;
+
+// ── Productos ──
+document.getElementById('bod-prod-input').addEventListener('change', function() {
+  if(this.files.length) bodAddProducts([...this.files]);
+});
+function bodProdDrop(e) { e.preventDefault(); dzLeave('bod-prod-dz'); if(e.dataTransfer?.files.length) bodAddProducts([...e.dataTransfer.files]); }
+
+function bodAddProducts(files) {
+  const valid = files.filter(f => /\.(png|jpe?g|webp|tiff?|bmp|gif)$/i.test(f.name));
+  if (!valid.length) { toast('Agrega imágenes válidas (PNG, JPG, WebP, TIFF)'); return; }
+  valid.forEach(f => {
+    if (BOD_FILES.find(x => x.file.name === f.name)) return;
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = () => {
+      BOD_FILES.push({ file: f, name: Path_stem(f.name).toUpperCase().replace(/[\s\-]+/g,'_'), w: img.naturalWidth, h: img.naturalHeight, url });
+      renderThumbs();
+    };
+    img.src = url;
+  });
+}
+
+function Path_stem(fname) { return fname.replace(/\.[^.]+$/, ''); }
+
+function renderThumbs() {
+  const grid = document.getElementById('bod-thumb-grid');
+  const wrap = document.getElementById('bod-thumbs');
+  const count = document.getElementById('bod-prod-count');
+  grid.innerHTML = '';
+  count.textContent = BOD_FILES.length;
+  if (!BOD_FILES.length) { wrap.classList.add('hidden'); return; }
+  wrap.classList.remove('hidden');
+  BOD_FILES.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'relative group rounded-lg overflow-hidden border border-gray-200 bg-gray-50';
+    div.style.aspectRatio = '1';
+    div.innerHTML = `
+      <img src="${item.url}" class="w-full h-full object-contain">
+      <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
+        <button onclick="bodRemoveProd(${i})"
+                class="opacity-0 group-hover:opacity-100 w-6 h-6 bg-red-500 rounded-full text-white text-xs transition-all">✕</button>
+      </div>
+      <p class="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[9px] text-center truncate px-1 py-0.5">${esc(item.name)}</p>`;
+    grid.appendChild(div);
+  });
+}
+
+function bodRemoveProd(i) {
+  URL.revokeObjectURL(BOD_FILES[i].url);
+  BOD_FILES.splice(i, 1);
+  renderThumbs();
+}
+function bodClearProducts() {
+  BOD_FILES.forEach(f => URL.revokeObjectURL(f.url));
+  BOD_FILES = [];
+  renderThumbs();
+}
+
+// ── Fondo ──
+document.getElementById('bod-bg-input').addEventListener('change', function() { if(this.files[0]) bodSetBg(this.files[0]); });
+function bodBgDrop(e) { e.preventDefault(); dzLeave('bod-bg-dz'); const f=e.dataTransfer?.files?.[0]; if(f) bodSetBg(f); }
+function bodSetBg(file) {
+  BOD_BG_FILE = file;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    document.getElementById('bod-bg-thumb').src=ev.target.result;
+    document.getElementById('bod-bg-fname').textContent=file.name;
+    document.getElementById('bod-bg-ph').classList.add('hidden');
+    const pv=document.getElementById('bod-bg-pv'); pv.classList.remove('hidden'); pv.classList.add('flex');
+  };
+  reader.readAsDataURL(file);
+}
+function bodClearBg(e) {
+  e&&e.stopPropagation();
+  BOD_BG_FILE=null;
+  document.getElementById('bod-bg-ph').classList.remove('hidden');
+  const pv=document.getElementById('bod-bg-pv'); pv.classList.add('hidden'); pv.classList.remove('flex');
+  document.getElementById('bod-bg-input').value='';
+}
+
+// ── Config buttons ──
+function setRows(n) {
+  BOD_ROWS = n;
+  document.querySelectorAll('.rows-btn').forEach(b => {
+    const active = +b.dataset.rows === n;
+    b.className = `rows-btn flex-1 py-2 text-xs font-semibold rounded-lg border transition-all ${active?'border-indigo-200 bg-indigo-600 text-white':'border-gray-200 text-gray-600 hover:border-indigo-300'}`;
+  });
+}
+function setAspect(w, h) {
+  BOD_ASPECT_W = w; BOD_ASPECT_H = h;
+  const key = (w===0) ? '0' : `${w}:${h}`;
+  document.querySelectorAll('.aspect-btn').forEach(b => {
+    const active = b.dataset.aspect === key;
+    b.className = `aspect-btn flex-1 py-2 text-xs font-semibold rounded-lg border transition-all ${active?'border-indigo-200 bg-indigo-600 text-white':'border-gray-200 text-gray-600 hover:border-indigo-300'}`;
+  });
+}
+
+// ── Generate: upload → compute → preview ──
+async function bodGenerate() {
+  if (!BOD_FILES.length) { toast('Agrega al menos una imagen de producto'); return; }
+
+  const btn = document.getElementById('bod-gen-btn');
+  btn.disabled = true;
+  document.getElementById('bod-loading-msg').textContent = 'Subiendo imágenes...';
+  showBOD('bod-loading');
+
+  try {
+    // 1. Upload
+    const fd = new FormData();
+    BOD_FILES.forEach(item => fd.append('products', item.file, item.file.name));
+    if (BOD_BG_FILE) fd.append('background', BOD_BG_FILE, BOD_BG_FILE.name);
+
+    const upRes = await fetch('/api/bodegon/upload', {method:'POST',body:fd});
+    const upData = await upRes.json();
+    if (!upRes.ok) throw new Error(upData.detail || 'Error subiendo imágenes');
+    BOD_SESSION = upData.session_id;
+
+    // 2. Compute layout
+    document.getElementById('bod-loading-msg').textContent = 'Calculando layout...';
+    const cfg = buildConfig();
+    const compRes = await fetch('/api/bodegon/compute', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({session_id: BOD_SESSION, config: cfg}),
+    });
+    const layout = await compRes.json();
+    if (!compRes.ok) throw new Error(layout.detail || 'Error calculando layout');
+    BOD_LAYOUT = layout;
+
+    // 3. Draw canvas preview
+    drawBodCanvas(layout);
+
+    // Update info
+    document.getElementById('bod-info-meta').textContent =
+      `${layout.canvas_width.toLocaleString()} × ${layout.canvas_height.toLocaleString()} px · ` +
+      `${layout.items.length} productos · ${layout.rows_count} fila${layout.rows_count!==1?'s':''}`;
+
+    showBOD('bod-preview');
+
+  } catch(e) {
+    showBOD('bod-upload');
+    toast(e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function buildConfig() {
+  return {
+    rows_count:        BOD_ROWS,
+    base_height:       +document.getElementById('cfg-height').value,
+    item_gap:          +document.getElementById('cfg-gap').value,
+    internal_padding:  120,
+    max_vertical_boost:1.20,
+    aspect_w:          BOD_ASPECT_W,
+    aspect_h:          BOD_ASPECT_H,
+  };
+}
+
+// ── Canvas preview ──
+function drawBodCanvas(layout) {
+  const canvas = document.getElementById('bod-canvas');
+  const ctx = canvas.getContext('2d');
+  const MAX_W = 680;
+  const scale = Math.min(1, MAX_W / layout.canvas_width);
+  canvas.width  = Math.round(layout.canvas_width  * scale);
+  canvas.height = Math.round(layout.canvas_height * scale);
+
+  // Fondo transparente (patrón de cuadros)
+  ctx.fillStyle = ctx.createPattern(checkerPattern(), 'repeat');
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Products
+  const palette = ['#818cf8','#34d399','#fb923c','#f472b6','#60a5fa','#a78bfa','#4ade80','#facc15'];
+  layout.items.forEach((item, idx) => {
+    const x = item.x * scale;
+    const y = item.y * scale;
+    const w = item.sw * scale;
+    const h = item.sh * scale;
+    const color = palette[idx % palette.length];
+
+    // Try to draw thumbnail from BOD_FILES
+    const match = BOD_FILES.find(f => f.name === item.name);
+    if (match) {
+      const img = new Image();
+      img.onload = () => {
+        // Draw checkered background for transparency
+        const pat = ctx.createPattern(checkerPattern(), 'repeat');
+        ctx.fillStyle = pat;
+        ctx.fillRect(x, y, w, h);
+        ctx.drawImage(img, x, y, w, h);
+      };
+      img.src = match.url;
+    } else {
+      // Colored placeholder
+      ctx.fillStyle = color + '80';
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(x+0.5, y+0.5, w-1, h-1);
+    }
+
+    // Label
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.font = `bold ${Math.max(9, Math.min(13, w/6))}px Inter,sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const label = item.name.length > 12 ? item.name.slice(0,11)+'…' : item.name;
+    ctx.fillText(label, x+w/2, y+h/2);
+  });
+}
+
+function checkerPattern() {
+  const c = document.createElement('canvas'); c.width=c.height=10;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,10,10);
+  ctx.fillStyle='#e5e7eb'; ctx.fillRect(0,0,5,5); ctx.fillRect(5,5,5,5);
+  return c;
+}
+
+// ── Render PNG ──
+async function bodRender() {
+  if (!BOD_SESSION) { toast('Genera el layout primero'); return; }
+  const btn = document.getElementById('bod-render-btn');
+  btn.disabled=true;
+  btn.innerHTML=`<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full spin"></div> Renderizando...`;
+  try {
+    const res = await fetch('/api/bodegon/render', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({session_id:BOD_SESSION, config:buildConfig()}),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail||'Error');
+    // Download
+    const link = document.createElement('a');
+    link.href = `/api/bodegon/download/${BOD_SESSION}`;
+    link.download = 'bodegon.png';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  } catch(e) { toast(e.message); }
+  finally {
+    btn.disabled=false;
+    btn.innerHTML=`<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>Generar y descargar PNG`;
+  }
+}
+
+function bodReset() {
+  BOD_SESSION=null; BOD_LAYOUT=null;
+  BOD_FILES.forEach(f=>URL.revokeObjectURL(f.url));
+  BOD_FILES=[]; BOD_BG_FILE=null;
+  document.getElementById('bod-thumb-grid').innerHTML='';
+  document.getElementById('bod-thumbs').classList.add('hidden');
+  bodClearBg();
+  showBOD('bod-upload');
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+fetch('/api/status').then(r=>r.json()).then(d=>{
+  if(!d.psapi_available) document.getElementById('badge-no-psapi').classList.remove('hidden');
+}).catch(()=>{});
+</script>
+</body>
+</html>
