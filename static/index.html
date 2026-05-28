@@ -334,7 +334,8 @@
         <p class="font-semibold text-gray-900 text-sm" id="bod-info-title">Bodegón listo para renderizar</p>
         <p class="text-xs text-gray-400 mt-0.5" id="bod-info-meta"></p>
       </div>
-      <button onclick="bodReset()" class="text-xs text-gray-400 hover:text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-all">Reiniciar</button>
+      <button onclick="bodGoBack()" class="text-xs text-gray-400 hover:text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-all">← Volver</button>
+      <button onclick="bodReset()" class="text-xs text-red-300 hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-all">Reiniciar</button>
     </div>
 
     <!-- Canvas preview -->
@@ -818,13 +819,23 @@ async function bodRender() {
   }
 }
 
+function bodGoBack() {
+  // Vuelve a configuración manteniendo las imágenes ya cargadas
+  BOD_SESSION = null;
+  BOD_LAYOUT  = null;
+  showBOD('bod-upload');
+}
+
 function bodReset() {
-  BOD_SESSION=null; BOD_LAYOUT=null;
-  BOD_FILES.forEach(f=>URL.revokeObjectURL(f.url));
-  BOD_FILES=[]; BOD_BG_FILE=null;
-  document.getElementById('bod-thumb-grid').innerHTML='';
+  BOD_SESSION = null; BOD_LAYOUT = null;
+  BOD_FILES.forEach(f => URL.revokeObjectURL(f.url));
+  BOD_FILES = []; BOD_BG_FILE = null;
+  document.getElementById('bod-thumb-grid').innerHTML = '';
   document.getElementById('bod-thumbs').classList.add('hidden');
   bodClearBg();
+  // Fix: limpiar inputs para que el evento change dispare aunque se elijan los mismos archivos
+  document.getElementById('bod-prod-input').value = '';
+  document.getElementById('bod-bg-input').value   = '';
   showBOD('bod-upload');
 }
 
