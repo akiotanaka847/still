@@ -107,10 +107,12 @@ def compute_layout(
 
     # Config automática
     if rows_count == 0 or aspect_w == 0:
-        if n <= 15:
-            rows_count = rows_count or 2; aspect_w = aspect_w or 5; aspect_h = aspect_h or 3
-        elif n <= 30:
-            rows_count = rows_count or 2; aspect_w = aspect_w or 8; aspect_h = aspect_h or 3
+        if n <= 3:
+            rows_count = rows_count or 1; aspect_w = aspect_w or 5;  aspect_h = aspect_h or 3
+        elif n <= 8:
+            rows_count = rows_count or 2; aspect_w = aspect_w or 5;  aspect_h = aspect_h or 3
+        elif n <= 20:
+            rows_count = rows_count or 2; aspect_w = aspect_w or 8;  aspect_h = aspect_h or 3
         else:
             rows_count = rows_count or 3; aspect_w = aspect_w or 10; aspect_h = aspect_h or 3
     aspect_h = aspect_h or 3

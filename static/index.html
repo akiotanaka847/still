@@ -629,6 +629,7 @@ let BOD_AI_REASONING = '';   // texto explicativo de la IA
 // ── Estrategias de layout (espejo del Python) ──────────────────────────────
 const STRATEGIES = [
   {
+    // Equilibrado: orden natural por altura, aspecto estándar
     id: 'auto', label: 'Auto', desc: 'Equilibrado perceptual',
     color: 'indigo',
     prepareItems: items => [...items].sort((a,b) => b.sh - a.sh),
@@ -636,31 +637,34 @@ const STRATEGIES = [
     postProcess: rows => rows,
   },
   {
+    // Por área: orden por tamaño real de imagen, canvas cuadrado
     id: 'area', label: 'Por área', desc: 'Mayor superficie primero',
     color: 'emerald',
     prepareItems: items => [...items].sort((a,b) => (b.ow*b.oh)-(a.ow*a.oh)),
-    modifyCfg:   cfg => cfg,
+    modifyCfg:   cfg => ({...cfg, aspect_w:1, aspect_h:1}),
     postProcess: rows => rows,
   },
   {
-    id: 'alternado', label: 'Alternado', desc: 'Ritmo alto / ancho',
+    // Alternado: intercala verticales/horizontales, canvas panorámico
+    id: 'alternado', label: 'Alternado', desc: 'Ritmo visual alto/ancho',
     color: 'violet',
     prepareItems: items => {
-      const s = [...items].sort((a,b) => (b.oh/b.ow)-(a.oh/a.ow));
+      const s=[...items].sort((a,b)=>(b.oh/b.ow)-(a.oh/a.ow));
       const t=s.filter((_,i)=>i%2===0), w2=s.filter((_,i)=>i%2!==0), r=[];
       for(let i=0;i<Math.max(t.length,w2.length);i++){
         if(i<t.length) r.push(t[i]); if(i<w2.length) r.push(w2[i]);
       }
       return r;
     },
-    modifyCfg:   cfg => cfg,
+    modifyCfg: cfg => ({...cfg, rows_count:1, aspect_w:16, aspect_h:5}),
     postProcess: rows => rows,
   },
   {
+    // Centrado: más alto al centro, widescreen
     id: 'centrado', label: 'Centrado', desc: 'Más alto al centro',
     color: 'amber',
     prepareItems: items => [...items].sort((a,b) => b.sh - a.sh),
-    modifyCfg:   cfg => cfg,
+    modifyCfg:   cfg => ({...cfg, aspect_w:16, aspect_h:9}),
     postProcess: rows => rows.map(row => {
       if (row.items.length < 3) return row;
       const s=[...row.items].sort((a,b)=>b.sh-a.sh);
@@ -676,17 +680,19 @@ const STRATEGIES = [
     }),
   },
   {
-    id: 'uniforme', label: 'Uniforme', desc: 'Misma altura para todos',
+    // Uniforme: todos la misma altura, formato muy ancho
+    id: 'uniforme', label: 'Uniforme', desc: 'Misma altura, formato ancho',
     color: 'sky',
     prepareItems: items => [...items].sort((a,b) => b.ow - a.ow),
-    modifyCfg:   cfg => ({...cfg, max_vertical_boost: 1.0}),
+    modifyCfg:   cfg => ({...cfg, rows_count:1, max_vertical_boost:1.0, aspect_w:3, aspect_h:1}),
     postProcess: rows => rows,
   },
   {
-    id: 'dinamico', label: 'Dinámico', desc: 'Contraste acentuado',
+    // Dinámico: contraste extremo de tamaños, 1 fila, boost alto
+    id: 'dinamico', label: 'Dinámico', desc: 'Contraste de tamaños extremo',
     color: 'rose',
     prepareItems: items => [...items].sort((a,b) => b.sh - a.sh),
-    modifyCfg:   cfg => ({...cfg, max_vertical_boost: 1.6}),
+    modifyCfg:   cfg => ({...cfg, rows_count:1, max_vertical_boost:2.2, aspect_w:5, aspect_h:3}),
     postProcess: rows => rows,
   },
 ];
@@ -699,8 +705,9 @@ function computeLayoutJS(images, cfg, strategy) {
   let {rows_count=0, base_height=760, item_gap=40, internal_padding=120,
        max_vertical_boost=1.20, aspect_w=0, aspect_h=0} = effCfg;
   if (!rows_count || !aspect_w) {
-    if (n<=15)      { rows_count=rows_count||2; aspect_w=aspect_w||5;  aspect_h=aspect_h||3; }
-    else if (n<=30) { rows_count=rows_count||2; aspect_w=aspect_w||8;  aspect_h=aspect_h||3; }
+    if      (n<=3)  { rows_count=rows_count||1; aspect_w=aspect_w||5;  aspect_h=aspect_h||3; }
+    else if (n<=8)  { rows_count=rows_count||2; aspect_w=aspect_w||5;  aspect_h=aspect_h||3; }
+    else if (n<=20) { rows_count=rows_count||2; aspect_w=aspect_w||8;  aspect_h=aspect_h||3; }
     else            { rows_count=rows_count||3; aspect_w=aspect_w||10; aspect_h=aspect_h||3; }
   }
   aspect_h = aspect_h || 3;
@@ -822,7 +829,7 @@ function setAspect(w,h) {
   });
 }
 function buildConfig(strategyId='auto') {
-  return {
+  const base = {
     sort_strategy:     strategyId,
     rows_count:        BOD_ROWS,
     base_height:       +document.getElementById('cfg-height').value,
@@ -832,6 +839,10 @@ function buildConfig(strategyId='auto') {
     aspect_w:          BOD_ASPECT_W,
     aspect_h:          BOD_ASPECT_H,
   };
+  // Aplicar overrides de la estrategia (aspect, rows, boost)
+  const s = STRATEGIES.find(s => s.id === strategyId);
+  if (s) return {...s.modifyCfg(base), sort_strategy: strategyId};
+  return base;
 }
 
 // ── Ver propuestas ───────────────────────────────────────────────────────────
