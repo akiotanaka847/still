@@ -1,10 +1,10 @@
 """
-Motor de layout para bodegones — portado de Bodegones2.jsx.
-Calcula escala perceptual y distribución en filas.
+Motor de layout para bodegones.
+Soporta 6 estrategias de ordenamiento/escalado.
 """
 import math
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List
 
 
 @dataclass
@@ -26,8 +26,66 @@ class _Row:
     height: float = 0.0
 
 
+# ─── Estrategias de ordenamiento ─────────────────────────────────────────────
+
+def _sort_auto(items: List[_Item]) -> List[_Item]:
+    return sorted(items, key=lambda x: x.sh, reverse=True)
+
+def _sort_area(items: List[_Item]) -> List[_Item]:
+    return sorted(items, key=lambda x: x.w * x.h, reverse=True)
+
+def _sort_alternado(items: List[_Item]) -> List[_Item]:
+    """Intercala productos verticales y horizontales para ritmo visual."""
+    by_ratio = sorted(items, key=lambda x: x.h / max(x.w, 1), reverse=True)
+    tall = [x for i, x in enumerate(by_ratio) if i % 2 == 0]
+    wide = [x for i, x in enumerate(by_ratio) if i % 2 != 0]
+    result = []
+    for i in range(max(len(tall), len(wide))):
+        if i < len(tall): result.append(tall[i])
+        if i < len(wide): result.append(wide[i])
+    return result
+
+def _sort_uniforme(items: List[_Item]) -> List[_Item]:
+    return sorted(items, key=lambda x: x.w, reverse=True)
+
+def _sort_dinamico(items: List[_Item]) -> List[_Item]:
+    return sorted(items, key=lambda x: x.sh, reverse=True)
+
+
+def _center_in_rows(rows: List[_Row]) -> List[_Row]:
+    """Reordena items dentro de cada fila para que el más alto quede al centro."""
+    for row in rows:
+        if len(row.items) < 3:
+            continue
+        s = sorted(row.items, key=lambda x: x.sh, reverse=True)
+        res: list = [None] * len(s)
+        mid = len(s) // 2
+        res[mid] = s[0]
+        l, r = mid - 1, mid + 1
+        for i in range(1, len(s)):
+            if i % 2 == 1 and r < len(s):
+                res[r] = s[i]; r += 1
+            elif l >= 0:
+                res[l] = s[i]; l -= 1
+            else:
+                res[r] = s[i]; r += 1
+        row.items = [x for x in res if x is not None]
+    return rows
+
+
+SORT_STRATEGIES = {
+    'auto':      _sort_auto,
+    'area':      _sort_area,
+    'alternado': _sort_alternado,
+    'centrado':  _sort_auto,      # sort igual, post-process centra
+    'uniforme':  _sort_uniforme,
+    'dinamico':  _sort_dinamico,
+}
+
+
 def compute_layout(
     images: List[dict],
+    sort_strategy: str = 'auto',
     rows_count: int = 0,
     base_height: int = 760,
     item_gap: int = 40,
@@ -36,57 +94,48 @@ def compute_layout(
     aspect_w: int = 0,
     aspect_h: int = 0,
 ) -> dict:
-    """
-    Calcula el layout de bodegón para una lista de imágenes.
-
-    images: [{"name": str, "filepath": str, "width": int, "height": int}]
-    Returns: {canvas_width, canvas_height, rows_count, items: [...]}
-    """
     n = len(images)
     if n == 0:
         raise ValueError("No se proporcionaron imágenes")
 
-    # Config automática según cantidad de productos
+    # Uniforme y dinámico modifican el boost
+    if sort_strategy == 'uniforme':
+        max_vertical_boost = 1.0
+    elif sort_strategy == 'dinamico':
+        max_vertical_boost = 1.6
+
+    # Config automática
     if rows_count == 0 or aspect_w == 0:
         if n <= 15:
-            rows_count = rows_count or 2
-            aspect_w = aspect_w or 5
-            aspect_h = aspect_h or 3
+            rows_count = rows_count or 2; aspect_w = aspect_w or 5; aspect_h = aspect_h or 3
         elif n <= 30:
-            rows_count = rows_count or 2
-            aspect_w = aspect_w or 8
-            aspect_h = aspect_h or 3
+            rows_count = rows_count or 2; aspect_w = aspect_w or 8; aspect_h = aspect_h or 3
         else:
-            rows_count = rows_count or 3
-            aspect_w = aspect_w or 10
-            aspect_h = aspect_h or 3
-
+            rows_count = rows_count or 3; aspect_w = aspect_w or 10; aspect_h = aspect_h or 3
     aspect_h = aspect_h or 3
 
-    # Escala con boost para verticales
+    # Escalar items
     items: List[_Item] = []
     for d in images:
         w = max(int(d.get("width", 1)), 1)
         h = max(int(d.get("height", 1)), 1)
         ratio = h / w
-
         boost = 1.0
         if ratio > 1.35:
             boost = 1.0 + (max_vertical_boost - 1.0) * min(ratio / 3.0, 1.0)
-
         sh = round(base_height * boost)
         sw = round(sh * w / h)
-
         items.append(_Item(
-            name=d.get("name", f"PRODUCTO_{len(items)+1}"),
+            name=d.get("name", f"P{len(items)+1}"),
             filepath=d.get("filepath", ""),
             w=w, h=h, sw=sw, sh=sh,
         ))
 
-    # Ordenar por altura descendente
-    items.sort(key=lambda x: x.sh, reverse=True)
+    # Aplicar estrategia de ordenamiento
+    sort_fn = SORT_STRATEGIES.get(sort_strategy, _sort_auto)
+    items = sort_fn(items)
 
-    # Crear filas y distribuir (fila con menor ancho acumula)
+    # Distribuir en filas
     rows: List[_Row] = [_Row() for _ in range(rows_count)]
     for item in items:
         row = min(rows, key=lambda r: r.width)
@@ -95,24 +144,25 @@ def compute_layout(
         if item.sh > row.height:
             row.height = item.sh
 
+    # Post-proceso "centrado"
+    if sort_strategy == 'centrado':
+        rows = _center_in_rows(rows)
+
     # Tamaño del canvas
     widest = max(r.width for r in rows)
     total_h = sum(r.height for r in rows)
-
     doc_h = total_h + internal_padding * 2
     doc_w = doc_h * (aspect_w / aspect_h)
     min_w = widest + internal_padding * 2
     if min_w > doc_w:
         doc_w = min_w
-
     doc_w = min(math.ceil(doc_w), 30000)
     doc_h = min(math.ceil(doc_h), 30000)
 
-    # Calcular posiciones (alineación base inferior por fila)
+    # Calcular posiciones
     gx = (doc_w - widest) / 2
     cy = float(internal_padding)
     out = []
-
     for row in rows:
         rx = (widest - row.width) / 2
         cx = gx + rx
@@ -123,12 +173,9 @@ def compute_layout(
             out.append({
                 "name":     item.name,
                 "filepath": item.filepath,
-                "ow":       item.w,
-                "oh":       item.h,
-                "sw":       item.sw,
-                "sh":       item.sh,
-                "x":        round(item.x),
-                "y":        round(item.y),
+                "ow": item.w, "oh": item.h,
+                "sw": item.sw, "sh": item.sh,
+                "x":  round(item.x), "y": round(item.y),
             })
         cy += row.height + item_gap
 
@@ -136,5 +183,6 @@ def compute_layout(
         "canvas_width":  doc_w,
         "canvas_height": doc_h,
         "rows_count":    rows_count,
+        "sort_strategy": sort_strategy,
         "items":         out,
     }

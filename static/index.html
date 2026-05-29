@@ -301,15 +301,15 @@
         </div>
       </div>
 
-      <!-- Botón generar -->
-      <button id="bod-gen-btn" onclick="bodGenerate()"
+      <!-- Botón ver propuestas -->
+      <button id="bod-gen-btn" onclick="bodShowProposals()"
               class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-2xl
                      shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7"/>
+            d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
         </svg>
-        Calcular layout y previsualizar
+        Ver propuestas de layout
       </button>
     </div>
   </section>
@@ -317,47 +317,71 @@
   <!-- LOADING BODEGON -->
   <section id="bod-loading" class="hidden py-20 text-center">
     <div class="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full spin mx-auto mb-4"></div>
-    <p id="bod-loading-msg" class="text-gray-700 font-semibold">Calculando layout...</p>
-    <p class="text-gray-400 text-sm mt-1">Analizando proporciones</p>
+    <p id="bod-loading-msg" class="text-gray-700 font-semibold">Subiendo imágenes...</p>
+    <p class="text-gray-400 text-sm mt-1">Un momento</p>
+  </section>
+
+  <!-- PROPUESTAS -->
+  <section id="bod-proposals" class="hidden slide-up">
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <h2 class="font-bold text-gray-900 text-lg">Elige una propuesta</h2>
+        <p class="text-xs text-gray-400 mt-0.5">Clic para seleccionar · <span id="prop-count"></span></p>
+      </div>
+      <button onclick="showBOD('bod-upload')"
+              class="text-xs text-gray-400 hover:text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-all">
+        ← Configuración
+      </button>
+    </div>
+
+    <!-- Grid 2×3 -->
+    <div id="proposals-grid" class="grid grid-cols-2 gap-3 mb-5"></div>
+
+    <!-- Usar propuesta -->
+    <button id="bod-use-btn" onclick="bodUseProposal()"
+            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-2xl
+                   shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+      </svg>
+      Usar esta propuesta
+    </button>
   </section>
 
   <!-- PREVIEW -->
   <section id="bod-preview" class="hidden slide-up">
-    <!-- Info bar -->
     <div class="bg-white border border-gray-200 rounded-2xl p-4 mb-4 flex items-center gap-3 card">
       <div class="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
         <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
         </svg>
       </div>
-      <div class="flex-1">
-        <p class="font-semibold text-gray-900 text-sm" id="bod-info-title">Bodegón listo para renderizar</p>
+      <div class="flex-1 min-w-0">
+        <p class="font-semibold text-gray-900 text-sm truncate" id="bod-info-title">Bodegón listo</p>
         <p class="text-xs text-gray-400 mt-0.5" id="bod-info-meta"></p>
       </div>
-      <button onclick="bodGoBack()" class="text-xs text-gray-400 hover:text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-all">← Volver</button>
-      <button onclick="bodReset()" class="text-xs text-red-300 hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-all">Reiniciar</button>
+      <button onclick="showBOD('bod-proposals')"
+              class="text-xs text-gray-400 hover:text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-all whitespace-nowrap">← Propuestas</button>
+      <button onclick="bodReset()"
+              class="text-xs text-red-300 hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-all">Reiniciar</button>
     </div>
 
-    <!-- Canvas preview -->
     <div class="bg-white border border-gray-200 rounded-2xl p-4 mb-4">
-      <p class="text-xs font-medium text-gray-500 mb-3">Vista previa del layout</p>
-      <div class="overflow-auto rounded-xl bg-gray-50 flex items-center justify-center min-h-40">
+      <p class="text-xs font-medium text-gray-500 mb-3">Vista previa</p>
+      <div class="overflow-auto rounded-xl flex items-center justify-center min-h-40">
         <canvas id="bod-canvas" class="max-w-full rounded-xl shadow-sm"></canvas>
       </div>
     </div>
 
-    <!-- Render buttons -->
-    <div class="grid grid-cols-1 gap-3">
-      <button id="bod-render-btn" onclick="bodRender()"
-              class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-2xl
-                     shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-        </svg>
-        Generar y descargar PNG
-      </button>
-    </div>
+    <button id="bod-render-btn" onclick="bodRender()"
+            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-2xl
+                   shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+      </svg>
+      Generar y descargar PNG
+    </button>
   </section>
 
 </div><!-- /panel-bodegon -->
@@ -391,7 +415,7 @@ function showSO(id) {
   requestAnimationFrame(() => t.classList.add('slide-up'));
 }
 
-const STEPS_BOD = ['bod-upload','bod-loading','bod-preview'];
+const STEPS_BOD = ['bod-upload','bod-loading','bod-proposals','bod-preview'];
 function showBOD(id) {
   STEPS_BOD.forEach(s => { const e=document.getElementById(s); e.classList.add('hidden'); e.classList.remove('slide-up'); });
   const t = document.getElementById(id);
@@ -564,15 +588,132 @@ function soReset() {
 // ═══════════════════════════════════════════════════════
 // TAB 2 — BODEGÓN GENERATOR
 // ═══════════════════════════════════════════════════════
-let BOD_SESSION  = null;
-let BOD_FILES    = [];   // [{file, name, w, h, url}]
-let BOD_BG_FILE  = null;
-let BOD_ROWS     = 0;
-let BOD_ASPECT_W = 0;
-let BOD_ASPECT_H = 0;
-let BOD_LAYOUT   = null;
+let BOD_SESSION      = null;
+let BOD_FILES        = [];   // [{file, name, w, h, url, img}]
+let BOD_BG_FILE      = null;
+let BOD_ROWS         = 0;
+let BOD_ASPECT_W     = 0;
+let BOD_ASPECT_H     = 0;
+let BOD_LAYOUT       = null;
+let BOD_SELECTED_IDX = 0;   // índice de la propuesta seleccionada
 
-// ── Productos ──
+const STEPS_BOD = ['bod-upload','bod-loading','bod-proposals','bod-preview'];
+
+// ── Estrategias de layout (espejo del Python) ──────────────────────────────
+const STRATEGIES = [
+  {
+    id: 'auto', label: 'Auto', desc: 'Equilibrado perceptual',
+    color: 'indigo',
+    prepareItems: items => [...items].sort((a,b) => b.sh - a.sh),
+    modifyCfg:   cfg => cfg,
+    postProcess: rows => rows,
+  },
+  {
+    id: 'area', label: 'Por área', desc: 'Mayor superficie primero',
+    color: 'emerald',
+    prepareItems: items => [...items].sort((a,b) => (b.ow*b.oh)-(a.ow*a.oh)),
+    modifyCfg:   cfg => cfg,
+    postProcess: rows => rows,
+  },
+  {
+    id: 'alternado', label: 'Alternado', desc: 'Ritmo alto / ancho',
+    color: 'violet',
+    prepareItems: items => {
+      const s = [...items].sort((a,b) => (b.oh/b.ow)-(a.oh/a.ow));
+      const t=s.filter((_,i)=>i%2===0), w2=s.filter((_,i)=>i%2!==0), r=[];
+      for(let i=0;i<Math.max(t.length,w2.length);i++){
+        if(i<t.length) r.push(t[i]); if(i<w2.length) r.push(w2[i]);
+      }
+      return r;
+    },
+    modifyCfg:   cfg => cfg,
+    postProcess: rows => rows,
+  },
+  {
+    id: 'centrado', label: 'Centrado', desc: 'Más alto al centro',
+    color: 'amber',
+    prepareItems: items => [...items].sort((a,b) => b.sh - a.sh),
+    modifyCfg:   cfg => cfg,
+    postProcess: rows => rows.map(row => {
+      if (row.items.length < 3) return row;
+      const s=[...row.items].sort((a,b)=>b.sh-a.sh);
+      const res=new Array(s.length).fill(null);
+      const mid=Math.floor(s.length/2); res[mid]=s[0];
+      let l=mid-1, r=mid+1;
+      for(let i=1;i<s.length;i++){
+        if(i%2===1&&r<s.length) res[r++]=s[i];
+        else if(l>=0) res[l--]=s[i];
+        else res[r++]=s[i];
+      }
+      return {...row, items:res.filter(Boolean)};
+    }),
+  },
+  {
+    id: 'uniforme', label: 'Uniforme', desc: 'Misma altura para todos',
+    color: 'sky',
+    prepareItems: items => [...items].sort((a,b) => b.ow - a.ow),
+    modifyCfg:   cfg => ({...cfg, max_vertical_boost: 1.0}),
+    postProcess: rows => rows,
+  },
+  {
+    id: 'dinamico', label: 'Dinámico', desc: 'Contraste acentuado',
+    color: 'rose',
+    prepareItems: items => [...items].sort((a,b) => b.sh - a.sh),
+    modifyCfg:   cfg => ({...cfg, max_vertical_boost: 1.6}),
+    postProcess: rows => rows,
+  },
+];
+
+// ── Motor de layout client-side ────────────────────────────────────────────
+function computeLayoutJS(images, cfg, strategy) {
+  const n = images.length;
+  if (!n) return null;
+  const effCfg = strategy.modifyCfg({...cfg});
+  let {rows_count=0, base_height=760, item_gap=40, internal_padding=120,
+       max_vertical_boost=1.20, aspect_w=0, aspect_h=0} = effCfg;
+  if (!rows_count || !aspect_w) {
+    if (n<=15)      { rows_count=rows_count||2; aspect_w=aspect_w||5;  aspect_h=aspect_h||3; }
+    else if (n<=30) { rows_count=rows_count||2; aspect_w=aspect_w||8;  aspect_h=aspect_h||3; }
+    else            { rows_count=rows_count||3; aspect_w=aspect_w||10; aspect_h=aspect_h||3; }
+  }
+  aspect_h = aspect_h || 3;
+  // Escalar
+  const scaled = images.map(d => {
+    const ow=Math.max(d.w||1,1), oh=Math.max(d.h||1,1), ratio=oh/ow;
+    let boost=1.0;
+    if(ratio>1.35) boost=1.0+(max_vertical_boost-1.0)*Math.min(ratio/3.0,1.0);
+    const sh=Math.round(base_height*boost), sw=Math.round(sh*ow/oh);
+    return {...d, ow, oh, sw, sh};
+  });
+  // Ordenar con estrategia
+  const sorted = strategy.prepareItems(scaled);
+  // Distribuir
+  const rows = Array.from({length:rows_count},()=>({items:[],width:0,height:0}));
+  for(const item of sorted){
+    const row=rows.reduce((m,r)=>r.width<m.width?r:m,rows[0]);
+    row.items.push(item); row.width+=item.sw+item_gap;
+    if(item.sh>row.height) row.height=item.sh;
+  }
+  // Post-proceso
+  const prows = strategy.postProcess(rows);
+  const widest=Math.max(...prows.map(r=>r.width));
+  const totalH=prows.reduce((s,r)=>s+r.height,0);
+  let docH=totalH+internal_padding*2, docW=docH*(aspect_w/aspect_h);
+  if(widest+internal_padding*2>docW) docW=widest+internal_padding*2;
+  docW=Math.min(Math.ceil(docW),30000); docH=Math.min(Math.ceil(docH),30000);
+  const gx=(docW-widest)/2; let cy=internal_padding; const out=[];
+  for(const row of prows){
+    const rx=(widest-row.width)/2; let cx=gx+rx;
+    for(const item of row.items){
+      out.push({...item, x:Math.round(cx), y:Math.round(cy+(row.height-item.sh))});
+      cx+=item.sw+item_gap;
+    }
+    cy+=row.height+item_gap;
+  }
+  return {canvas_width:docW, canvas_height:docH, rows_count, sort_strategy:strategy.id, items:out};
+}
+
+// ── Productos ──────────────────────────────────────────────────────────────
 document.getElementById('bod-prod-input').addEventListener('change', function() {
   if(this.files.length) bodAddProducts([...this.files]);
 });
@@ -586,54 +727,41 @@ function bodAddProducts(files) {
     const url = URL.createObjectURL(f);
     const img = new Image();
     img.onload = () => {
-      BOD_FILES.push({ file: f, name: Path_stem(f.name).toUpperCase().replace(/[\s\-]+/g,'_'), w: img.naturalWidth, h: img.naturalHeight, url });
+      // Guardamos el HTMLImageElement cacheado para dibujo rápido en canvas
+      BOD_FILES.push({ file:f, name:stemUp(f.name), w:img.naturalWidth, h:img.naturalHeight, url, img });
       renderThumbs();
     };
     img.src = url;
   });
 }
-
-function Path_stem(fname) { return fname.replace(/\.[^.]+$/, ''); }
+function stemUp(fname) { return fname.replace(/\.[^.]+$/,'').toUpperCase().replace(/[\s\-]+/g,'_'); }
 
 function renderThumbs() {
-  const grid = document.getElementById('bod-thumb-grid');
-  const wrap = document.getElementById('bod-thumbs');
-  const count = document.getElementById('bod-prod-count');
+  const grid=document.getElementById('bod-thumb-grid'), wrap=document.getElementById('bod-thumbs');
+  document.getElementById('bod-prod-count').textContent = BOD_FILES.length;
   grid.innerHTML = '';
-  count.textContent = BOD_FILES.length;
   if (!BOD_FILES.length) { wrap.classList.add('hidden'); return; }
   wrap.classList.remove('hidden');
-  BOD_FILES.forEach((item, i) => {
-    const div = document.createElement('div');
-    div.className = 'relative group rounded-lg overflow-hidden border border-gray-200 bg-gray-50';
-    div.style.aspectRatio = '1';
-    div.innerHTML = `
-      <img src="${item.url}" class="w-full h-full object-contain">
+  BOD_FILES.forEach((item,i) => {
+    const div=document.createElement('div');
+    div.className='relative group rounded-lg overflow-hidden border border-gray-200 bg-gray-50';
+    div.style.aspectRatio='1';
+    div.innerHTML=`<img src="${item.url}" class="w-full h-full object-contain">
       <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
-        <button onclick="bodRemoveProd(${i})"
-                class="opacity-0 group-hover:opacity-100 w-6 h-6 bg-red-500 rounded-full text-white text-xs transition-all">✕</button>
+        <button onclick="bodRemoveProd(${i})" class="opacity-0 group-hover:opacity-100 w-6 h-6 bg-red-500 rounded-full text-white text-xs transition-all">✕</button>
       </div>
       <p class="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[9px] text-center truncate px-1 py-0.5">${esc(item.name)}</p>`;
     grid.appendChild(div);
   });
 }
+function bodRemoveProd(i) { URL.revokeObjectURL(BOD_FILES[i].url); BOD_FILES.splice(i,1); renderThumbs(); }
+function bodClearProducts() { BOD_FILES.forEach(f=>URL.revokeObjectURL(f.url)); BOD_FILES=[]; renderThumbs(); }
 
-function bodRemoveProd(i) {
-  URL.revokeObjectURL(BOD_FILES[i].url);
-  BOD_FILES.splice(i, 1);
-  renderThumbs();
-}
-function bodClearProducts() {
-  BOD_FILES.forEach(f => URL.revokeObjectURL(f.url));
-  BOD_FILES = [];
-  renderThumbs();
-}
-
-// ── Fondo ──
+// ── Fondo ───────────────────────────────────────────────────────────────────
 document.getElementById('bod-bg-input').addEventListener('change', function() { if(this.files[0]) bodSetBg(this.files[0]); });
 function bodBgDrop(e) { e.preventDefault(); dzLeave('bod-bg-dz'); const f=e.dataTransfer?.files?.[0]; if(f) bodSetBg(f); }
 function bodSetBg(file) {
-  BOD_BG_FILE = file;
+  BOD_BG_FILE=file;
   const reader=new FileReader();
   reader.onload=ev=>{
     document.getElementById('bod-bg-thumb').src=ev.target.result;
@@ -644,82 +772,31 @@ function bodSetBg(file) {
   reader.readAsDataURL(file);
 }
 function bodClearBg(e) {
-  e&&e.stopPropagation();
-  BOD_BG_FILE=null;
+  e&&e.stopPropagation(); BOD_BG_FILE=null;
   document.getElementById('bod-bg-ph').classList.remove('hidden');
   const pv=document.getElementById('bod-bg-pv'); pv.classList.add('hidden'); pv.classList.remove('flex');
   document.getElementById('bod-bg-input').value='';
 }
 
-// ── Config buttons ──
+// ── Config ──────────────────────────────────────────────────────────────────
 function setRows(n) {
-  BOD_ROWS = n;
+  BOD_ROWS=n;
   document.querySelectorAll('.rows-btn').forEach(b => {
-    const active = +b.dataset.rows === n;
-    b.className = `rows-btn flex-1 py-2 text-xs font-semibold rounded-lg border transition-all ${active?'border-indigo-200 bg-indigo-600 text-white':'border-gray-200 text-gray-600 hover:border-indigo-300'}`;
+    const a=+b.dataset.rows===n;
+    b.className=`rows-btn flex-1 py-2 text-xs font-semibold rounded-lg border transition-all ${a?'border-indigo-200 bg-indigo-600 text-white':'border-gray-200 text-gray-600 hover:border-indigo-300'}`;
   });
 }
-function setAspect(w, h) {
-  BOD_ASPECT_W = w; BOD_ASPECT_H = h;
-  const key = (w===0) ? '0' : `${w}:${h}`;
+function setAspect(w,h) {
+  BOD_ASPECT_W=w; BOD_ASPECT_H=h;
+  const key=(w===0)?'0':`${w}:${h}`;
   document.querySelectorAll('.aspect-btn').forEach(b => {
-    const active = b.dataset.aspect === key;
-    b.className = `aspect-btn flex-1 py-2 text-xs font-semibold rounded-lg border transition-all ${active?'border-indigo-200 bg-indigo-600 text-white':'border-gray-200 text-gray-600 hover:border-indigo-300'}`;
+    const a=b.dataset.aspect===key;
+    b.className=`aspect-btn flex-1 py-2 text-xs font-semibold rounded-lg border transition-all ${a?'border-indigo-200 bg-indigo-600 text-white':'border-gray-200 text-gray-600 hover:border-indigo-300'}`;
   });
 }
-
-// ── Generate: upload → compute → preview ──
-async function bodGenerate() {
-  if (!BOD_FILES.length) { toast('Agrega al menos una imagen de producto'); return; }
-
-  const btn = document.getElementById('bod-gen-btn');
-  btn.disabled = true;
-  document.getElementById('bod-loading-msg').textContent = 'Subiendo imágenes...';
-  showBOD('bod-loading');
-
-  try {
-    // 1. Upload
-    const fd = new FormData();
-    BOD_FILES.forEach(item => fd.append('products', item.file, item.file.name));
-    if (BOD_BG_FILE) fd.append('background', BOD_BG_FILE, BOD_BG_FILE.name);
-
-    const upRes = await fetch('/api/bodegon/upload', {method:'POST',body:fd});
-    const upData = await upRes.json();
-    if (!upRes.ok) throw new Error(upData.detail || 'Error subiendo imágenes');
-    BOD_SESSION = upData.session_id;
-
-    // 2. Compute layout
-    document.getElementById('bod-loading-msg').textContent = 'Calculando layout...';
-    const cfg = buildConfig();
-    const compRes = await fetch('/api/bodegon/compute', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({session_id: BOD_SESSION, config: cfg}),
-    });
-    const layout = await compRes.json();
-    if (!compRes.ok) throw new Error(layout.detail || 'Error calculando layout');
-    BOD_LAYOUT = layout;
-
-    // 3. Draw canvas preview
-    drawBodCanvas(layout);
-
-    // Update info
-    document.getElementById('bod-info-meta').textContent =
-      `${layout.canvas_width.toLocaleString()} × ${layout.canvas_height.toLocaleString()} px · ` +
-      `${layout.items.length} productos · ${layout.rows_count} fila${layout.rows_count!==1?'s':''}`;
-
-    showBOD('bod-preview');
-
-  } catch(e) {
-    showBOD('bod-upload');
-    toast(e.message);
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-function buildConfig() {
+function buildConfig(strategyId='auto') {
   return {
+    sort_strategy:     strategyId,
     rows_count:        BOD_ROWS,
     base_height:       +document.getElementById('cfg-height').value,
     item_gap:          +document.getElementById('cfg-gap').value,
@@ -730,88 +807,166 @@ function buildConfig() {
   };
 }
 
-// ── Canvas preview ──
-function drawBodCanvas(layout) {
-  const canvas = document.getElementById('bod-canvas');
-  const ctx = canvas.getContext('2d');
-  const MAX_W = 680;
-  const scale = Math.min(1, MAX_W / layout.canvas_width);
-  canvas.width  = Math.round(layout.canvas_width  * scale);
-  canvas.height = Math.round(layout.canvas_height * scale);
+// ── Ver propuestas (client-side, sin upload) ─────────────────────────────────
+function bodShowProposals() {
+  if (!BOD_FILES.length) { toast('Agrega al menos una imagen de producto'); return; }
+  const baseCfg = buildConfig();
+  document.getElementById('prop-count').textContent =
+    `${BOD_FILES.length} producto${BOD_FILES.length!==1?'s':''}`;
 
-  // Fondo transparente (patrón de cuadros)
-  ctx.fillStyle = ctx.createPattern(checkerPattern(), 'repeat');
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Calcular los 6 layouts en JS
+  const layouts = STRATEGIES.map(s => computeLayoutJS(BOD_FILES, baseCfg, s));
 
-  // Products
-  const palette = ['#818cf8','#34d399','#fb923c','#f472b6','#60a5fa','#a78bfa','#4ade80','#facc15'];
-  layout.items.forEach((item, idx) => {
-    const x = item.x * scale;
-    const y = item.y * scale;
-    const w = item.sw * scale;
-    const h = item.sh * scale;
-    const color = palette[idx % palette.length];
+  // Renderizar cards
+  const grid = document.getElementById('proposals-grid');
+  grid.innerHTML = '';
+  STRATEGIES.forEach((s, i) => {
+    const layout = layouts[i];
+    const isSelected = i === BOD_SELECTED_IDX;
+    const card = document.createElement('div');
+    card.id = `prop-card-${i}`;
+    card.className = `cursor-pointer rounded-2xl border-2 p-3 transition-all
+      ${isSelected ? `border-${s.color}-500 bg-${s.color}-50 ring-2 ring-${s.color}-200` : 'border-gray-200 hover:border-gray-300 bg-white'}`;
+    card.onclick = () => bodSelectProposal(i);
 
-    // Try to draw thumbnail from BOD_FILES
-    const match = BOD_FILES.find(f => f.name === item.name);
-    if (match) {
-      const img = new Image();
-      img.onload = () => {
-        // Draw checkered background for transparency
-        const pat = ctx.createPattern(checkerPattern(), 'repeat');
-        ctx.fillStyle = pat;
-        ctx.fillRect(x, y, w, h);
-        ctx.drawImage(img, x, y, w, h);
-      };
-      img.src = match.url;
-    } else {
-      // Colored placeholder
-      ctx.fillStyle = color + '80';
-      ctx.fillRect(x, y, w, h);
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(x+0.5, y+0.5, w-1, h-1);
-    }
+    const cv = document.createElement('canvas');
+    cv.className = 'w-full rounded-lg';
+    card.appendChild(cv);
 
-    // Label
-    ctx.fillStyle = 'rgba(0,0,0,0.65)';
-    ctx.font = `bold ${Math.max(9, Math.min(13, w/6))}px Inter,sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const label = item.name.length > 12 ? item.name.slice(0,11)+'…' : item.name;
-    ctx.fillText(label, x+w/2, y+h/2);
+    const label = document.createElement('div');
+    label.className = 'mt-2 text-center';
+    label.innerHTML = `<p class="text-xs font-bold text-gray-800">${s.label}</p>
+      <p class="text-[10px] text-gray-400 mt-0.5">${s.desc}</p>`;
+    card.appendChild(label);
+
+    grid.appendChild(card);
+
+    // Dibujar mini-canvas
+    if (layout) renderMiniCanvas(cv, layout, 290);
+  });
+
+  showBOD('bod-proposals');
+}
+
+function bodSelectProposal(idx) {
+  BOD_SELECTED_IDX = idx;
+  STRATEGIES.forEach((s, i) => {
+    const card = document.getElementById(`prop-card-${i}`);
+    if (!card) return;
+    card.className = `cursor-pointer rounded-2xl border-2 p-3 transition-all
+      ${i===idx ? `border-${s.color}-500 bg-${s.color}-50 ring-2 ring-${s.color}-200` : 'border-gray-200 hover:border-gray-300 bg-white'}`;
   });
 }
 
+// ── Usar propuesta → upload → preview ───────────────────────────────────────
+async function bodUseProposal() {
+  const strategy = STRATEGIES[BOD_SELECTED_IDX];
+  const btn = document.getElementById('bod-use-btn');
+  btn.disabled = true;
+  btn.innerHTML = `<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full spin"></div> Subiendo...`;
+  showBOD('bod-loading');
+  document.getElementById('bod-loading-msg').textContent = 'Subiendo imágenes al servidor...';
+
+  try {
+    const fd = new FormData();
+    BOD_FILES.forEach(item => fd.append('products', item.file, item.file.name));
+    if (BOD_BG_FILE) fd.append('background', BOD_BG_FILE, BOD_BG_FILE.name);
+
+    const upRes = await fetch('/api/bodegon/upload', {method:'POST',body:fd});
+    const upData = await upRes.json();
+    if (!upRes.ok) throw new Error(upData.detail||'Error subiendo');
+    BOD_SESSION = upData.session_id;
+
+    document.getElementById('bod-loading-msg').textContent = 'Calculando layout final...';
+    const cfg = buildConfig(strategy.id);
+    const compRes = await fetch('/api/bodegon/compute', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({session_id:BOD_SESSION, config:cfg}),
+    });
+    const layout = await compRes.json();
+    if (!compRes.ok) throw new Error(layout.detail||'Error calculando');
+    BOD_LAYOUT = layout;
+
+    // Preview grande
+    drawBodCanvas(layout);
+    document.getElementById('bod-info-title').textContent = `${strategy.label} — ${strategy.desc}`;
+    document.getElementById('bod-info-meta').textContent =
+      `${layout.canvas_width.toLocaleString()} × ${layout.canvas_height.toLocaleString()} px · ` +
+      `${layout.items.length} productos · ${layout.rows_count} fila${layout.rows_count!==1?'s':''}`;
+    showBOD('bod-preview');
+
+  } catch(e) {
+    showBOD('bod-proposals');
+    toast(e.message);
+  } finally {
+    btn.disabled=false;
+    btn.innerHTML=`<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Usar esta propuesta`;
+  }
+}
+
+// ── Canvas helpers ──────────────────────────────────────────────────────────
 function checkerPattern() {
-  const c = document.createElement('canvas'); c.width=c.height=10;
-  const ctx = c.getContext('2d');
+  const c=document.createElement('canvas'); c.width=c.height=10;
+  const ctx=c.getContext('2d');
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,10,10);
   ctx.fillStyle='#e5e7eb'; ctx.fillRect(0,0,5,5); ctx.fillRect(5,5,5,5);
   return c;
 }
 
-// ── Render PNG ──
+function renderMiniCanvas(canvas, layout, maxW) {
+  const scale = Math.min(1, maxW / layout.canvas_width);
+  canvas.width  = Math.round(layout.canvas_width  * scale);
+  canvas.height = Math.round(layout.canvas_height * scale);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = ctx.createPattern(checkerPattern(), 'repeat');
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  layout.items.forEach(item => {
+    const x=item.x*scale, y=item.y*scale, w=item.sw*scale, h=item.sh*scale;
+    const match = BOD_FILES.find(f => f.name === item.name);
+    if (match?.img?.complete && match.img.naturalWidth) {
+      ctx.drawImage(match.img, x, y, w, h);
+    } else {
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillRect(x, y, w, h);
+    }
+  });
+}
+
+function drawBodCanvas(layout) {
+  const canvas=document.getElementById('bod-canvas'), ctx=canvas.getContext('2d');
+  const scale=Math.min(1, 680/layout.canvas_width);
+  canvas.width=Math.round(layout.canvas_width*scale);
+  canvas.height=Math.round(layout.canvas_height*scale);
+  ctx.fillStyle=ctx.createPattern(checkerPattern(),'repeat');
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  layout.items.forEach(item => {
+    const x=item.x*scale, y=item.y*scale, w=item.sw*scale, h=item.sh*scale;
+    const match=BOD_FILES.find(f=>f.name===item.name);
+    if (match?.img?.complete && match.img.naturalWidth) {
+      ctx.drawImage(match.img, x, y, w, h);
+    } else if (match) {
+      const img=new Image(); img.onload=()=>ctx.drawImage(img,x,y,w,h); img.src=match.url;
+    }
+  });
+}
+
+// ── Render PNG ──────────────────────────────────────────────────────────────
 async function bodRender() {
-  if (!BOD_SESSION) { toast('Genera el layout primero'); return; }
-  const btn = document.getElementById('bod-render-btn');
+  if (!BOD_SESSION) { toast('Elige una propuesta primero'); return; }
+  const btn=document.getElementById('bod-render-btn');
   btn.disabled=true;
   btn.innerHTML=`<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full spin"></div> Renderizando...`;
   try {
-    const res = await fetch('/api/bodegon/render', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({session_id:BOD_SESSION, config:buildConfig()}),
+    const strategy = STRATEGIES[BOD_SELECTED_IDX];
+    const res=await fetch('/api/bodegon/render', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({session_id:BOD_SESSION, config:buildConfig(strategy.id)}),
     });
-    const data = await res.json();
+    const data=await res.json();
     if (!res.ok) throw new Error(data.detail||'Error');
-    // Download
-    const link = document.createElement('a');
-    link.href = `/api/bodegon/download/${BOD_SESSION}`;
-    link.download = 'bodegon.png';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    const link=document.createElement('a');
+    link.href=`/api/bodegon/download/${BOD_SESSION}`; link.download='bodegon.png';
+    document.body.appendChild(link); link.click(); link.remove();
   } catch(e) { toast(e.message); }
   finally {
     btn.disabled=false;
@@ -819,23 +974,16 @@ async function bodRender() {
   }
 }
 
-function bodGoBack() {
-  // Vuelve a configuración manteniendo las imágenes ya cargadas
-  BOD_SESSION = null;
-  BOD_LAYOUT  = null;
-  showBOD('bod-upload');
-}
-
+// ── Reset ───────────────────────────────────────────────────────────────────
 function bodReset() {
-  BOD_SESSION = null; BOD_LAYOUT = null;
-  BOD_FILES.forEach(f => URL.revokeObjectURL(f.url));
-  BOD_FILES = []; BOD_BG_FILE = null;
-  document.getElementById('bod-thumb-grid').innerHTML = '';
+  BOD_SESSION=null; BOD_LAYOUT=null; BOD_SELECTED_IDX=0;
+  BOD_FILES.forEach(f=>URL.revokeObjectURL(f.url));
+  BOD_FILES=[]; BOD_BG_FILE=null;
+  document.getElementById('bod-thumb-grid').innerHTML='';
   document.getElementById('bod-thumbs').classList.add('hidden');
   bodClearBg();
-  // Fix: limpiar inputs para que el evento change dispare aunque se elijan los mismos archivos
-  document.getElementById('bod-prod-input').value = '';
-  document.getElementById('bod-bg-input').value   = '';
+  document.getElementById('bod-prod-input').value='';
+  document.getElementById('bod-bg-input').value='';
   showBOD('bod-upload');
 }
 

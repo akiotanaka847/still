@@ -370,6 +370,7 @@ async def bodegon_compute(body: dict):
     cfg = body.get("config", {})
     layout = compute_layout(
         images=info["images"],
+        sort_strategy=cfg.get("sort_strategy", "auto"),
         rows_count=int(cfg.get("rows_count", 0)),
         base_height=int(cfg.get("base_height", 760)),
         item_gap=int(cfg.get("item_gap", 40)),
@@ -379,7 +380,6 @@ async def bodegon_compute(body: dict):
         aspect_h=int(cfg.get("aspect_h", 0)),
     )
 
-    # Guardar layout en sesión para el render
     info["layout"] = layout
     info_file.write_text(json.dumps(info, indent=2), encoding="utf-8")
 
@@ -405,6 +405,7 @@ async def bodegon_render(body: dict):
         cfg = body["config"]
         layout = compute_layout(
             images=info["images"],
+            sort_strategy=cfg.get("sort_strategy", "auto"),
             rows_count=int(cfg.get("rows_count", 0)),
             base_height=int(cfg.get("base_height", 760)),
             item_gap=int(cfg.get("item_gap", 40)),
