@@ -1061,10 +1061,10 @@ async function bodRender() {
   btn.disabled=true;
   btn.innerHTML=`<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full spin"></div> Renderizando...`;
   try {
-    const strategy = STRATEGIES[BOD_SELECTED_IDX];
+    const strategyId = BOD_SELECTED_IDX === 6 ? 'ai' : STRATEGIES[BOD_SELECTED_IDX].id;
     const res=await fetch('/api/bodegon/render', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({session_id:BOD_SESSION, config:buildConfig(strategy.id)}),
+      body: JSON.stringify({session_id:BOD_SESSION, config:buildConfig(strategyId)}),
     });
     const data=await res.json();
     if (!res.ok) throw new Error(data.detail||'Error');
