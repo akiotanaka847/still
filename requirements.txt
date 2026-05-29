@@ -3,3 +3,5 @@ uvicorn[standard]>=0.27.0
 python-multipart>=0.0.9
 PhotoshopAPI>=0.9.0
 Pillow>=10.0.0
+anthropic>=0.40.0
+python-dotenv>=1.0.0

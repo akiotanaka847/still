@@ -2,5 +2,6 @@ sessions/
 __pycache__/
 *.pyc
 .env
+*.env
 *.egg-info/
 dist/

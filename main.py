@@ -1,9 +1,10 @@
 """
 PSD Smart Object Replacer — FastAPI backend
 Módulo 1: Reemplaza SmartObjectLayers en archivos PSD/PSB.
-Módulo 2: Generador de bodegones con layout automático.
+Módulo 2: Generador de bodegones con layout automático + propuesta IA.
 """
 import json
+import os
 import re
 import shutil
 import threading
@@ -13,6 +14,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import List, Optional
 import uuid
+
+from dotenv import load_dotenv
+load_dotenv()
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -440,6 +444,50 @@ async def bodegon_download(session_id: str):
     if not out.exists():
         raise HTTPException(404, "PNG no encontrado. Ejecuta el render primero.")
     return FileResponse(str(out), filename="bodegon.png", media_type="image/png")
+
+
+@app.post("/api/bodegon/ai-proposal")
+async def bodegon_ai_proposal(body: dict):
+    """Analiza los productos con Claude Vision y devuelve el orden óptimo + layout."""
+    session_id = body.get("session_id", "")
+    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
+        raise HTTPException(400, "Session ID inválido")
+
+    session_dir = SESSIONS_DIR / session_id
+    info_file = session_dir / "bodegon.json"
+    if not info_file.exists():
+        raise HTTPException(404, "Sesión no encontrada")
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        raise HTTPException(503, "ANTHROPIC_API_KEY no configurada en .env")
+
+    info = json.loads(info_file.read_text(encoding="utf-8"))
+
+    try:
+        from ai_proposal import analyze_products
+        suggestion = analyze_products(info["images"], api_key)
+    except Exception as e:
+        raise HTTPException(500, f"Error en análisis IA: {e}")
+
+    # Reordenar según la sugerencia de la IA
+    name_to_img = {img["name"]: img for img in info["images"]}
+    ordered = [name_to_img[n] for n in suggestion["order"] if n in name_to_img]
+
+    cfg = body.get("config", {})
+    layout = compute_layout(
+        images=ordered,
+        sort_strategy="ai",          # preserva el orden de la IA
+        rows_count=int(cfg.get("rows_count", 0)),
+        base_height=int(cfg.get("base_height", 760)),
+        item_gap=int(cfg.get("item_gap", 40)),
+        internal_padding=int(cfg.get("internal_padding", 120)),
+        max_vertical_boost=float(cfg.get("max_vertical_boost", 1.20)),
+        aspect_w=int(cfg.get("aspect_w", 0)),
+        aspect_h=int(cfg.get("aspect_h", 0)),
+    )
+
+    return {"layout": layout, "suggestion": suggestion}
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")

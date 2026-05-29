@@ -80,6 +80,7 @@ SORT_STRATEGIES = {
     'centrado':  _sort_auto,      # sort igual, post-process centra
     'uniforme':  _sort_uniforme,
     'dinamico':  _sort_dinamico,
+    'ai':        list,            # preserva el orden decidido por la IA
 }
 
 

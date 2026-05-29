@@ -595,7 +595,9 @@ let BOD_ROWS         = 0;
 let BOD_ASPECT_W     = 0;
 let BOD_ASPECT_H     = 0;
 let BOD_LAYOUT       = null;
-let BOD_SELECTED_IDX = 0;   // índice de la propuesta seleccionada
+let BOD_SELECTED_IDX = 0;   // 0-5 = estrategias, 6 = IA
+let BOD_AI_LAYOUT    = null; // layout devuelto por la IA
+let BOD_AI_REASONING = '';   // texto explicativo de la IA
 
 // ── Estrategias de layout (espejo del Python) ──────────────────────────────
 const STRATEGIES = [
@@ -805,87 +807,191 @@ function buildConfig(strategyId='auto') {
   };
 }
 
-// ── Ver propuestas (client-side, sin upload) ─────────────────────────────────
+// ── Ver propuestas ───────────────────────────────────────────────────────────
 function bodShowProposals() {
   if (!BOD_FILES.length) { toast('Agrega al menos una imagen de producto'); return; }
+
+  BOD_SESSION = null; BOD_AI_LAYOUT = null; BOD_AI_REASONING = '';
+  BOD_SELECTED_IDX = 0;
+
   const baseCfg = buildConfig();
   document.getElementById('prop-count').textContent =
     `${BOD_FILES.length} producto${BOD_FILES.length!==1?'s':''}`;
 
-  // Calcular los 6 layouts en JS
   const layouts = STRATEGIES.map(s => computeLayoutJS(BOD_FILES, baseCfg, s));
-
-  // Renderizar cards
   const grid = document.getElementById('proposals-grid');
   grid.innerHTML = '';
+
+  // 6 tarjetas de estrategias
   STRATEGIES.forEach((s, i) => {
-    const layout = layouts[i];
-    const isSelected = i === BOD_SELECTED_IDX;
     const card = document.createElement('div');
     card.id = `prop-card-${i}`;
-    card.className = `cursor-pointer rounded-2xl border-2 p-3 transition-all
-      ${isSelected ? `border-${s.color}-500 bg-${s.color}-50 ring-2 ring-${s.color}-200` : 'border-gray-200 hover:border-gray-300 bg-white'}`;
+    card.className = _propCardClass(i, s.color);
     card.onclick = () => bodSelectProposal(i);
-
     const cv = document.createElement('canvas');
     cv.className = 'w-full rounded-lg';
+    card.innerHTML = '';
     card.appendChild(cv);
-
-    const label = document.createElement('div');
-    label.className = 'mt-2 text-center';
-    label.innerHTML = `<p class="text-xs font-bold text-gray-800">${s.label}</p>
-      <p class="text-[10px] text-gray-400 mt-0.5">${s.desc}</p>`;
-    card.appendChild(label);
-
+    card.insertAdjacentHTML('beforeend',
+      `<div class="mt-2 text-center">
+         <p class="text-xs font-bold text-gray-800">${s.label}</p>
+         <p class="text-[10px] text-gray-400 mt-0.5">${s.desc}</p>
+       </div>`);
     grid.appendChild(card);
-
-    // Dibujar mini-canvas
-    if (layout) renderMiniCanvas(cv, layout, 290);
+    if (layouts[i]) renderMiniCanvas(cv, layouts[i], 290);
   });
+
+  // Tarjeta IA — ocupa las 2 columnas, estado cargando
+  const aiCard = document.createElement('div');
+  aiCard.id = 'prop-card-6';
+  aiCard.className = 'col-span-2 rounded-2xl border-2 border-dashed border-purple-200 bg-purple-50 p-4 flex items-center gap-4';
+  aiCard.innerHTML = `
+    <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+      <div class="w-5 h-5 border-2 border-purple-300 border-t-purple-600 rounded-full spin" id="ai-spinner"></div>
+    </div>
+    <div class="flex-1 min-w-0">
+      <p class="text-sm font-bold text-purple-800">✦ Propuesta IA</p>
+      <p class="text-xs text-purple-500 mt-0.5" id="ai-status">Analizando productos con Claude Vision...</p>
+    </div>`;
+  grid.appendChild(aiCard);
 
   showBOD('bod-proposals');
+
+  // Upload + análisis IA en segundo plano
+  bodUploadAndAnalyzeAI(baseCfg);
 }
 
-function bodSelectProposal(idx) {
-  BOD_SELECTED_IDX = idx;
-  STRATEGIES.forEach((s, i) => {
-    const card = document.getElementById(`prop-card-${i}`);
-    if (!card) return;
-    card.className = `cursor-pointer rounded-2xl border-2 p-3 transition-all
-      ${i===idx ? `border-${s.color}-500 bg-${s.color}-50 ring-2 ring-${s.color}-200` : 'border-gray-200 hover:border-gray-300 bg-white'}`;
-  });
-}
-
-// ── Usar propuesta → upload → preview ───────────────────────────────────────
-async function bodUseProposal() {
-  const strategy = STRATEGIES[BOD_SELECTED_IDX];
-  const btn = document.getElementById('bod-use-btn');
-  btn.disabled = true;
-  btn.innerHTML = `<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full spin"></div> Subiendo...`;
-  showBOD('bod-loading');
-  document.getElementById('bod-loading-msg').textContent = 'Subiendo imágenes al servidor...';
-
+async function bodUploadAndAnalyzeAI(cfg) {
   try {
     const fd = new FormData();
     BOD_FILES.forEach(item => fd.append('products', item.file, item.file.name));
     if (BOD_BG_FILE) fd.append('background', BOD_BG_FILE, BOD_BG_FILE.name);
 
-    const upRes = await fetch('/api/bodegon/upload', {method:'POST',body:fd});
+    const upRes = await fetch('/api/bodegon/upload', {method:'POST', body:fd});
     const upData = await upRes.json();
     if (!upRes.ok) throw new Error(upData.detail||'Error subiendo');
     BOD_SESSION = upData.session_id;
 
+    const aiRes = await fetch('/api/bodegon/ai-proposal', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({session_id: BOD_SESSION, config: cfg}),
+    });
+    const aiData = await aiRes.json();
+    if (!aiRes.ok) throw new Error(aiData.detail||'Error IA');
+
+    BOD_AI_LAYOUT   = aiData.layout;
+    BOD_AI_REASONING = aiData.suggestion.reasoning || '';
+
+    // Actualizar tarjeta IA con resultado
+    const card = document.getElementById('prop-card-6');
+    if (!card) return;
+    const isSelected = BOD_SELECTED_IDX === 6;
+    card.className = `col-span-2 cursor-pointer rounded-2xl border-2 p-3 transition-all
+      ${isSelected ? 'border-purple-500 bg-purple-50 ring-2 ring-purple-200' : 'border-purple-200 hover:border-purple-400 bg-white'}`;
+    card.onclick = () => bodSelectProposal(6);
+
+    const cv = document.createElement('canvas');
+    cv.className = 'w-full rounded-lg mb-2';
+    card.innerHTML = '';
+    card.appendChild(cv);
+    renderMiniCanvas(cv, BOD_AI_LAYOUT, 580);
+
+    card.insertAdjacentHTML('beforeend', `
+      <div class="flex items-start gap-2 mt-1">
+        <span class="text-purple-600 text-sm flex-shrink-0">✦</span>
+        <div>
+          <p class="text-xs font-bold text-purple-800">IA Recomendada</p>
+          <p class="text-[11px] text-gray-500 mt-0.5 leading-relaxed">${esc(BOD_AI_REASONING)}</p>
+        </div>
+      </div>`);
+
+  } catch(e) {
+    const card = document.getElementById('prop-card-6');
+    if (card) {
+      card.className = 'col-span-2 rounded-2xl border-2 border-dashed border-red-200 bg-red-50 p-4 flex items-center gap-3';
+      card.innerHTML = `
+        <svg class="w-5 h-5 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <div>
+          <p class="text-xs font-semibold text-red-700">IA no disponible</p>
+          <p class="text-[10px] text-red-500 mt-0.5">${esc(e.message)}</p>
+        </div>`;
+    }
+  }
+}
+
+function _propCardClass(idx, color) {
+  const sel = idx === BOD_SELECTED_IDX;
+  return `cursor-pointer rounded-2xl border-2 p-3 transition-all
+    ${sel ? `border-${color}-500 bg-${color}-50 ring-2 ring-${color}-200` : 'border-gray-200 hover:border-gray-300 bg-white'}`;
+}
+
+function bodSelectProposal(idx) {
+  if (idx === 6 && !BOD_AI_LAYOUT) { toast('Espera a que termine el análisis IA', 'warn'); return; }
+  BOD_SELECTED_IDX = idx;
+  STRATEGIES.forEach((s, i) => {
+    const c = document.getElementById(`prop-card-${i}`);
+    if (c) c.className = _propCardClass(i, s.color);
+  });
+  // Actualizar borde de la tarjeta IA
+  const aiCard = document.getElementById('prop-card-6');
+  if (aiCard && BOD_AI_LAYOUT) {
+    const sel = idx === 6;
+    aiCard.className = `col-span-2 cursor-pointer rounded-2xl border-2 p-3 transition-all
+      ${sel ? 'border-purple-500 bg-purple-50 ring-2 ring-purple-200' : 'border-purple-200 hover:border-purple-400 bg-white'}`;
+  }
+}
+
+// ── Usar propuesta seleccionada ──────────────────────────────────────────────
+async function bodUseProposal() {
+  const isAI = BOD_SELECTED_IDX === 6;
+  if (isAI && !BOD_AI_LAYOUT) { toast('Espera a que termine el análisis IA', 'warn'); return; }
+
+  const btn = document.getElementById('bod-use-btn');
+  btn.disabled = true;
+  btn.innerHTML = `<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full spin"></div> Preparando...`;
+
+  try {
+    if (isAI) {
+      // Layout y sesión ya están listos del análisis en segundo plano
+      BOD_LAYOUT = BOD_AI_LAYOUT;
+      drawBodCanvas(BOD_LAYOUT);
+      document.getElementById('bod-info-title').textContent = '✦ IA — Orden personalizado';
+      document.getElementById('bod-info-meta').textContent =
+        `${BOD_LAYOUT.canvas_width.toLocaleString()} × ${BOD_LAYOUT.canvas_height.toLocaleString()} px · ` +
+        `${BOD_LAYOUT.items.length} productos · ${BOD_LAYOUT.rows_count} fila${BOD_LAYOUT.rows_count!==1?'s':''}`;
+      showBOD('bod-preview');
+      return;
+    }
+
+    // Estrategia clásica — sesión ya existe si el upload de IA completó
+    const strategy = STRATEGIES[BOD_SELECTED_IDX];
+
+    if (!BOD_SESSION) {
+      // Upload de seguridad (si el background upload falló)
+      showBOD('bod-loading');
+      document.getElementById('bod-loading-msg').textContent = 'Subiendo imágenes...';
+      const fd = new FormData();
+      BOD_FILES.forEach(item => fd.append('products', item.file, item.file.name));
+      if (BOD_BG_FILE) fd.append('background', BOD_BG_FILE, BOD_BG_FILE.name);
+      const upRes = await fetch('/api/bodegon/upload', {method:'POST', body:fd});
+      const upData = await upRes.json();
+      if (!upRes.ok) throw new Error(upData.detail);
+      BOD_SESSION = upData.session_id;
+    }
+
     document.getElementById('bod-loading-msg').textContent = 'Calculando layout final...';
+    showBOD('bod-loading');
     const cfg = buildConfig(strategy.id);
     const compRes = await fetch('/api/bodegon/compute', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({session_id:BOD_SESSION, config:cfg}),
+      body: JSON.stringify({session_id: BOD_SESSION, config: cfg}),
     });
     const layout = await compRes.json();
     if (!compRes.ok) throw new Error(layout.detail||'Error calculando');
     BOD_LAYOUT = layout;
 
-    // Preview grande
     drawBodCanvas(layout);
     document.getElementById('bod-info-title').textContent = `${strategy.label} — ${strategy.desc}`;
     document.getElementById('bod-info-meta').textContent =
@@ -897,8 +1003,8 @@ async function bodUseProposal() {
     showBOD('bod-proposals');
     toast(e.message);
   } finally {
-    btn.disabled=false;
-    btn.innerHTML=`<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Usar esta propuesta`;
+    btn.disabled = false;
+    btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Usar esta propuesta`;
   }
 }
 
@@ -975,6 +1081,7 @@ async function bodRender() {
 // ── Reset ───────────────────────────────────────────────────────────────────
 function bodReset() {
   BOD_SESSION=null; BOD_LAYOUT=null; BOD_SELECTED_IDX=0;
+  BOD_AI_LAYOUT=null; BOD_AI_REASONING='';
   BOD_FILES.forEach(f=>URL.revokeObjectURL(f.url));
   BOD_FILES=[]; BOD_BG_FILE=null;
   document.getElementById('bod-thumb-grid').innerHTML='';
