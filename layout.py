@@ -90,7 +90,7 @@ def compute_layout(
     rows_count: int = 0,
     base_height: int = 760,
     item_gap: int = 40,
-    internal_padding: int = 120,
+    internal_padding: int = 0,  # Siempre 0 — canvas exacto al contenido
     max_vertical_boost: float = 1.20,
     aspect_w: int = 0,
     aspect_h: int = 0,
@@ -98,6 +98,9 @@ def compute_layout(
     n = len(images)
     if n == 0:
         raise ValueError("No se proporcionaron imágenes")
+
+    # Forzar padding = 0 para canvas exacto
+    internal_padding = 0
 
     # Uniforme y dinámico modifican el boost
     if sort_strategy == 'uniforme':

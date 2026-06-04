@@ -702,7 +702,7 @@ function computeLayoutJS(images, cfg, strategy) {
   const n = images.length;
   if (!n) return null;
   const effCfg = strategy.modifyCfg({...cfg});
-  let {rows_count=0, base_height=760, item_gap=40, internal_padding=120,
+  let {rows_count=0, base_height=760, item_gap=40, internal_padding=0,  // Siempre 0
        max_vertical_boost=1.20, aspect_w=0, aspect_h=0} = effCfg;
   if (!rows_count || !aspect_w) {
     if      (n<=3)  { rows_count=rows_count||1; aspect_w=aspect_w||5;  aspect_h=aspect_h||3; }
