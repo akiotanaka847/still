@@ -732,12 +732,13 @@ function computeLayoutJS(images, cfg, strategy) {
   const prows = strategy.postProcess(rows);
   const widest=Math.max(...prows.map(r=>r.width));
   const totalH=prows.reduce((s,r)=>s+r.height,0);
-  let docH=totalH+internal_padding*2, docW=docH*(aspect_w/aspect_h);
-  if(widest+internal_padding*2>docW) docW=widest+internal_padding*2;
-  docW=Math.min(Math.ceil(docW),30000); docH=Math.min(Math.ceil(docH),30000);
-  const gx=(docW-widest)/2; let cy=internal_padding; const out=[];
+  // Canvas exacto al contenido — sin padding ni aspecto forzado
+  let docW=Math.ceil(widest-item_gap);  // Último gap no cuenta
+  let docH=Math.ceil(totalH);
+  docW=Math.min(docW,30000); docH=Math.min(docH,30000);
+  const gx=0; let cy=0; const out=[];
   for(const row of prows){
-    const rx=(widest-row.width)/2; let cx=gx+rx;
+    const rx=0; let cx=gx+rx;
     for(const item of row.items){
       out.push({...item, x:Math.round(cx), y:Math.round(cy+(row.height-item.sh))});
       cx+=item.sw+item_gap;

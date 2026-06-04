@@ -151,20 +151,21 @@ def compute_layout(
     if sort_strategy == 'centrado':
         rows = _center_in_rows(rows)
 
-    # Tamaño del canvas
+    # Tamaño del canvas — exacto al contenido, sin padding
     widest = max(r.width for r in rows)
     total_h = sum(r.height for r in rows)
-    doc_h = total_h + internal_padding * 2
-    doc_w = doc_h * (aspect_w / aspect_h)
-    min_w = widest + internal_padding * 2
-    if min_w > doc_w:
-        doc_w = min_w
-    doc_w = min(math.ceil(doc_w), 30000)
-    doc_h = min(math.ceil(doc_h), 30000)
 
-    # Calcular posiciones
-    gx = (doc_w - widest) / 2
-    cy = float(internal_padding)
+    # Canvas sin padding — tamaño exacto del contenido
+    # Restar el gap final de cada fila (no debe ocupar ancho)
+    doc_w = math.ceil(widest - item_gap)  # Último gap no cuenta
+    doc_h = math.ceil(total_h)
+
+    doc_w = min(doc_w, 30000)
+    doc_h = min(doc_h, 30000)
+
+    # Calcular posiciones — sin offset, todo pegado al origen
+    gx = 0.0  # Sin centrado horizontal
+    cy = 0.0  # Sin padding vertical
     out = []
     for row in rows:
         rx = (widest - row.width) / 2
