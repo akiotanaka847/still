@@ -1,6 +1,8 @@
 sessions/
 .venv/
 venv/
+users.json
+.secret
 __pycache__/
 *.pyc
 .env

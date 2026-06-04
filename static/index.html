@@ -45,29 +45,165 @@
   .nav-item { display:flex; align-items:center; gap:.6rem; width:100%; padding:.55rem .75rem;
     border-radius:.65rem; font-size:.82rem; font-weight:500; color:#64748b; cursor:pointer;
     transition:background .15s,color .15s; text-align:left; }
-  .nav-item:hover { background:#f1f5f9; color:#0f172a; }
+  .nav-ico { width:18px; height:18px; flex-shrink:0; opacity:.9; }
+  .nav-item:hover { background:rgba(255,255,255,.07); color:#f1f5f9; }
   .nav-item-active, .nav-item-active:hover {
-    background:linear-gradient(135deg,#eef2ff,#f3e8ff); color:#5B8CF7; font-weight:600; }
-  .nav-item .soon { margin-left:auto; font-size:.6rem; font-weight:600; color:#d97706;
-    background:#fffbeb; border:1px solid #fde68a; padding:.05rem .35rem; border-radius:9999px; }
+    background:rgba(129,140,248,.16); color:#c7d2fe; font-weight:600;
+    box-shadow:inset 0 0 0 1px rgba(129,140,248,.3); }
+  .nav-item .soon { margin-left:auto; font-size:.6rem; font-weight:600; color:#fcd34d;
+    background:rgba(245,158,11,.12); border:1px solid rgba(252,211,77,.3); padding:.05rem .35rem; border-radius:9999px; }
 
   ::-webkit-scrollbar{width:5px;}
   ::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:3px;}
 
-  /* Fondo de cuadritos (transparencia) para previews uniformes */
+  /* ── Landing 2030 ── */
+  @keyframes aurora { 0%,100%{transform:translate(0,0) scale(1);} 33%{transform:translate(8%,-6%) scale(1.18);} 66%{transform:translate(-7%,9%) scale(.92);} }
+  @keyframes floaty { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-12px);} }
+  @keyframes shimmer { to { background-position:200% center; } }
+  .aurora { position:absolute; border-radius:9999px; filter:blur(70px); opacity:.6; pointer-events:none; animation:aurora 16s ease-in-out infinite; }
+  .floaty { animation:floaty 7s ease-in-out infinite; }
+  .glass  { background:rgba(255,255,255,.07); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border:1px solid rgba(255,255,255,.14); }
+  .glow-btn { transition:box-shadow .3s,transform .2s; }
+  .glow-btn:hover { box-shadow:0 12px 46px rgba(168,85,247,.45); transform:translateY(-2px); }
+  .grid-fade { background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px); background-size:42px 42px; -webkit-mask-image:radial-gradient(ellipse 80% 80% at 50% 0%,#000 40%,transparent 100%); mask-image:radial-gradient(ellipse 80% 80% at 50% 0%,#000 40%,transparent 100%); }
+  .shine { background:linear-gradient(90deg,#fff,#c7d2fe,#e9d5ff,#a5f3fc,#fff); background-size:200% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; animation:shimmer 5s linear infinite; }
+
+  /* Fondo de cuadritos (transparencia) para previews uniformes — oscuro */
   .checker-bg {
     background-image:
-      linear-gradient(45deg,#eceef1 25%,transparent 25%),
-      linear-gradient(-45deg,#eceef1 25%,transparent 25%),
-      linear-gradient(45deg,transparent 75%,#eceef1 75%),
-      linear-gradient(-45deg,transparent 75%,#eceef1 75%);
+      linear-gradient(45deg,#222a3d 25%,transparent 25%),
+      linear-gradient(-45deg,#222a3d 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#222a3d 75%),
+      linear-gradient(-45deg,transparent 75%,#222a3d 75%);
     background-size:14px 14px;
     background-position:0 0,0 7px,7px -7px,-7px 0;
-    background-color:#fff;
+    background-color:#171d2e;
   }
+
+  /* ════════ TEMA OSCURO 2030 (remapeo de utilidades Tailwind) ════════ */
+  body.theme-2030 { background:#06080f; color:#e2e8f0; }
+
+  /* Superficies */
+  .theme-2030 .bg-white { background:rgba(255,255,255,.045) !important; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
+  .theme-2030 .bg-slate-50,
+  .theme-2030 .bg-gray-50 { background:rgba(255,255,255,.04) !important; }
+  .theme-2030 .bg-gray-100 { background:rgba(255,255,255,.08) !important; }
+  .theme-2030 .bg-gray-300 { background:rgba(255,255,255,.22) !important; }
+  .theme-2030 .bg-indigo-50 { background:rgba(99,102,241,.16) !important; }
+  .theme-2030 .bg-purple-50,
+  .theme-2030 .bg-purple-100 { background:rgba(168,85,247,.16) !important; }
+  .theme-2030 .bg-cyan-50 { background:rgba(34,211,238,.14) !important; }
+  .theme-2030 .bg-emerald-100 { background:rgba(16,185,129,.16) !important; }
+  .theme-2030 .bg-amber-50 { background:rgba(245,158,11,.12) !important; }
+  .theme-2030 .bg-red-50 { background:rgba(239,68,68,.13) !important; }
+  /* Tintes de selección de las tarjetas de propuesta (por color de estrategia) */
+  .theme-2030 .bg-emerald-50 { background:rgba(16,185,129,.16) !important; }
+  .theme-2030 .bg-violet-50  { background:rgba(139,92,246,.16) !important; }
+  .theme-2030 .bg-sky-50     { background:rgba(56,189,248,.16) !important; }
+  .theme-2030 .bg-rose-50    { background:rgba(244,63,94,.16) !important; }
+  .theme-2030 .bg-teal-50    { background:rgba(20,184,166,.16) !important; }
+  .theme-2030 .bg-fuchsia-50 { background:rgba(217,70,239,.16) !important; }
+  .theme-2030 .bg-amber-100  { background:rgba(245,158,11,.18) !important; }
+
+  /* Texto */
+  .theme-2030 .text-gray-900 { color:#f8fafc !important; }
+  .theme-2030 .text-gray-800 { color:#e7ecf3 !important; }
+  .theme-2030 .text-gray-700,
+  .theme-2030 .text-gray-600 { color:#cbd5e1 !important; }
+  .theme-2030 .text-gray-500 { color:#9aa6b8 !important; }
+  .theme-2030 .text-gray-400 { color:#7c889c !important; }
+  .theme-2030 .text-indigo-600,
+  .theme-2030 .text-indigo-400 { color:#a5b4fc !important; }
+  .theme-2030 .text-purple-800,
+  .theme-2030 .text-purple-500,
+  .theme-2030 .text-purple-400,
+  .theme-2030 .text-purple-600 { color:#d8b4fe !important; }
+  .theme-2030 .text-emerald-600 { color:#34d399 !important; }
+  .theme-2030 .text-amber-700,
+  .theme-2030 .text-amber-600 { color:#fcd34d !important; }
+  .theme-2030 .text-red-700,
+  .theme-2030 .text-red-500,
+  .theme-2030 .text-red-400 { color:#fca5a5 !important; }
+
+  /* Bordes */
+  .theme-2030 .border-gray-100 { border-color:rgba(255,255,255,.07) !important; }
+  .theme-2030 .border-gray-200 { border-color:rgba(255,255,255,.11) !important; }
+  .theme-2030 .border-indigo-200 { border-color:rgba(129,140,248,.45) !important; }
+  .theme-2030 .border-purple-100,
+  .theme-2030 .border-purple-200 { border-color:rgba(192,132,252,.4) !important; }
+  .theme-2030 .border-amber-200 { border-color:rgba(252,211,77,.3) !important; }
+  .theme-2030 .border-red-200 { border-color:rgba(252,165,165,.35) !important; }
+
+  /* Hover backgrounds (evita destellos claros) */
+  .theme-2030 .hover\:bg-gray-50:hover { background:rgba(255,255,255,.06) !important; }
+  .theme-2030 .hover\:bg-indigo-50:hover { background:rgba(99,102,241,.16) !important; }
+  .theme-2030 .hover\:bg-red-50:hover { background:rgba(239,68,68,.14) !important; }
+
+  /* Formularios */
+  .theme-2030 select, .theme-2030 input[type="range"] { color:#e2e8f0; }
+  .theme-2030 select option { background:#0d1322; color:#e2e8f0; }
+
+  /* Sombra de tarjeta al hover (en oscuro) */
+  .theme-2030 .card:hover { box-shadow:0 8px 30px rgba(0,0,0,.5); }
 </style>
 </head>
-<body class="bg-slate-50 min-h-screen">
+<body class="theme-2030 min-h-screen">
+
+<!-- Fondo aurora global (detrás de toda la app) -->
+<div class="fixed inset-0 -z-10 overflow-hidden pointer-events-none" style="background:radial-gradient(130% 130% at 0% 0%,#101733 0%,#0a0e1f 55%,#06080f 100%);">
+  <div class="aurora w-[28rem] h-[28rem]" style="top:-120px;left:-100px;background:#5B8CF7;opacity:.35;"></div>
+  <div class="aurora w-[32rem] h-[32rem]" style="bottom:-160px;right:-120px;background:#A855F7;opacity:.32;animation-delay:-6s;"></div>
+  <div class="aurora w-[22rem] h-[22rem]" style="top:45%;left:60%;background:#22d3ee;opacity:.18;animation-delay:-10s;"></div>
+</div>
+
+<!-- ═══════════ LOGIN ═══════════ -->
+<div id="login-overlay" class="fixed inset-0 z-[100] flex items-center justify-center px-4 overflow-hidden"
+     style="display:flex; background:radial-gradient(130% 130% at 0% 0%,#101733 0%,#0a0e1f 55%,#06080f 100%);">
+  <div class="aurora w-96 h-96" style="top:-120px;left:-80px;background:#5B8CF7;opacity:.4;"></div>
+  <div class="aurora w-[30rem] h-[30rem]" style="bottom:-160px;right:-120px;background:#A855F7;opacity:.35;animation-delay:-6s;"></div>
+  <div class="absolute inset-0 grid-fade"></div>
+
+  <div class="glass rounded-3xl p-8 w-full max-w-sm relative text-white shadow-2xl">
+    <div class="flex items-center gap-2.5 mb-6">
+      <div class="w-9 h-9 brand-gradient rounded-xl flex items-center justify-center shadow-lg">
+        <span class="text-white font-black leading-none">S</span>
+      </div>
+      <div class="flex items-baseline gap-0.5">
+        <span class="font-bold text-white text-base">Still</span>
+        <span class="font-black text-base brand-text">AI</span>
+      </div>
+    </div>
+
+    <h2 id="login-title" class="text-2xl font-black tracking-tight">Bienvenido</h2>
+    <p id="login-sub" class="text-sm text-slate-400 mt-1 mb-6">Inicia sesión para continuar</p>
+
+    <form onsubmit="authSubmit(event)" class="space-y-3.5">
+      <div>
+        <label class="block text-xs font-medium text-slate-300 mb-1.5">Usuario</label>
+        <input id="login-user" type="text" autocomplete="username" autocapitalize="none" spellcheck="false"
+               class="w-full bg-white/5 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-white/30 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
+               placeholder="tu_usuario">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-300 mb-1.5">Contraseña</label>
+        <input id="login-pass" type="password" autocomplete="current-password"
+               class="w-full bg-white/5 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-white/30 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
+               placeholder="••••••••">
+      </div>
+      <p id="login-error" class="hidden text-xs text-red-300 bg-red-500/10 border border-red-400/20 rounded-lg px-3 py-2"></p>
+      <button id="login-btn" type="submit"
+              class="glow-btn w-full brand-gradient text-white font-semibold py-3 rounded-xl mt-1 flex items-center justify-center gap-2">
+        Iniciar sesión
+      </button>
+    </form>
+
+    <p id="login-toggle" class="text-xs text-slate-400 text-center mt-5">
+      ¿No tienes cuenta? <button type="button" onclick="authToggle()" class="text-indigo-300 font-semibold hover:underline">Crear una</button>
+    </p>
+  </div>
+
+  <p class="absolute bottom-5 text-[11px] text-slate-500">StillAI · Still perfect. Every time.</p>
+</div>
 
 <div class="flex min-h-screen">
 
@@ -85,13 +221,34 @@
     </div>
     <!-- Menú -->
     <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-      <button onclick="toast('Próximamente','warn')" class="nav-item">🏠 <span>Inicio</span></button>
-      <button id="nav-bodegon" onclick="switchTab('bodegon')" class="nav-item nav-item-active">🖼️ <span>Bodegón</span></button>
-      <button id="nav-batch" onclick="switchTab('batch')" class="nav-item">📁 <span>Por lotes</span></button>
-      <button onclick="toast('Próximamente','warn')" class="nav-item">🗂️ <span>Proyectos</span> <span class="soon">Pronto</span></button>
-      <button onclick="toast('Próximamente','warn')" class="nav-item">▦ <span>Plantillas</span> <span class="soon">Pronto</span></button>
-      <button onclick="toast('Próximamente','warn')" class="nav-item">🎨 <span>Estilos</span> <span class="soon">Pronto</span></button>
-      <button onclick="toast('Próximamente','warn')" class="nav-item">⚙️ <span>Ajustes</span> <span class="soon">Pronto</span></button>
+      <button id="nav-home" onclick="switchTab('home')" class="nav-item nav-item-active">
+        <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955a1.5 1.5 0 012.122 0L22.5 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75"/></svg>
+        <span>Inicio</span>
+      </button>
+      <button id="nav-bodegon" onclick="switchTab('bodegon')" class="nav-item">
+        <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
+        <span>Bodegón</span>
+      </button>
+      <button id="nav-batch" onclick="switchTab('batch')" class="nav-item">
+        <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 6.878V6a2.25 2.25 0 012.25-2.25h7.5A2.25 2.25 0 0118 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 004.5 9v.878m13.5-3A2.25 2.25 0 0119.5 9v.878m0 0a2.246 2.246 0 00-.75-.128H5.25c-.263 0-.515.045-.75.128m15 0A2.25 2.25 0 0121 12v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6c0-.98.626-1.813 1.5-2.122"/></svg>
+        <span>Por lotes</span>
+      </button>
+      <button onclick="toast('Próximamente','warn')" class="nav-item">
+        <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"/></svg>
+        <span>Proyectos</span> <span class="soon">Pronto</span>
+      </button>
+      <button onclick="toast('Próximamente','warn')" class="nav-item">
+        <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
+        <span>Plantillas</span> <span class="soon">Pronto</span>
+      </button>
+      <button onclick="toast('Próximamente','warn')" class="nav-item">
+        <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.098 19.902a3.75 3.75 0 005.304 0l6.401-6.402M6.75 21A3.75 3.75 0 013 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 003.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125h-4.072M10.5 8.197l2.88-2.88c.438-.439 1.15-.439 1.59 0l3.712 3.713c.44.44.44 1.152 0 1.59l-2.879 2.88"/></svg>
+        <span>Estilos</span> <span class="soon">Pronto</span>
+      </button>
+      <button onclick="toast('Próximamente','warn')" class="nav-item">
+        <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <span>Ajustes</span> <span class="soon">Pronto</span>
+      </button>
     </nav>
     <!-- Plan Pro -->
     <div class="p-3 flex-shrink-0">
@@ -134,12 +291,117 @@
         <div id="badge-no-psapi" class="hidden">
           <span class="text-xs bg-red-50 text-red-500 border border-red-200 px-2 py-1 rounded-full">⚠ psapi</span>
         </div>
-        <div title="Cuenta (próximamente)"
-             class="w-8 h-8 rounded-full brand-gradient flex items-center justify-center text-white text-[11px] font-bold ring-2 ring-gray-100 cursor-default select-none">SA</div>
+        <span id="topbar-username" class="hidden sm:block text-xs font-medium text-gray-300"></span>
+        <div id="user-avatar"
+             class="w-8 h-8 rounded-full brand-gradient flex items-center justify-center text-white text-[11px] font-bold ring-2 ring-white/10 select-none">·</div>
+        <button onclick="authLogout()" title="Cerrar sesión"
+                class="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l3 3m0 0l-3 3m3-3H2.25"/></svg>
+        </button>
       </div>
     </header>
 
     <main class="flex-1 min-w-0 px-6 py-6">
+
+<!-- ═══════════════════════════════════════════════════════
+     INICIO — Landing 2030
+═══════════════════════════════════════════════════════ -->
+<div id="panel-home" class="hidden">
+
+  <!-- HERO -->
+  <section class="relative overflow-hidden rounded-3xl text-white px-8 py-14 sm:px-14 sm:py-20 mb-7"
+           style="background:radial-gradient(120% 120% at 0% 0%,#131a33 0%,#0a0e1f 55%,#070a16 100%);">
+    <div class="aurora w-72 h-72" style="top:-50px;left:-40px;background:#5B8CF7;"></div>
+    <div class="aurora w-96 h-96" style="bottom:-90px;right:-40px;background:#A855F7;animation-delay:-5s;"></div>
+    <div class="aurora w-60 h-60" style="top:35%;left:58%;background:#22d3ee;opacity:.35;animation-delay:-9s;"></div>
+    <div class="absolute inset-0 grid-fade"></div>
+
+    <div class="relative max-w-3xl">
+      <span class="inline-flex items-center gap-2 text-xs font-semibold text-indigo-200 glass px-3 py-1.5 rounded-full mb-6">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        Composición de producto con IA
+      </span>
+      <h1 class="text-4xl sm:text-6xl font-black leading-[1.04] tracking-tight mb-5">
+        Bodegones que <span class="shine">venden</span>,<br>en segundos.
+      </h1>
+      <p class="text-base sm:text-lg text-slate-300/90 max-w-2xl mb-9">
+        Sube tus productos y deja que la IA los ordene, los escale a su
+        <strong class="text-white font-semibold">tamaño real</strong> y los componga con fondo
+        transparente — listos para tu tienda, catálogo o redes.
+      </p>
+
+      <div class="flex flex-wrap gap-3 mb-9">
+        <button onclick="switchTab('bodegon')"
+                class="glow-btn brand-gradient text-white font-semibold px-6 py-3.5 rounded-2xl flex items-center gap-2 shadow-lg">
+          🖼️ Crear un bodegón
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        </button>
+        <button onclick="switchTab('batch')"
+                class="glow-btn glass text-white font-semibold px-6 py-3.5 rounded-2xl flex items-center gap-2">
+          📁 Generar por lotes
+        </button>
+      </div>
+
+      <div class="flex flex-wrap gap-x-6 gap-y-2 text-xs text-slate-400">
+        <span>⚡ Groq · Gemini · Claude</span>
+        <span>🪄 Fondo transparente al ras</span>
+        <span>📐 Tamaño real por producto</span>
+        <span>🌑 Sombras y profundidad</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- CÓMO FUNCIONA / capacidades -->
+  <div class="grid sm:grid-cols-3 gap-4 mb-8">
+    <div class="bg-white border border-gray-200 rounded-2xl p-5 card">
+      <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-lg mb-3">🧠</div>
+      <h3 class="font-bold text-gray-900 text-sm">La IA ordena por ti</h3>
+      <p class="text-xs text-gray-500 mt-1.5 leading-relaxed">Analiza color, contraste y peso visual, elige el producto héroe y arma la mejor composición.</p>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-2xl p-5 card">
+      <div class="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-lg mb-3">📐</div>
+      <h3 class="font-bold text-gray-900 text-sm">Tamaños reales</h3>
+      <p class="text-xs text-gray-500 mt-1.5 leading-relaxed">Una botella de 1L no se ve igual que un serum de 30ml. La IA respeta la proporción real de cada producto.</p>
+    </div>
+    <div class="bg-white border border-gray-200 rounded-2xl p-5 card">
+      <div class="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center text-lg mb-3">🌗</div>
+      <h3 class="font-bold text-gray-900 text-sm">Profundidad y sombras</h3>
+      <p class="text-xs text-gray-500 mt-1.5 leading-relaxed">Héroe al frente, solapamiento y sombra de contacto para que tus productos se vean reales, no flotando.</p>
+    </div>
+  </div>
+
+  <!-- MÓDULOS -->
+  <p class="text-xs font-semibold text-gray-500 mb-3">Elige tu flujo</p>
+  <div class="grid md:grid-cols-2 gap-5">
+    <button onclick="switchTab('bodegon')"
+            class="group text-left bg-white border border-gray-200 rounded-2xl p-6 card hover:border-indigo-300 transition-all relative overflow-hidden">
+      <div class="absolute -right-8 -top-8 w-28 h-28 rounded-full bg-indigo-50 opacity-70 group-hover:scale-125 transition-transform"></div>
+      <div class="relative">
+        <div class="w-12 h-12 rounded-2xl brand-gradient flex items-center justify-center text-white text-xl mb-4 shadow-lg">🖼️</div>
+        <h3 class="font-bold text-gray-900 text-lg">Bodegón individual</h3>
+        <p class="text-sm text-gray-500 mt-1.5 mb-4 max-w-sm">Sube tus productos, compara <strong class="text-gray-700">10 estilos + 3 propuestas de IA</strong>, previsualiza y descarga el PNG con fondo transparente.</p>
+        <span class="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 group-hover:gap-2.5 transition-all">
+          Entrar <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        </span>
+      </div>
+    </button>
+
+    <button onclick="switchTab('batch')"
+            class="group text-left bg-white border border-gray-200 rounded-2xl p-6 card hover:border-purple-300 transition-all relative overflow-hidden">
+      <div class="absolute -right-8 -top-8 w-28 h-28 rounded-full bg-purple-50 opacity-70 group-hover:scale-125 transition-transform"></div>
+      <div class="relative">
+        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-white text-xl mb-4 shadow-lg" style="background:linear-gradient(135deg,#A855F7,#6366f1);">📁</div>
+        <h3 class="font-bold text-gray-900 text-lg">Generación por lotes</h3>
+        <p class="text-sm text-gray-500 mt-1.5 mb-4 max-w-sm">Sube carpetas: <strong class="text-gray-700">cada subcarpeta = un bodegón</strong>. Elige el modo, genera cientos y descarga todo en un ZIP.</p>
+        <span class="inline-flex items-center gap-1.5 text-sm font-semibold text-purple-600 group-hover:gap-2.5 transition-all">
+          Entrar <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        </span>
+      </div>
+    </button>
+  </div>
+
+  <p class="text-center text-[11px] text-gray-400 mt-8">StillAI · Still perfect. Every time.</p>
+</div><!-- /panel-home -->
 
 <!-- ═══════════════════════════════════════════════════════
      TAB 1 — SMART OBJECT REPLACER
@@ -648,18 +910,19 @@
 // TABS
 // ═══════════════════════════════════════════════════════
 function switchTab(name) {
-  ['so', 'bodegon', 'batch'].forEach(p => {
+  ['so', 'bodegon', 'batch', 'home'].forEach(p => {
     const el = document.getElementById('panel-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
   });
   // Estado activo del menú lateral
-  const navB = document.getElementById('nav-bodegon');
-  const navL = document.getElementById('nav-batch');
-  if (navB) navB.classList.toggle('nav-item-active', name === 'bodegon');
-  if (navL) navL.classList.toggle('nav-item-active', name === 'batch');
+  [['nav-home', 'home'], ['nav-bodegon', 'bodegon'], ['nav-batch', 'batch']].forEach(([id, n]) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('nav-item-active', name === n);
+  });
   // Tabs legacy (ocultos) para compatibilidad
   document.getElementById('tab-so').classList.toggle('active', name === 'so');
   document.getElementById('tab-bodegon').classList.toggle('active', name === 'bodegon');
+  window.scrollTo({ top: 0 });
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1423,8 +1686,8 @@ async function bodUseProposal() {
 function checkerPattern() {
   const c=document.createElement('canvas'); c.width=c.height=10;
   const ctx=c.getContext('2d');
-  ctx.fillStyle='#fff'; ctx.fillRect(0,0,10,10);
-  ctx.fillStyle='#e5e7eb'; ctx.fillRect(0,0,5,5); ctx.fillRect(5,5,5,5);
+  ctx.fillStyle='#171d2e'; ctx.fillRect(0,0,10,10);
+  ctx.fillStyle='#222a3d'; ctx.fillRect(0,0,5,5); ctx.fillRect(5,5,5,5);
   return c;
 }
 
@@ -1691,14 +1954,77 @@ async function batchDownloadAll() {
 }
 
 // ═══════════════════════════════════════════════════════
+// AUTENTICACIÓN
+// ═══════════════════════════════════════════════════════
+let LOGIN_MODE = 'login';
+
+function authErr(msg) {
+  const e = document.getElementById('login-error');
+  e.textContent = msg || '';
+  e.classList.toggle('hidden', !msg);
+}
+function authToggle() {
+  LOGIN_MODE = LOGIN_MODE === 'login' ? 'register' : 'login';
+  const reg = LOGIN_MODE === 'register';
+  document.getElementById('login-title').textContent = reg ? 'Crea tu cuenta' : 'Bienvenido';
+  document.getElementById('login-sub').textContent = reg ? 'Regístrate para empezar' : 'Inicia sesión para continuar';
+  document.getElementById('login-btn').textContent = reg ? 'Crear cuenta' : 'Iniciar sesión';
+  document.getElementById('login-toggle').innerHTML = reg
+    ? '¿Ya tienes cuenta? <button type="button" onclick="authToggle()" class="text-indigo-300 font-semibold hover:underline">Inicia sesión</button>'
+    : '¿No tienes cuenta? <button type="button" onclick="authToggle()" class="text-indigo-300 font-semibold hover:underline">Crear una</button>';
+  authErr('');
+}
+function showLogin() { document.getElementById('login-overlay').style.display = 'flex'; }
+function hideLogin(username) {
+  document.getElementById('login-overlay').style.display = 'none';
+  if (username) {
+    document.getElementById('topbar-username').textContent = username;
+    document.getElementById('user-avatar').textContent = username.slice(0, 2).toUpperCase();
+  }
+}
+async function authSubmit(ev) {
+  ev.preventDefault();
+  const username = document.getElementById('login-user').value.trim();
+  const password = document.getElementById('login-pass').value;
+  if (!username || !password) { authErr('Completa usuario y contraseña'); return; }
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; const old = btn.textContent;
+  btn.innerHTML = '<div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full spin"></div>';
+  try {
+    const ep = LOGIN_MODE === 'register' ? '/api/auth/register' : '/api/auth/login';
+    const r = await fetch(ep, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ username, password }) });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Error');
+    document.getElementById('login-pass').value = '';
+    authErr('');
+    hideLogin(d.username);
+  } catch (e) { authErr(e.message); }
+  finally { btn.disabled = false; btn.textContent = old; }
+}
+async function authLogout() {
+  try { await fetch('/api/auth/logout', { method: 'POST' }); } catch (e) {}
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  showLogin();
+}
+async function checkAuth() {
+  try {
+    const r = await fetch('/api/auth/me');
+    if (r.ok) { hideLogin((await r.json()).username); }
+    else showLogin();
+  } catch (e) { showLogin(); }
+}
+
+// ═══════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════
 fetch('/api/status').then(r=>r.json()).then(d=>{
   if(!d.psapi_available) document.getElementById('badge-no-psapi').classList.remove('hidden');
 }).catch(()=>{});
 
-// Evolutivo 3: Bodegón es la experiencia principal
-switchTab('bodegon');
+switchTab('home');   // panel por defecto
+checkAuth();         // muestra/oculta el login según la sesión
 </script>
 </body>
 </html>

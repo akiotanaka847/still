@@ -3,9 +3,12 @@ PSD Smart Object Replacer — FastAPI backend
 Módulo 1: Reemplaza SmartObjectLayers en archivos PSD/PSB.
 Módulo 2: Generador de bodegones con layout automático + propuesta IA.
 """
+import hashlib
+import hmac
 import json
 import os
 import re
+import secrets
 import shutil
 import threading
 import time
@@ -19,10 +22,11 @@ import uuid
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 
 from layout import compute_layout
 from renderer import get_image_dimensions, render_png
@@ -44,6 +48,50 @@ SESSIONS_DIR = Path("sessions")
 STATIC_DIR = Path("static")
 SESSIONS_DIR.mkdir(exist_ok=True)
 STATIC_DIR.mkdir(exist_ok=True)
+
+
+# ─── Autenticación ────────────────────────────────────────────────────────────
+USERS_FILE = Path("users.json")
+SECRET_FILE = Path(".secret")
+
+# Prefijos de rutas que requieren sesión iniciada
+PROTECTED_PREFIXES = ("/api/bodegon", "/api/batch", "/api/analyze", "/api/process", "/api/download")
+
+
+def _get_secret() -> str:
+    if SECRET_FILE.exists():
+        return SECRET_FILE.read_text(encoding="utf-8").strip()
+    s = secrets.token_hex(32)
+    SECRET_FILE.write_text(s, encoding="utf-8")
+    return s
+
+
+def _load_users() -> dict:
+    if USERS_FILE.exists():
+        try:
+            return json.loads(USERS_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+    return {}
+
+
+def _save_users(users: dict) -> None:
+    USERS_FILE.write_text(json.dumps(users, indent=2), encoding="utf-8")
+
+
+def _hash_pw(pw: str, salt: bytes = None) -> str:
+    salt = salt or secrets.token_bytes(16)
+    dk = hashlib.pbkdf2_hmac("sha256", pw.encode(), salt, 200_000)
+    return f"{salt.hex()}:{dk.hex()}"
+
+
+def _verify_pw(pw: str, stored: str) -> bool:
+    try:
+        salt_hex, dk_hex = stored.split(":")
+        dk = hashlib.pbkdf2_hmac("sha256", pw.encode(), bytes.fromhex(salt_hex), 200_000)
+        return hmac.compare_digest(dk.hex(), dk_hex)
+    except Exception:
+        return False
 
 
 # ─── Helpers internos ─────────────────────────────────────────────────────────
@@ -142,6 +190,24 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def auth_guard(request: Request, call_next):
+    """Bloquea las rutas protegidas si no hay sesión iniciada."""
+    if request.url.path.startswith(PROTECTED_PREFIXES) and not request.session.get("user"):
+        return JSONResponse({"detail": "Inicia sesión para continuar"}, status_code=401)
+    return await call_next(request)
+
+
+# La sesión (cookie firmada) debe envolver al guard → se agrega de último (outermost)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=_get_secret(),
+    same_site="lax",
+    https_only=False,
+    max_age=60 * 60 * 24 * 7,   # 7 días
+)
+
+
 # ─── Rutas ────────────────────────────────────────────────────────────────────
 @app.get("/", response_class=HTMLResponse)
 async def frontend() -> HTMLResponse:
@@ -154,6 +220,49 @@ async def frontend() -> HTMLResponse:
 @app.get("/api/status")
 async def status():
     return {"psapi_available": PSAPI_AVAILABLE}
+
+
+# ─── Auth ─────────────────────────────────────────────────────────────────────
+@app.post("/api/auth/register")
+async def auth_register(request: Request, body: dict):
+    u = (body.get("username") or "").strip().lower()
+    p = body.get("password") or ""
+    if len(u) < 3 or len(p) < 4:
+        raise HTTPException(400, "Usuario (mín 3) y contraseña (mín 4 caracteres) requeridos")
+    if not re.match(r"^[a-z0-9_.\-]+$", u):
+        raise HTTPException(400, "Usuario inválido (usa letras, números, . _ -)")
+    users = _load_users()
+    if u in users:
+        raise HTTPException(409, "Ese usuario ya existe")
+    users[u] = {"password": _hash_pw(p), "created": time.time()}
+    _save_users(users)
+    request.session["user"] = u          # inicia sesión automáticamente
+    return {"username": u}
+
+
+@app.post("/api/auth/login")
+async def auth_login(request: Request, body: dict):
+    u = (body.get("username") or "").strip().lower()
+    p = body.get("password") or ""
+    users = _load_users()
+    if u not in users or not _verify_pw(p, users[u]["password"]):
+        raise HTTPException(401, "Usuario o contraseña incorrectos")
+    request.session["user"] = u
+    return {"username": u}
+
+
+@app.post("/api/auth/logout")
+async def auth_logout(request: Request):
+    request.session.clear()
+    return {"ok": True}
+
+
+@app.get("/api/auth/me")
+async def auth_me(request: Request):
+    u = request.session.get("user")
+    if not u:
+        raise HTTPException(401, "No autenticado")
+    return {"username": u}
 
 
 @app.post("/api/analyze")
