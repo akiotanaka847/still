@@ -10,6 +10,7 @@ import shutil
 import threading
 import time
 import webbrowser
+import zipfile
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import List, Optional
@@ -288,6 +289,14 @@ async def download(session_id: str):
 
 VALID_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp", ".gif"}
 
+# Propuestas IA: mismo análisis (orden + tamaños), distinto tratamiento de layout
+AI_VARIANT_DEFS = [
+    ("ai",        "IA · Equilibrado", "Orden y tamaños inteligentes"),
+    ("ai_depth",  "IA · Profundidad", "Héroe al frente + solapamiento"),
+    ("ai_shadow", "IA · Sombra",      "Anclado con sombra de contacto"),
+]
+AI_STRATEGY_IDS = {vid for vid, _, _ in AI_VARIANT_DEFS}
+
 
 @app.post("/api/bodegon/upload")
 async def bodegon_upload(
@@ -407,8 +416,14 @@ async def bodegon_render(body: dict):
     # Re-computar si hay config nueva en el body
     if "config" in body:
         cfg = body["config"]
+        # Para las estrategias de IA usamos las imágenes ordenadas + escaladas
+        # que persistió /ai-proposal
+        if cfg.get("sort_strategy") in AI_STRATEGY_IDS and info.get("ai_images"):
+            render_images = info["ai_images"]
+        else:
+            render_images = info["images"]
         layout = compute_layout(
-            images=info["images"],
+            images=render_images,
             sort_strategy=cfg.get("sort_strategy", "auto"),
             rows_count=int(cfg.get("rows_count", 0)),
             base_height=int(cfg.get("base_height", 760)),
@@ -458,36 +473,117 @@ async def bodegon_ai_proposal(body: dict):
     if not info_file.exists():
         raise HTTPException(404, "Sesión no encontrada")
 
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if not api_key:
-        raise HTTPException(503, "ANTHROPIC_API_KEY no configurada en .env")
+    groq_key = os.environ.get("GROQ_API_KEY", "").strip()
+    gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    provider = os.environ.get("AI_PROVIDER", "").strip().lower() or None
+    if not (groq_key or gemini_key or anthropic_key):
+        raise HTTPException(503, "Configura GROQ_API_KEY, GEMINI_API_KEY o ANTHROPIC_API_KEY en .env")
 
     info = json.loads(info_file.read_text(encoding="utf-8"))
 
     try:
         from ai_proposal import analyze_products
-        suggestion = analyze_products(info["images"], api_key)
+        suggestion = analyze_products(
+            info["images"],
+            groq_key=groq_key or None,
+            gemini_key=gemini_key or None,
+            anthropic_key=anthropic_key or None,
+            provider=provider,
+        )
     except Exception as e:
         raise HTTPException(500, f"Error en análisis IA: {e}")
 
-    # Reordenar según la sugerencia de la IA
+    # Reordenar según la sugerencia de la IA y adjuntar el tamaño real relativo
     name_to_img = {img["name"]: img for img in info["images"]}
-    ordered = [name_to_img[n] for n in suggestion["order"] if n in name_to_img]
+    sizes = suggestion.get("sizes", {})
+    ordered = []
+    for n in suggestion["order"]:
+        if n in name_to_img:
+            img = dict(name_to_img[n])
+            img["scale"] = float(sizes.get(n, 1.0))
+            ordered.append(img)
 
+    # Persistir el orden + tamaños para que el render del PNG los respete
+    info["ai_images"] = ordered
+    info_file.write_text(json.dumps(info, indent=2), encoding="utf-8")
+
+    # Varias propuestas IA desde el MISMO análisis (orden + tamaños), distinto layout
     cfg = body.get("config", {})
-    layout = compute_layout(
-        images=ordered,
-        sort_strategy="ai",          # preserva el orden de la IA
-        rows_count=int(cfg.get("rows_count", 0)),
-        base_height=int(cfg.get("base_height", 760)),
-        item_gap=int(cfg.get("item_gap", 40)),
-        internal_padding=int(cfg.get("internal_padding", 120)),
-        max_vertical_boost=float(cfg.get("max_vertical_boost", 1.20)),
-        aspect_w=int(cfg.get("aspect_w", 0)),
-        aspect_h=int(cfg.get("aspect_h", 0)),
-    )
 
-    return {"layout": layout, "suggestion": suggestion}
+    def _ai_layout(strategy_id: str):
+        return compute_layout(
+            images=ordered,
+            sort_strategy=strategy_id,
+            rows_count=int(cfg.get("rows_count", 0)),
+            base_height=int(cfg.get("base_height", 760)),
+            item_gap=int(cfg.get("item_gap", 40)),
+            internal_padding=int(cfg.get("internal_padding", 120)),
+            max_vertical_boost=float(cfg.get("max_vertical_boost", 1.20)),
+            aspect_w=int(cfg.get("aspect_w", 0)),
+            aspect_h=int(cfg.get("aspect_h", 0)),
+        )
+
+    variants = [
+        {"id": vid, "label": label, "desc": desc, "layout": _ai_layout(vid)}
+        for vid, label, desc in AI_VARIANT_DEFS
+    ]
+
+    return {
+        "variants": variants,
+        "layout": variants[0]["layout"],   # compat
+        "suggestion": suggestion,
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MÓDULO 3: GENERACIÓN POR LOTES (varias carpetas → varios bodegones)
+# ══════════════════════════════════════════════════════════════════════════════
+@app.post("/api/batch/zip")
+async def batch_zip(body: dict):
+    """Empaqueta en un ZIP los PNG ya renderizados de varias sesiones (grupos)."""
+    items = body.get("items", [])
+    if not items:
+        raise HTTPException(400, "No se proporcionaron grupos")
+
+    batch_id = str(uuid.uuid4())
+    batch_dir = SESSIONS_DIR / "_batch" / batch_id
+    batch_dir.mkdir(parents=True, exist_ok=True)
+    zip_path = batch_dir / "bodegones.zip"
+
+    used: set = set()
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        for it in items:
+            sid = it.get("session_id", "")
+            if not re.match(r"^[0-9a-f\-]{36}$", sid):
+                continue
+            png = SESSIONS_DIR / sid / "output" / "bodegon.png"
+            if not png.exists():
+                continue
+            base = _safe_name(it.get("name") or sid).rsplit(".", 1)[0]
+            arc = f"{base}.png"
+            n = 1
+            while arc in used:
+                arc = f"{base}_{n}.png"
+                n += 1
+            used.add(arc)
+            zf.write(str(png), arc)
+
+    if not used:
+        shutil.rmtree(batch_dir, ignore_errors=True)
+        raise HTTPException(404, "No hay bodegones renderizados para empaquetar")
+
+    return {"batch_id": batch_id, "count": len(used)}
+
+
+@app.get("/api/batch/download/{batch_id}")
+async def batch_download(batch_id: str):
+    if not re.match(r"^[0-9a-f\-]{36}$", batch_id):
+        raise HTTPException(400, "Batch ID inválido")
+    z = SESSIONS_DIR / "_batch" / batch_id / "bodegones.zip"
+    if not z.exists():
+        raise HTTPException(404, "ZIP no encontrado")
+    return FileResponse(str(z), filename="bodegones.zip", media_type="application/zip")
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")

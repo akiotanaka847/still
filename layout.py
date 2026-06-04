@@ -74,15 +74,29 @@ def _center_in_rows(rows: List[_Row]) -> List[_Row]:
 
 
 SORT_STRATEGIES = {
-    'auto':        _sort_auto,
-    'area':        _sort_area,
-    'alternado':   _sort_alternado,
-    'centrado':    _sort_auto,      # sort igual, post-process centra
-    'uniforme':    _sort_uniforme,
-    'dinamico':    _sort_dinamico,
-    'sombra':      _sort_auto,      # mismo orden que auto + sombra de contacto
-    'profundidad': _sort_auto,      # héroe al centro, solapamiento y sombra
-    'ai':          list,            # preserva el orden decidido por la IA
+    'auto':             _sort_auto,
+    'area':             _sort_area,
+    'alternado':        _sort_alternado,
+    'centrado':         _sort_auto,   # sort igual, post-process centra
+    'uniforme':         _sort_uniforme,
+    'dinamico':         _sort_dinamico,
+    'sombra':           _sort_auto,   # mismo orden que auto + sombra de contacto
+    'profundidad':      _sort_auto,   # héroe al centro, solapamiento y sombra
+    'profundidad_xl':   _sort_auto,   # héroe dominante (XL), más solapamiento
+    'profundidad_grad': _sort_auto,   # escalonada: tamaño decrece del centro a los lados
+    'ai':               list,         # IA: preserva el orden, plano
+    'ai_depth':         list,         # IA + profundidad (preserva orden, centra héroe)
+    'ai_shadow':        list,         # IA + sombra de contacto (preserva orden)
+}
+
+# Parámetros de las propuestas de profundidad
+#   overlap: solapamiento horizontal | hero_scale: escala del producto central
+#   falloff: factor de escala que se aplica por distancia al centro (1.0 = sin caída)
+DEPTH_PARAMS = {
+    'profundidad':      {'overlap': 0.16, 'hero_scale': 1.22, 'falloff': 1.00},
+    'profundidad_xl':   {'overlap': 0.24, 'hero_scale': 1.50, 'falloff': 1.00},
+    'profundidad_grad': {'overlap': 0.20, 'hero_scale': 1.18, 'falloff': 0.84},
+    'ai_depth':         {'overlap': 0.16, 'hero_scale': 1.22, 'falloff': 1.00},
 }
 
 
@@ -105,10 +119,12 @@ def compute_layout(
     internal_padding = 0
 
     # ─── Efectos de las propuestas nuevas ────────────────────────────────────
-    shadow = sort_strategy in ('sombra', 'profundidad')
-    depth = sort_strategy == 'profundidad'
-    overlap = 0.16 if depth else 0.0          # solapamiento horizontal
-    hero_scale = 1.22 if depth else 1.0       # el producto más alto crece
+    depth = sort_strategy in DEPTH_PARAMS
+    shadow = depth or sort_strategy in ('sombra', 'ai_shadow')
+    dp = DEPTH_PARAMS.get(sort_strategy, {})
+    overlap = dp.get('overlap', 0.0)          # solapamiento horizontal
+    hero_scale = dp.get('hero_scale', 1.0)    # escala del producto central
+    depth_falloff = dp.get('falloff', 1.0)    # caída de tamaño hacia los lados
     # Espacio reservado bajo cada fila para la sombra de contacto
     shadow_margin = round(base_height * 0.12) if shadow else 0
 
@@ -143,7 +159,9 @@ def compute_layout(
         boost = 1.0
         if ratio > 1.35:
             boost = 1.0 + (max_vertical_boost - 1.0) * min(ratio / 3.0, 1.0)
-        sh = round(base_height * boost)
+        # Tamaño real relativo (lo aporta la IA; 1.0 = sin cambio). Acotado.
+        rel = max(0.25, min(1.5, float(d.get("scale", 1.0))))
+        sh = round(base_height * boost * rel)
         sw = round(sh * w / h)
         items.append(_Item(
             name=d.get("name", f"P{len(items)+1}"),
@@ -155,12 +173,6 @@ def compute_layout(
     sort_fn = SORT_STRATEGIES.get(sort_strategy, _sort_auto)
     items = sort_fn(items)
 
-    # Profundidad: el producto más alto (primero tras el sort) es el héroe → crece
-    if depth and items:
-        hero = items[0]
-        hero.sw = round(hero.sw * hero_scale)
-        hero.sh = round(hero.sh * hero_scale)
-
     # Distribuir en filas (balance por ancho aproximado)
     rows: List[_Row] = [_Row() for _ in range(rows_count)]
     for item in items:
@@ -170,9 +182,25 @@ def compute_layout(
         if item.sh > row.height:
             row.height = item.sh
 
-    # Post-proceso "centrado" y "profundidad" → héroe al centro de la fila
-    if sort_strategy in ('centrado', 'profundidad'):
+    # Post-proceso "centrado" y profundidad → el más alto al centro de la fila
+    if sort_strategy == 'centrado' or depth:
         rows = _center_in_rows(rows)
+
+    # Profundidad: escalar según la posición ya centrada
+    #   héroe (el más alto, queda al centro) → hero_scale
+    #   cada paso de índice hacia los lados → ×falloff
+    row_hero = {}
+    if depth:
+        for ri, row in enumerate(rows):
+            if not row.items:
+                continue
+            hero_idx = max(range(len(row.items)), key=lambda i: row.items[i].sh)
+            row_hero[ri] = hero_idx
+            for idx, item in enumerate(row.items):
+                d = abs(idx - hero_idx)
+                scale = hero_scale if d == 0 else (depth_falloff ** d)
+                item.sw = max(1, round(item.sw * scale))
+                item.sh = max(1, round(item.sh * scale))
 
     # Recalcular ancho/alto reales de cada fila (con o sin solapamiento)
     for row in rows:
@@ -195,18 +223,17 @@ def compute_layout(
     # Calcular posiciones — sin offset, todo pegado al origen
     cy = 0.0
     out = []
-    for row in rows:
+    for ri, row in enumerate(rows):
         if not row.items:
             continue
         rx = (widest - row.width) / 2
         cx = rx
-        n_items = len(row.items)
-        center = (n_items - 1) / 2.0
+        hero_idx = row_hero.get(ri, (len(row.items) - 1) / 2.0)
         for idx, item in enumerate(row.items):
             item.x = cx
             item.y = cy + (row.height - item.sh)   # alineados a la base
-            # z-order: en profundidad, lo más cercano al centro queda al frente
-            z = (-abs(idx - center)) if depth else float(idx)
+            # z-order: en profundidad, el héroe (y lo cercano a él) queda al frente
+            z = (-abs(idx - hero_idx)) if depth else float(idx)
             if overlap > 0:
                 cx += item.sw * (1 - overlap)
             else:

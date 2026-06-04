@@ -41,47 +41,105 @@
   .tab-btn.active { background:linear-gradient(135deg,var(--brand-from),var(--brand-to)); color:#fff; }
   .tab-btn        { background:#f1f5f9; color:#64748b; }
 
+  /* Menú lateral */
+  .nav-item { display:flex; align-items:center; gap:.6rem; width:100%; padding:.55rem .75rem;
+    border-radius:.65rem; font-size:.82rem; font-weight:500; color:#64748b; cursor:pointer;
+    transition:background .15s,color .15s; text-align:left; }
+  .nav-item:hover { background:#f1f5f9; color:#0f172a; }
+  .nav-item-active, .nav-item-active:hover {
+    background:linear-gradient(135deg,#eef2ff,#f3e8ff); color:#5B8CF7; font-weight:600; }
+  .nav-item .soon { margin-left:auto; font-size:.6rem; font-weight:600; color:#d97706;
+    background:#fffbeb; border:1px solid #fde68a; padding:.05rem .35rem; border-radius:9999px; }
+
   ::-webkit-scrollbar{width:5px;}
   ::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:3px;}
+
+  /* Fondo de cuadritos (transparencia) para previews uniformes */
+  .checker-bg {
+    background-image:
+      linear-gradient(45deg,#eceef1 25%,transparent 25%),
+      linear-gradient(-45deg,#eceef1 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#eceef1 75%),
+      linear-gradient(-45deg,transparent 75%,#eceef1 75%);
+    background-size:14px 14px;
+    background-position:0 0,0 7px,7px -7px,-7px 0;
+    background-color:#fff;
+  }
 </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
 
-<!-- NAVBAR -->
-<nav class="bg-black border-b border-white/10 sticky top-0 z-50">
-  <div class="max-w-4xl mx-auto px-5 h-14 flex items-center gap-3">
+<div class="flex min-h-screen">
 
-    <!-- Logo S -->
-    <div class="w-8 h-8 brand-gradient rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-      <span class="text-white font-black text-base leading-none">S</span>
+  <!-- ═══════════ SIDEBAR ═══════════ -->
+  <aside class="hidden md:flex flex-col w-56 flex-shrink-0 bg-white border-r border-gray-200 sticky top-0 h-screen">
+    <!-- Logo -->
+    <div class="h-14 flex items-center gap-2.5 px-5 border-b border-gray-100 flex-shrink-0">
+      <div class="w-8 h-8 brand-gradient rounded-xl flex items-center justify-center shadow-lg">
+        <span class="text-white font-black text-base leading-none">S</span>
+      </div>
+      <div class="flex items-baseline gap-0.5">
+        <span class="font-bold text-gray-900 text-sm tracking-tight">Still</span>
+        <span class="font-black text-sm tracking-tight brand-text">AI</span>
+      </div>
     </div>
+    <!-- Menú -->
+    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <button onclick="toast('Próximamente','warn')" class="nav-item">🏠 <span>Inicio</span></button>
+      <button id="nav-bodegon" onclick="switchTab('bodegon')" class="nav-item nav-item-active">🖼️ <span>Bodegón</span></button>
+      <button id="nav-batch" onclick="switchTab('batch')" class="nav-item">📁 <span>Por lotes</span></button>
+      <button onclick="toast('Próximamente','warn')" class="nav-item">🗂️ <span>Proyectos</span> <span class="soon">Pronto</span></button>
+      <button onclick="toast('Próximamente','warn')" class="nav-item">▦ <span>Plantillas</span> <span class="soon">Pronto</span></button>
+      <button onclick="toast('Próximamente','warn')" class="nav-item">🎨 <span>Estilos</span> <span class="soon">Pronto</span></button>
+      <button onclick="toast('Próximamente','warn')" class="nav-item">⚙️ <span>Ajustes</span> <span class="soon">Pronto</span></button>
+    </nav>
+    <!-- Plan Pro -->
+    <div class="p-3 flex-shrink-0">
+      <div class="rounded-xl border border-amber-200 bg-amber-50 p-3">
+        <p class="text-xs font-bold text-amber-700">⭐ Plan Pro</p>
+        <p class="text-[10px] text-amber-600/80 mt-0.5 leading-snug">Más créditos, exportaciones en alta resolución y más.</p>
+        <button onclick="toast('Próximamente','warn')" class="mt-2 w-full btn-brand text-white text-xs font-semibold py-2 rounded-lg">Mejorar plan</button>
+      </div>
+    </div>
+  </aside>
 
-    <!-- Brand name -->
-    <div class="flex items-baseline gap-0.5">
-      <span class="font-bold text-white text-sm tracking-tight">Still</span>
-      <span class="font-black text-sm tracking-tight brand-text">AI</span>
-    </div>
-    <span class="text-white/30 text-xs hidden sm:block">Still perfect. Every time.</span>
+  <!-- ═══════════ ÁREA PRINCIPAL ═══════════ -->
+  <div class="flex-1 min-w-0 flex flex-col">
 
-    <!-- Tabs -->
-    <div class="ml-auto flex gap-1.5">
-      <!-- Smart Objects: módulo legado, oculto en el evolutivo 3 (backend intacto) -->
-      <button id="tab-so" onclick="switchTab('so')"
-        class="tab-btn hidden text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
-        Smart Objects
-      </button>
-      <button id="tab-bodegon" onclick="switchTab('bodegon')"
-        class="tab-btn active text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
-        Bodegón
-      </button>
-    </div>
-    <div id="badge-no-psapi" class="hidden">
-      <span class="text-xs bg-red-900/50 text-red-300 border border-red-700 px-2 py-1 rounded-full">⚠ psapi</span>
-    </div>
-  </div>
-</nav>
+    <!-- Top bar -->
+    <header class="h-14 bg-white border-b border-gray-200 sticky top-0 z-40 flex items-center gap-3 px-5 flex-shrink-0">
+      <!-- Logo (solo móvil, sin sidebar) -->
+      <div class="md:hidden flex items-center gap-2">
+        <div class="w-7 h-7 brand-gradient rounded-lg flex items-center justify-center">
+          <span class="text-white font-black text-sm">S</span>
+        </div>
+        <span class="font-bold text-gray-900 text-sm">Still<span class="brand-text font-black">AI</span></span>
+      </div>
 
-<main class="max-w-4xl mx-auto px-5 py-8">
+      <!-- Tabs ocultos: conservados solo para el cableado JS (switchTab) -->
+      <div class="hidden">
+        <button id="tab-so" onclick="switchTab('so')" class="tab-btn">Smart Objects</button>
+        <button id="tab-bodegon" onclick="switchTab('bodegon')" class="tab-btn active">Bodegón</button>
+      </div>
+
+      <div class="ml-auto flex items-center gap-2">
+        <span title="Próximamente"
+              class="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full cursor-default select-none">
+          ⭐ Pro
+        </span>
+        <button onclick="toast('Próximamente','warn')"
+                class="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-800 px-2.5 py-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+          🗂️ Mis proyectos
+        </button>
+        <div id="badge-no-psapi" class="hidden">
+          <span class="text-xs bg-red-50 text-red-500 border border-red-200 px-2 py-1 rounded-full">⚠ psapi</span>
+        </div>
+        <div title="Cuenta (próximamente)"
+             class="w-8 h-8 rounded-full brand-gradient flex items-center justify-center text-white text-[11px] font-bold ring-2 ring-gray-100 cursor-default select-none">SA</div>
+      </div>
+    </header>
+
+    <main class="flex-1 min-w-0 px-6 py-6">
 
 <!-- ═══════════════════════════════════════════════════════
      TAB 1 — SMART OBJECT REPLACER
@@ -194,227 +252,391 @@
 ═══════════════════════════════════════════════════════ -->
 <div id="panel-bodegon" class="hidden">
 
-  <!-- UPLOAD STEP -->
-  <section id="bod-upload" class="slide-up">
-    <div class="text-center mb-8">
-      <h1 class="text-2xl font-bold text-gray-900 mb-1">Generador de Bodegón</h1>
-      <p class="brand-text text-sm font-semibold mb-2">Still perfect. Every time.</p>
-      <p class="text-gray-500 text-sm max-w-lg mx-auto">Sube tus productos, elige entre 6 estilos de layout o deja que la IA proponga la composición perfecta.</p>
+  <!-- Encabezado de página -->
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Generador de Bodegón</h1>
+    <p class="brand-text text-sm font-semibold">Still perfect. Every time.</p>
+    <p class="text-gray-500 text-sm mt-1 max-w-xl">Sube tus productos y deja que la IA cree composiciones profesionales listas para destacar.</p>
+  </div>
+
+  <!-- Layout de 2 columnas (se expande a ancho completo en propuestas/preview) -->
+  <div id="bod-grid" class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
+    <!-- ═══ COLUMNA IZQUIERDA — flujo de trabajo ═══ -->
+    <div id="bod-workcol" class="lg:col-span-2 space-y-4">
+
+      <!-- UPLOAD STEP -->
+      <section id="bod-upload" class="slide-up space-y-4">
+
+        <!-- ① Productos -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-5">
+          <div class="flex items-center gap-2 mb-3">
+            <div class="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+              <span class="text-white text-xs font-bold">1</span>
+            </div>
+            <span class="font-semibold text-gray-800">Sube tus productos</span>
+            <span class="text-xs text-gray-400">(obligatorio)</span>
+          </div>
+
+          <div id="bod-prod-dz"
+               class="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center cursor-pointer
+                      hover:border-indigo-300 hover:bg-indigo-50 transition-all"
+               onclick="document.getElementById('bod-prod-input').click()"
+               ondragover="dzOver(event,'bod-prod-dz')" ondragleave="dzLeave('bod-prod-dz')" ondrop="bodProdDrop(event)">
+            <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+              <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+              </svg>
+            </div>
+            <p class="text-sm font-medium text-gray-600">Arrastra imágenes aquí <span class="text-gray-400 font-normal">o haz clic para seleccionar</span></p>
+            <p class="text-xs text-gray-400 mt-1.5">PNG · JPG · WebP · TIFF · BMP</p>
+            <input id="bod-prod-input" type="file" multiple
+                   accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp" class="hidden">
+          </div>
+
+          <!-- Thumbnails -->
+          <div id="bod-thumbs" class="hidden mt-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span id="bod-prod-count">0</span> productos cargados
+              </span>
+              <button onclick="bodClearProducts()" class="text-xs text-red-400 hover:text-red-600">Quitar todos</button>
+            </div>
+            <div id="bod-thumb-grid" class="grid grid-cols-5 gap-2 max-h-52 overflow-y-auto"></div>
+          </div>
+        </div>
+
+        <!-- Botón ver propuestas -->
+        <button id="bod-gen-btn" onclick="bodShowProposals()"
+                class="w-full btn-brand text-white font-semibold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+          </svg>
+          Generar propuestas
+        </button>
+      </section>
+
+      <!-- LOADING -->
+      <section id="bod-loading" class="hidden bg-white border border-gray-200 rounded-2xl py-20 text-center">
+        <div class="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full spin mx-auto mb-4"></div>
+        <p id="bod-loading-msg" class="text-gray-700 font-semibold">Subiendo imágenes...</p>
+        <p class="text-gray-400 text-sm mt-1">Un momento</p>
+      </section>
+
+      <!-- PROPUESTAS -->
+      <section id="bod-proposals" class="hidden slide-up">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+              <span class="text-white text-xs font-bold">3</span>
+            </div>
+            <div>
+              <h2 class="font-bold text-gray-900 text-base leading-tight">Propuestas generadas</h2>
+              <p class="text-[11px] text-gray-400">Clic para seleccionar · <span id="prop-count"></span></p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="bodShowProposals()"
+                    class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-indigo-600 border border-gray-200 hover:border-indigo-200 px-3 py-1.5 rounded-lg transition-all">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              Regenerar
+            </button>
+            <button onclick="showBOD('bod-upload')"
+                    class="text-xs text-gray-400 hover:text-indigo-600 px-2 py-1.5 rounded-lg hover:bg-indigo-50 transition-all">← Volver</button>
+          </div>
+        </div>
+
+        <!-- Propuestas IA (destacadas, una sola análisis → varias variantes) -->
+        <div id="ai-block" class="mb-5">
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="text-purple-600 text-sm">✦</span>
+            <p class="text-sm font-bold text-purple-800">Propuestas IA</p>
+            <span id="ai-status" class="text-[11px] text-purple-400">Analizando con IA…</span>
+          </div>
+          <p id="ai-reasoning" class="text-[11px] text-gray-500 mb-2.5 leading-relaxed max-w-3xl"></p>
+          <div id="ai-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-5xl"></div>
+        </div>
+
+        <!-- Estilos geométricos -->
+        <p class="text-xs font-semibold text-gray-500 mb-2">Estilos de layout</p>
+        <div id="proposals-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-4"></div>
+
+        <button id="bod-use-btn" onclick="bodUseProposal()"
+                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 rounded-2xl
+                       shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+          Usar esta propuesta
+        </button>
+      </section>
+
+      <!-- PREVIEW -->
+      <section id="bod-preview" class="hidden slide-up">
+        <div class="bg-white border border-gray-200 rounded-2xl p-4 mb-4 flex items-center gap-3 card">
+          <div class="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-gray-900 text-sm truncate" id="bod-info-title">Bodegón listo</p>
+            <p class="text-xs text-gray-400 mt-0.5" id="bod-info-meta"></p>
+          </div>
+          <button onclick="showBOD('bod-proposals')"
+                  class="text-xs text-gray-400 hover:text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-all whitespace-nowrap">← Propuestas</button>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-2xl p-4 mb-4">
+          <p class="text-xs font-medium text-gray-500 mb-3">Vista previa</p>
+          <div class="overflow-auto rounded-xl flex items-center justify-center min-h-40">
+            <canvas id="bod-canvas" class="max-w-full rounded-xl shadow-sm"></canvas>
+          </div>
+        </div>
+
+        <button id="bod-render-btn" onclick="bodRender()"
+                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 rounded-2xl
+                       shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          Generar y descargar PNG
+        </button>
+      </section>
     </div>
 
-    <div class="space-y-4">
-      <!-- Productos -->
-      <div class="bg-white border border-gray-200 rounded-2xl p-5">
-        <div class="flex items-center gap-2 mb-3">
-          <div class="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
-            <span class="text-white text-xs font-bold">1</span>
+    <!-- ═══ COLUMNA DERECHA — opciones de diseño ═══ -->
+    <aside id="bod-aside" class="lg:col-span-1">
+      <div class="bg-white border border-gray-200 rounded-2xl p-5 lg:sticky lg:top-20 space-y-5">
+
+        <div class="flex items-center justify-between">
+          <h3 class="font-bold text-gray-900 text-sm">Opciones de diseño</h3>
+          <!-- Rápido / Avanzado -->
+          <div class="flex bg-gray-100 rounded-lg p-0.5 text-[11px] font-semibold">
+            <button id="opts-rapido" onclick="setOptsMode('rapido')" class="px-2.5 py-1 rounded-md text-gray-500 transition-all">Rápido</button>
+            <button id="opts-avanzado" onclick="setOptsMode('avanzado')" class="px-2.5 py-1 rounded-md bg-white shadow-sm text-indigo-600 transition-all">Avanzado</button>
           </div>
-          <span class="font-semibold text-gray-800">Imágenes de productos</span>
-          <span class="text-xs text-gray-400">(obligatorio · múltiples)</span>
         </div>
 
-        <div id="bod-prod-dz"
-             class="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center cursor-pointer
-                    hover:border-indigo-300 hover:bg-indigo-50 transition-all"
-             onclick="document.getElementById('bod-prod-input').click()"
-             ondragover="dzOver(event,'bod-prod-dz')" ondragleave="dzLeave('bod-prod-dz')" ondrop="bodProdDrop(event)">
-          <svg class="w-8 h-8 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4"/>
-          </svg>
-          <p class="text-sm text-gray-500">Arrastra imágenes de productos o haz clic</p>
-          <p class="text-xs text-gray-400 mt-1">PNG · JPG · WebP · TIFF · BMP</p>
-          <input id="bod-prod-input" type="file" multiple
-                 accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp" class="hidden">
+        <!-- Filas -->
+        <div>
+          <label class="block text-xs font-medium text-gray-500 mb-1.5">Filas</label>
+          <div class="flex gap-1.5" id="rows-btns">
+            <button onclick="setRows(0)" data-rows="0"
+                    class="rows-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-indigo-200 bg-indigo-600 text-white transition-all">Auto</button>
+            <button onclick="setRows(1)" data-rows="1"
+                    class="rows-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">1</button>
+            <button onclick="setRows(2)" data-rows="2"
+                    class="rows-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">2</button>
+            <button onclick="setRows(3)" data-rows="3"
+                    class="rows-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">3</button>
+          </div>
         </div>
 
-        <!-- Thumbnails de productos -->
-        <div id="bod-thumbs" class="hidden mt-4">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs text-gray-500 font-medium"><span id="bod-prod-count">0</span> producto(s) seleccionado(s)</span>
-            <button onclick="bodClearProducts()" class="text-xs text-red-400 hover:text-red-600">Quitar todos</button>
-          </div>
-          <div id="bod-thumb-grid" class="grid grid-cols-5 gap-2 max-h-52 overflow-y-auto"></div>
-        </div>
-      </div>
-
-      <!-- Fondo opcional -->
-      <div class="bg-white border border-gray-200 rounded-2xl p-5">
-        <div class="flex items-center gap-2 mb-3">
-          <div class="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
-            <span class="text-white text-xs font-bold">2</span>
-          </div>
-          <span class="font-semibold text-gray-800">Plantilla / Fondo</span>
-          <span class="text-xs text-gray-400">(opcional)</span>
-        </div>
-        <div id="bod-bg-dz"
-             class="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer
-                    hover:border-indigo-300 hover:bg-indigo-50 transition-all"
-             onclick="document.getElementById('bod-bg-input').click()"
-             ondragover="dzOver(event,'bod-bg-dz')" ondragleave="dzLeave('bod-bg-dz')" ondrop="bodBgDrop(event)">
-          <div id="bod-bg-ph" class="flex items-center justify-center gap-2 text-gray-400">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            <span class="text-sm">Seleccionar imagen de fondo</span>
-          </div>
-          <div id="bod-bg-pv" class="hidden items-center gap-3">
-            <img id="bod-bg-thumb" src="" class="w-12 h-8 object-cover rounded border border-gray-200 flex-shrink-0">
-            <p id="bod-bg-fname" class="text-sm text-gray-700 truncate flex-1 text-left"></p>
-            <button onclick="bodClearBg(event)" class="text-xs text-red-400 hover:text-red-600 flex-shrink-0">✕</button>
-          </div>
-          <input id="bod-bg-input" type="file" accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp" class="hidden">
-        </div>
-      </div>
-
-      <!-- Configuración -->
-      <div class="bg-white border border-gray-200 rounded-2xl p-5">
-        <div class="flex items-center gap-2 mb-4">
-          <div class="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
-            <span class="text-white text-xs font-bold">3</span>
-          </div>
-          <span class="font-semibold text-gray-800">Configuración del layout</span>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-          <!-- Filas -->
-          <div>
-            <label class="block text-xs font-medium text-gray-500 mb-1.5">Número de filas</label>
-            <div class="flex gap-1.5" id="rows-btns">
-              <button onclick="setRows(0)" data-rows="0"
-                      class="rows-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-indigo-200 bg-indigo-600 text-white transition-all">Auto</button>
-              <button onclick="setRows(1)" data-rows="1"
-                      class="rows-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">1</button>
-              <button onclick="setRows(2)" data-rows="2"
-                      class="rows-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">2</button>
-              <button onclick="setRows(3)" data-rows="3"
-                      class="rows-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">3</button>
+        <!-- Opciones avanzadas (sliders) -->
+        <div id="opts-advanced" class="space-y-5 pt-1 border-t border-gray-100">
+          <!-- Tamaño de producto -->
+          <div class="pt-4">
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-xs font-medium text-gray-500">Tamaño de producto</label>
+              <span class="text-xs font-semibold text-gray-700" id="lbl-height">760 px</span>
             </div>
-          </div>
-
-          <!-- Aspecto -->
-          <div>
-            <label class="block text-xs font-medium text-gray-500 mb-1.5">Proporción del canvas</label>
-            <div class="flex gap-1.5" id="aspect-btns">
-              <button onclick="setAspect(0,0)" data-aspect="0"
-                      class="aspect-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-indigo-200 bg-indigo-600 text-white transition-all">Auto</button>
-              <button onclick="setAspect(5,3)" data-aspect="5:3"
-                      class="aspect-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">5:3</button>
-              <button onclick="setAspect(16,9)" data-aspect="16:9"
-                      class="aspect-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">16:9</button>
-              <button onclick="setAspect(1,1)" data-aspect="1:1"
-                      class="aspect-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">1:1</button>
-            </div>
-          </div>
-
-          <!-- Altura base -->
-          <div>
-            <label class="block text-xs font-medium text-gray-500 mb-1.5">
-              Altura base de productos
-              <span class="font-normal text-gray-400 ml-1" id="lbl-height">760 px</span>
-            </label>
             <input type="range" id="cfg-height" min="300" max="2000" value="760" step="10"
                    class="w-full accent-indigo-600"
                    oninput="document.getElementById('lbl-height').textContent=this.value+' px'">
           </div>
-
-          <!-- Gap -->
+          <!-- Separación -->
           <div>
-            <label class="block text-xs font-medium text-gray-500 mb-1.5">
-              Separación entre productos
-              <span class="font-normal text-gray-400 ml-1" id="lbl-gap">40 px</span>
-            </label>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-xs font-medium text-gray-500">Separación entre productos</label>
+              <span class="text-xs font-semibold text-gray-700" id="lbl-gap">40 px</span>
+            </div>
             <input type="range" id="cfg-gap" min="0" max="200" value="40" step="5"
                    class="w-full accent-indigo-600"
                    oninput="document.getElementById('lbl-gap').textContent=this.value+' px'">
           </div>
         </div>
+
+        <!-- Sombras (info) -->
+        <div class="border-t border-gray-100 pt-4">
+          <div class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div>
+              <p class="text-xs font-medium text-gray-600">Sombras y profundidad</p>
+              <p class="text-[11px] text-gray-400 mt-0.5">Elige las propuestas <strong class="text-gray-500">Sombra</strong> o <strong class="text-gray-500">Profundidad</strong> para anclar tus productos con sombra de contacto.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fondo -->
+        <div class="border-t border-gray-100 pt-4">
+          <label class="block text-xs font-medium text-gray-500 mb-2">Fondo <span class="text-gray-400 font-normal">(opcional)</span></label>
+          <div id="bod-bg-dz"
+               class="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center cursor-pointer
+                      hover:border-indigo-300 hover:bg-indigo-50 transition-all"
+               onclick="document.getElementById('bod-bg-input').click()"
+               ondragover="dzOver(event,'bod-bg-dz')" ondragleave="dzLeave('bod-bg-dz')" ondrop="bodBgDrop(event)">
+            <div id="bod-bg-ph" class="flex items-center justify-center gap-2 text-gray-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              <span class="text-xs">Subir fondo</span>
+            </div>
+            <div id="bod-bg-pv" class="hidden items-center gap-2">
+              <img id="bod-bg-thumb" src="" class="w-10 h-7 object-cover rounded border border-gray-200 flex-shrink-0">
+              <p id="bod-bg-fname" class="text-xs text-gray-700 truncate flex-1 text-left"></p>
+              <button onclick="bodClearBg(event)" class="text-xs text-red-400 hover:text-red-600 flex-shrink-0">✕</button>
+            </div>
+            <input id="bod-bg-input" type="file" accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp" class="hidden">
+          </div>
+        </div>
+
+        <!-- Consejo de IA -->
+        <div class="bg-purple-50 border border-purple-100 rounded-xl p-3 flex items-start gap-2">
+          <span class="text-purple-500 text-sm flex-shrink-0">✦</span>
+          <div>
+            <p class="text-xs font-semibold text-purple-800">Consejo de IA</p>
+            <p class="text-[11px] text-purple-500/90 mt-0.5">Los fondos claros y neutros destacan mejor tus productos.</p>
+          </div>
+        </div>
       </div>
+    </aside>
+  </div>
 
-      <!-- Botón ver propuestas -->
-      <button id="bod-gen-btn" onclick="bodShowProposals()"
-              class="w-full btn-brand text-white font-semibold py-4 rounded-2xl transition-all flex items-center justify-center gap-2">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
-        </svg>
-        Ver propuestas de layout
-      </button>
-    </div>
-  </section>
-
-  <!-- LOADING BODEGON -->
-  <section id="bod-loading" class="hidden py-20 text-center">
-    <div class="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full spin mx-auto mb-4"></div>
-    <p id="bod-loading-msg" class="text-gray-700 font-semibold">Subiendo imágenes...</p>
-    <p class="text-gray-400 text-sm mt-1">Un momento</p>
-  </section>
-
-  <!-- PROPUESTAS -->
-  <section id="bod-proposals" class="hidden slide-up">
-    <div class="flex items-center justify-between mb-5">
-      <div>
-        <h2 class="font-bold text-gray-900 text-lg">Elige una propuesta</h2>
-        <p class="text-xs text-gray-400 mt-0.5">Clic para seleccionar · <span id="prop-count"></span></p>
-      </div>
-      <button onclick="showBOD('bod-upload')"
-              class="text-xs text-gray-400 hover:text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-all">
-        ← Configuración
-      </button>
-    </div>
-
-    <!-- Grid de propuestas -->
-    <div id="proposals-grid" class="grid grid-cols-2 gap-3 mb-5"></div>
-
-    <!-- Usar propuesta -->
-    <button id="bod-use-btn" onclick="bodUseProposal()"
-            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-2xl
-                   shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-      </svg>
-      Usar esta propuesta
+  <!-- ═══ BARRA DE ACCIONES INFERIOR ═══ -->
+  <div class="mt-6 bg-white border border-gray-200 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
+    <button onclick="bodReset()"
+            class="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-800 px-3 py-2 rounded-xl hover:bg-gray-50 transition-all">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      Volver a empezar
     </button>
-  </section>
-
-  <!-- PREVIEW -->
-  <section id="bod-preview" class="hidden slide-up">
-    <div class="bg-white border border-gray-200 rounded-2xl p-4 mb-4 flex items-center gap-3 card">
-      <div class="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
-        <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-        </svg>
-      </div>
-      <div class="flex-1 min-w-0">
-        <p class="font-semibold text-gray-900 text-sm truncate" id="bod-info-title">Bodegón listo</p>
-        <p class="text-xs text-gray-400 mt-0.5" id="bod-info-meta"></p>
-      </div>
-      <button onclick="showBOD('bod-proposals')"
-              class="text-xs text-gray-400 hover:text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-all whitespace-nowrap">← Propuestas</button>
-      <button onclick="bodReset()"
-              class="text-xs text-red-300 hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-all">Reiniciar</button>
-    </div>
-
-    <div class="bg-white border border-gray-200 rounded-2xl p-4 mb-4">
-      <p class="text-xs font-medium text-gray-500 mb-3">Vista previa</p>
-      <div class="overflow-auto rounded-xl flex items-center justify-center min-h-40">
-        <canvas id="bod-canvas" class="max-w-full rounded-xl shadow-sm"></canvas>
-      </div>
-    </div>
-
-    <button id="bod-render-btn" onclick="bodRender()"
-            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-2xl
-                   shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-      </svg>
-      Generar y descargar PNG
+    <button title="Próximamente" disabled
+            class="inline-flex items-center gap-2 text-sm font-medium text-gray-400 border border-gray-200 px-4 py-2 rounded-xl cursor-not-allowed">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+      Guardar proyecto <span class="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">Pronto</span>
     </button>
-  </section>
+  </div>
 
 </div><!-- /panel-bodegon -->
 
-</main>
+<!-- ═══════════════════════════════════════════════════════
+     MÓDULO 3 — GENERACIÓN POR LOTES
+═══════════════════════════════════════════════════════ -->
+<div id="panel-batch" class="hidden">
+
+  <!-- Encabezado -->
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Generación por lotes</h1>
+    <p class="brand-text text-sm font-semibold">Still perfect. Every time.</p>
+    <p class="text-gray-500 text-sm mt-1 max-w-xl">Sube carpetas de productos: <strong class="text-gray-600">cada subcarpeta se convierte en un bodegón</strong>. Elige el modo y genéralos todos de una.</p>
+  </div>
+
+  <!-- CONFIG -->
+  <div id="batch-config" class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
+    <!-- Carpetas -->
+    <div class="lg:col-span-2 space-y-4">
+      <div class="bg-white border border-gray-200 rounded-2xl p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <div class="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+            <span class="text-white text-xs font-bold">1</span>
+          </div>
+          <span class="font-semibold text-gray-800">Sube carpetas de productos</span>
+        </div>
+
+        <div id="batch-dz"
+             class="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center cursor-pointer hover:border-indigo-300 hover:bg-indigo-50 transition-all"
+             onclick="document.getElementById('batch-folder-input').click()">
+          <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+            <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+          </div>
+          <p class="text-sm font-medium text-gray-600">Elige una carpeta <span class="text-gray-400 font-normal">(con subcarpetas de productos)</span></p>
+          <p class="text-xs text-gray-400 mt-1.5">Cada subcarpeta = un bodegón · puedes agregar varias</p>
+          <input id="batch-folder-input" type="file" webkitdirectory directory multiple
+                 accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp" class="hidden">
+        </div>
+
+        <!-- Lista de grupos -->
+        <div id="batch-groups-wrap" class="hidden mt-4">
+          <div class="flex items-center justify-between mb-2">
+            <span class="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span id="batch-group-count">0</span> grupos · <span id="batch-file-count">0</span> imágenes
+            </span>
+            <button onclick="batchClear()" class="text-xs text-red-400 hover:text-red-600">Quitar todo</button>
+          </div>
+          <div id="batch-groups" class="space-y-1.5 max-h-72 overflow-y-auto"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Opciones -->
+    <aside class="lg:col-span-1">
+      <div class="bg-white border border-gray-200 rounded-2xl p-5 lg:sticky lg:top-20 space-y-4">
+        <h3 class="font-bold text-gray-900 text-sm">Modo de generación</h3>
+        <select id="batch-mode" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 bg-white focus:border-indigo-400 focus:outline-none">
+          <optgroup label="✦ Inteligente (IA)">
+            <option value="ai_depth" selected>IA · Profundidad</option>
+            <option value="ai">IA · Equilibrado</option>
+            <option value="ai_shadow">IA · Sombra</option>
+          </optgroup>
+          <optgroup label="Geométrico">
+            <option value="auto">Auto</option>
+            <option value="centrado">Centrado</option>
+            <option value="sombra">Sombra</option>
+            <option value="profundidad">Profundidad</option>
+            <option value="profundidad_xl">Héroe XL</option>
+            <option value="profundidad_grad">Escalonada</option>
+          </optgroup>
+        </select>
+        <p class="text-[11px] text-gray-400">Los modos <strong class="text-gray-500">IA</strong> analizan cada grupo (orden + tamaños). Más lentos pero mejores. Los geométricos son instantáneos.</p>
+
+        <button id="batch-gen-btn" onclick="batchGenerate()"
+                class="w-full btn-brand text-white font-semibold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          Generar bodegones
+        </button>
+
+        <div class="bg-purple-50 border border-purple-100 rounded-xl p-3 flex items-start gap-2">
+          <span class="text-purple-500 text-sm flex-shrink-0">✦</span>
+          <p class="text-[11px] text-purple-500/90">Nombra tus subcarpetas por SKU o línea de producto: cada una será un bodegón con ese nombre.</p>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- RESULTADOS -->
+  <section id="batch-results" class="hidden mt-2">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2">
+        <div class="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+          <span class="text-white text-xs font-bold">2</span>
+        </div>
+        <div>
+          <h2 class="font-bold text-gray-900 text-base leading-tight">Bodegones generados</h2>
+          <p class="text-[11px] text-gray-400"><span id="batch-progress">0/0</span> listos</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="batch-zip-btn" onclick="batchDownloadAll()" disabled
+                class="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 px-3.5 py-2 rounded-lg transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Descargar todo (ZIP)
+        </button>
+        <button onclick="batchBackToConfig()" class="text-xs text-gray-400 hover:text-indigo-600 px-2 py-1.5 rounded-lg hover:bg-indigo-50 transition-all">← Volver</button>
+      </div>
+    </div>
+    <div id="batch-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"></div>
+  </section>
+
+</div><!-- /panel-batch -->
+
+    </main>
+  </div><!-- /área principal -->
+</div><!-- /shell -->
 
 <!-- TOAST -->
 <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-opacity duration-300 max-w-sm w-full px-4">
@@ -426,8 +648,16 @@
 // TABS
 // ═══════════════════════════════════════════════════════
 function switchTab(name) {
-  document.getElementById('panel-so').classList.toggle('hidden', name !== 'so');
-  document.getElementById('panel-bodegon').classList.toggle('hidden', name !== 'bodegon');
+  ['so', 'bodegon', 'batch'].forEach(p => {
+    const el = document.getElementById('panel-' + p);
+    if (el) el.classList.toggle('hidden', p !== name);
+  });
+  // Estado activo del menú lateral
+  const navB = document.getElementById('nav-bodegon');
+  const navL = document.getElementById('nav-batch');
+  if (navB) navB.classList.toggle('nav-item-active', name === 'bodegon');
+  if (navL) navL.classList.toggle('nav-item-active', name === 'batch');
+  // Tabs legacy (ocultos) para compatibilidad
   document.getElementById('tab-so').classList.toggle('active', name === 'so');
   document.getElementById('tab-bodegon').classList.toggle('active', name === 'bodegon');
 }
@@ -449,6 +679,17 @@ function showBOD(id) {
   const t = document.getElementById(id);
   t.classList.remove('hidden');
   requestAnimationFrame(() => t.classList.add('slide-up'));
+
+  // En propuestas/preview/loading se oculta el panel de opciones y el flujo
+  // ocupa todo el ancho (aprovecha el espacio horizontal)
+  const wide  = (id !== 'bod-upload');
+  const work  = document.getElementById('bod-workcol');
+  const aside = document.getElementById('bod-aside');
+  if (work && aside) {
+    aside.classList.toggle('hidden', wide);
+    work.classList.toggle('lg:col-span-2', !wide);
+    work.classList.toggle('lg:col-span-3', wide);
+  }
 }
 
 function dzOver(e, id)  { e.preventDefault(); document.getElementById(id).classList.add('dz-active'); }
@@ -623,11 +864,28 @@ let BOD_ROWS         = 0;
 let BOD_ASPECT_W     = 0;
 let BOD_ASPECT_H     = 0;
 let BOD_LAYOUT       = null;
-let BOD_SELECTED_IDX = 0;   // 0..N-1 = estrategias geométricas, AI_IDX = IA
-let BOD_AI_LAYOUT    = null; // layout devuelto por la IA
-let BOD_AI_REASONING = '';   // texto explicativo de la IA
+let BOD_SELECTED_IDX = 0;   // 0..N-1 = geométricas; >= AI_BASE = variantes IA
+let BOD_AI_VARIANTS  = [];   // [{id,label,desc,layout}] devueltas por la IA
+let BOD_AI_REASONING = '';   // razonamiento (compartido por las variantes)
 
 // ── Estrategias de layout (espejo del Python) ──────────────────────────────
+// Reordena cada fila para que el más alto quede al centro (héroe).
+function centerHeroRows(rows) {
+  return rows.map(row => {
+    if (row.items.length < 3) return row;
+    const s=[...row.items].sort((a,b)=>b.sh-a.sh);
+    const res=new Array(s.length).fill(null);
+    const mid=Math.floor(s.length/2); res[mid]=s[0];
+    let l=mid-1, r=mid+1;
+    for(let i=1;i<s.length;i++){
+      if(i%2===1&&r<s.length) res[r++]=s[i];
+      else if(l>=0) res[l--]=s[i];
+      else res[r++]=s[i];
+    }
+    return {...row, items:res.filter(Boolean)};
+  });
+}
+
 const STRATEGIES = [
   {
     // Equilibrado: orden natural por altura, aspecto estándar
@@ -709,27 +967,36 @@ const STRATEGIES = [
     // Profundidad: héroe al centro más grande, solapamiento y sombra
     id: 'profundidad', label: 'Profundidad', desc: 'Héroe al frente + solapamiento',
     color: 'teal',
-    shadow: true, depth: true, overlap: 0.16, heroScale: 1.22,
+    shadow: true, depth: true, overlap: 0.16, heroScale: 1.22, falloff: 1.0,
     prepareItems: items => [...items].sort((a,b) => b.sh - a.sh),
     modifyCfg:   cfg => ({...cfg, rows_count:1}),
-    postProcess: rows => rows.map(row => {
-      if (row.items.length < 3) return row;
-      const s=[...row.items].sort((a,b)=>b.sh-a.sh);
-      const res=new Array(s.length).fill(null);
-      const mid=Math.floor(s.length/2); res[mid]=s[0];
-      let l=mid-1, r=mid+1;
-      for(let i=1;i<s.length;i++){
-        if(i%2===1&&r<s.length) res[r++]=s[i];
-        else if(l>=0) res[l--]=s[i];
-        else res[r++]=s[i];
-      }
-      return {...row, items:res.filter(Boolean)};
-    }),
+    postProcess: centerHeroRows,
+  },
+  {
+    // Héroe XL: producto central dominante, mucho solapamiento
+    id: 'profundidad_xl', label: 'Héroe XL', desc: 'Producto central dominante',
+    color: 'cyan',
+    shadow: true, depth: true, overlap: 0.24, heroScale: 1.5, falloff: 1.0,
+    prepareItems: items => [...items].sort((a,b) => b.sh - a.sh),
+    modifyCfg:   cfg => ({...cfg, rows_count:1}),
+    postProcess: centerHeroRows,
+  },
+  {
+    // Escalonada: tamaño decrece del centro hacia los lados (efecto abanico)
+    id: 'profundidad_grad', label: 'Escalonada', desc: 'Decrece hacia los lados',
+    color: 'fuchsia',
+    shadow: true, depth: true, overlap: 0.20, heroScale: 1.18, falloff: 0.84,
+    prepareItems: items => [...items].sort((a,b) => b.sh - a.sh),
+    modifyCfg:   cfg => ({...cfg, rows_count:1}),
+    postProcess: centerHeroRows,
   },
 ];
 
-// Índice de la propuesta IA = justo después de las estrategias geométricas
-const AI_IDX = STRATEGIES.length;
+// Las propuestas IA ocupan índices a partir de AI_BASE
+const AI_BASE = STRATEGIES.length;
+const AI_VARIANT_LABELS = ['IA · Equilibrado', 'IA · Profundidad', 'IA · Sombra'];
+const isAi      = idx => idx >= AI_BASE;
+const aiVariant = idx => BOD_AI_VARIANTS[idx - AI_BASE];
 
 // ── Motor de layout client-side ────────────────────────────────────────────
 function computeLayoutJS(images, cfg, strategy) {
@@ -758,14 +1025,10 @@ function computeLayoutJS(images, cfg, strategy) {
   const depth    = !!strategy.depth;
   const overlap  = strategy.overlap || 0;
   const heroScale= strategy.heroScale || 1;
+  const falloff  = strategy.falloff || 1;
   const shadowMargin = shadow ? Math.round(base_height*0.12) : 0;
   // Ordenar con estrategia
   const sorted = strategy.prepareItems(scaled);
-  // Profundidad: el más alto (primero) es el héroe → crece
-  if (depth && sorted.length) {
-    sorted[0].sw = Math.round(sorted[0].sw * heroScale);
-    sorted[0].sh = Math.round(sorted[0].sh * heroScale);
-  }
   // Distribuir
   const rows = Array.from({length:rows_count},()=>({items:[],width:0,height:0}));
   for(const item of sorted){
@@ -775,6 +1038,21 @@ function computeLayoutJS(images, cfg, strategy) {
   }
   // Post-proceso
   const prows = strategy.postProcess(rows);
+  // Héroe por fila = el más alto (queda al centro tras el centrado)
+  const heroIdx = prows.map(row => row.items.length
+    ? row.items.reduce((bi,it,i,a)=> it.sh>a[bi].sh ? i : bi, 0) : 0);
+  // Profundidad: escalar por distancia de índice al héroe
+  if (depth) {
+    prows.forEach((row, ri) => {
+      const hi = heroIdx[ri];
+      row.items.forEach((item, idx) => {
+        const d = Math.abs(idx - hi);
+        const sc = d === 0 ? heroScale : Math.pow(falloff, d);
+        item.sw = Math.max(1, Math.round(item.sw * sc));
+        item.sh = Math.max(1, Math.round(item.sh * sc));
+      });
+    });
+  }
   // Recalcular ancho/alto reales por fila (con o sin solapamiento)
   for(const row of prows){
     if(!row.items.length){ row.width=0; row.height=0; continue; }
@@ -790,17 +1068,17 @@ function computeLayoutJS(images, cfg, strategy) {
   const widest=Math.max(...prows.map(r=>r.width));
   // Posiciones — pegado al origen, base alineada
   let cy=0; const out=[];
-  for(const row of prows){
-    if(!row.items.length) continue;
+  prows.forEach((row, ri) => {
+    if(!row.items.length) return;
     const rx=(widest-row.width)/2; let cx=rx;
-    const center=(row.items.length-1)/2;
+    const hi=heroIdx[ri];
     row.items.forEach((item,idx)=>{
-      const z = depth ? (-Math.abs(idx-center)) : idx;
+      const z = depth ? (-Math.abs(idx-hi)) : idx;
       out.push({...item, x:Math.round(cx), y:Math.round(cy+(row.height-item.sh)), z});
       cx += overlap>0 ? item.sw*(1-overlap) : item.sw+item_gap;
     });
     cy += row.height + shadowMargin + item_gap;
-  }
+  });
   let docW=Math.min(Math.ceil(widest),30000);
   let docH=Math.min(Math.ceil(cy-item_gap),30000);  // conserva sombra final, descarta gap final
   return {
@@ -917,6 +1195,16 @@ function setAspect(w,h) {
     b.className=`aspect-btn flex-1 py-2 text-xs font-semibold rounded-lg border transition-all ${a?'border-indigo-200 bg-indigo-600 text-white':'border-gray-200 text-gray-600 hover:border-indigo-300'}`;
   });
 }
+function setOptsMode(mode) {
+  const adv = document.getElementById('opts-advanced');
+  const rB  = document.getElementById('opts-rapido');
+  const aB  = document.getElementById('opts-avanzado');
+  const on  = 'px-2.5 py-1 rounded-md bg-white shadow-sm text-indigo-600 transition-all';
+  const off = 'px-2.5 py-1 rounded-md text-gray-500 transition-all';
+  if (mode === 'rapido') { adv.classList.add('hidden');    rB.className = on; aB.className = off; }
+  else                   { adv.classList.remove('hidden'); aB.className = on; rB.className = off; }
+}
+
 function buildConfig(strategyId='auto') {
   const base = {
     sort_strategy:     strategyId,
@@ -935,56 +1223,72 @@ function buildConfig(strategyId='auto') {
 }
 
 // ── Ver propuestas ───────────────────────────────────────────────────────────
+function _propCardClass(idx, color) {
+  const sel = idx === BOD_SELECTED_IDX;
+  return `cursor-pointer rounded-2xl border-2 p-2.5 transition-all
+    ${sel ? `border-${color}-500 bg-${color}-50 ring-2 ring-${color}-200` : 'border-gray-200 hover:border-gray-300 bg-white'}`;
+}
+function _aiCardClass(idx) {
+  const sel = idx === BOD_SELECTED_IDX;
+  return `cursor-pointer rounded-2xl border-2 p-2.5 transition-all
+    ${sel ? 'border-purple-500 bg-purple-50 ring-2 ring-purple-200' : 'border-purple-200 hover:border-purple-400 bg-white'}`;
+}
+function _makeProposalCard(idx, label, desc, labelColor, clsFn) {
+  const card = document.createElement('div');
+  card.id = `prop-card-${idx}`;
+  card.className = clsFn(idx);
+  card.onclick = () => bodSelectProposal(idx);
+  // Área de preview de ALTURA FIJA → todas las tarjetas uniformes
+  const box = document.createElement('div');
+  box.className = 'checker-bg rounded-lg flex items-center justify-center overflow-hidden h-32';
+  const cv = document.createElement('canvas');
+  cv.className = 'max-w-full max-h-full object-contain';
+  box.appendChild(cv);
+  card.appendChild(box);
+  card.insertAdjacentHTML('beforeend',
+    `<div class="mt-1.5 text-center">
+       <p class="text-[11px] font-bold ${labelColor}">${esc(label)}</p>
+       <p class="text-[9px] text-gray-400 mt-0.5 leading-tight">${esc(desc)}</p>
+     </div>`);
+  return { card, cv };
+}
+
 function bodShowProposals() {
   if (!BOD_FILES.length) { toast('Agrega al menos una imagen de producto'); return; }
 
-  BOD_SESSION = null; BOD_AI_LAYOUT = null; BOD_AI_REASONING = '';
+  BOD_SESSION = null; BOD_AI_VARIANTS = []; BOD_AI_REASONING = '';
   BOD_SELECTED_IDX = 0;
 
   const baseCfg = buildConfig();
   document.getElementById('prop-count').textContent =
     `${BOD_FILES.length} producto${BOD_FILES.length!==1?'s':''}`;
 
+  // Estrategias geométricas (cálculo client-side instantáneo)
   const layouts = STRATEGIES.map(s => computeLayoutJS(BOD_FILES, baseCfg, s));
   const grid = document.getElementById('proposals-grid');
   grid.innerHTML = '';
-
-  // 6 tarjetas de estrategias
   STRATEGIES.forEach((s, i) => {
-    const card = document.createElement('div');
-    card.id = `prop-card-${i}`;
-    card.className = _propCardClass(i, s.color);
-    card.onclick = () => bodSelectProposal(i);
-    const cv = document.createElement('canvas');
-    cv.className = 'w-full rounded-lg';
-    card.innerHTML = '';
-    card.appendChild(cv);
-    card.insertAdjacentHTML('beforeend',
-      `<div class="mt-2 text-center">
-         <p class="text-xs font-bold text-gray-800">${s.label}</p>
-         <p class="text-[10px] text-gray-400 mt-0.5">${s.desc}</p>
-       </div>`);
+    const { card, cv } = _makeProposalCard(i, s.label, s.desc, 'text-gray-800', idx => _propCardClass(idx, s.color));
     grid.appendChild(card);
-    if (layouts[i]) renderMiniCanvas(cv, layouts[i], 290);
+    if (layouts[i]) renderMiniCanvas(cv, layouts[i]);
   });
 
-  // Tarjeta IA — ocupa las 2 columnas, estado cargando
-  const aiCard = document.createElement('div');
-  aiCard.id = `prop-card-${AI_IDX}`;
-  aiCard.className = 'col-span-2 rounded-2xl border-2 border-dashed border-purple-200 bg-purple-50 p-4 flex items-center gap-4';
-  aiCard.innerHTML = `
-    <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
-      <div class="w-5 h-5 border-2 border-purple-300 border-t-purple-600 rounded-full spin" id="ai-spinner"></div>
-    </div>
-    <div class="flex-1 min-w-0">
-      <p class="text-sm font-bold text-purple-800">✦ Propuesta IA</p>
-      <p class="text-xs text-purple-500 mt-0.5" id="ai-status">Analizando productos con Claude Vision...</p>
-    </div>`;
-  grid.appendChild(aiCard);
+  // Bloque IA — placeholders de carga
+  const aiGrid = document.getElementById('ai-grid');
+  aiGrid.innerHTML = '';
+  document.getElementById('ai-reasoning').textContent = '';
+  const st = document.getElementById('ai-status');
+  st.textContent = 'Analizando con IA…'; st.classList.remove('hidden');
+  AI_VARIANT_LABELS.forEach((lab, k) => {
+    const d = document.createElement('div');
+    d.id = `prop-card-${AI_BASE + k}`;
+    d.className = 'rounded-2xl border-2 border-dashed border-purple-200 bg-purple-50/40 p-3 flex flex-col items-center justify-center min-h-[110px] gap-2';
+    d.innerHTML = `<div class="w-5 h-5 border-2 border-purple-300 border-t-purple-600 rounded-full spin"></div>
+                   <p class="text-[10px] text-purple-400">${esc(lab)}</p>`;
+    aiGrid.appendChild(d);
+  });
 
   showBOD('bod-proposals');
-
-  // Upload + análisis IA en segundo plano
   bodUploadAndAnalyzeAI(baseCfg);
 }
 
@@ -1006,85 +1310,65 @@ async function bodUploadAndAnalyzeAI(cfg) {
     const aiData = await aiRes.json();
     if (!aiRes.ok) throw new Error(aiData.detail||'Error IA');
 
-    BOD_AI_LAYOUT   = aiData.layout;
-    BOD_AI_REASONING = aiData.suggestion.reasoning || '';
+    BOD_AI_VARIANTS  = aiData.variants || [];
+    BOD_AI_REASONING = (aiData.suggestion && aiData.suggestion.reasoning) || '';
 
-    // Actualizar tarjeta IA con resultado
-    const card = document.getElementById(`prop-card-${AI_IDX}`);
-    if (!card) return;
-    const isSelected = BOD_SELECTED_IDX === AI_IDX;
-    card.className = `col-span-2 cursor-pointer rounded-2xl border-2 p-3 transition-all
-      ${isSelected ? 'border-purple-500 bg-purple-50 ring-2 ring-purple-200' : 'border-purple-200 hover:border-purple-400 bg-white'}`;
-    card.onclick = () => bodSelectProposal(AI_IDX);
+    document.getElementById('ai-status').classList.add('hidden');
+    document.getElementById('ai-reasoning').textContent = BOD_AI_REASONING;
 
-    const cv = document.createElement('canvas');
-    cv.className = 'w-full rounded-lg mb-2';
-    card.innerHTML = '';
-    card.appendChild(cv);
-    renderMiniCanvas(cv, BOD_AI_LAYOUT, 580);
-
-    card.insertAdjacentHTML('beforeend', `
-      <div class="flex items-start gap-2 mt-1">
-        <span class="text-purple-600 text-sm flex-shrink-0">✦</span>
-        <div>
-          <p class="text-xs font-bold text-purple-800">IA Recomendada</p>
-          <p class="text-[11px] text-gray-500 mt-0.5 leading-relaxed">${esc(BOD_AI_REASONING)}</p>
-        </div>
-      </div>`);
+    const aiGrid = document.getElementById('ai-grid');
+    aiGrid.innerHTML = '';
+    BOD_AI_VARIANTS.forEach((v, k) => {
+      const idx = AI_BASE + k;
+      const { card, cv } = _makeProposalCard(idx, v.label, v.desc || '', 'text-purple-800', _aiCardClass);
+      aiGrid.appendChild(card);
+      if (v.layout) renderMiniCanvas(cv, v.layout);
+    });
 
   } catch(e) {
-    const card = document.getElementById(`prop-card-${AI_IDX}`);
-    if (card) {
-      card.className = 'col-span-2 rounded-2xl border-2 border-dashed border-red-200 bg-red-50 p-4 flex items-center gap-3';
-      card.innerHTML = `
+    document.getElementById('ai-status').classList.add('hidden');
+    document.getElementById('ai-grid').innerHTML = `
+      <div class="col-span-2 sm:col-span-3 rounded-2xl border-2 border-dashed border-red-200 bg-red-50 p-3 flex items-center gap-3">
         <svg class="w-5 h-5 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
         <div>
           <p class="text-xs font-semibold text-red-700">IA no disponible</p>
           <p class="text-[10px] text-red-500 mt-0.5">${esc(e.message)}</p>
-        </div>`;
-    }
+        </div>
+      </div>`;
   }
 }
 
-function _propCardClass(idx, color) {
-  const sel = idx === BOD_SELECTED_IDX;
-  return `cursor-pointer rounded-2xl border-2 p-3 transition-all
-    ${sel ? `border-${color}-500 bg-${color}-50 ring-2 ring-${color}-200` : 'border-gray-200 hover:border-gray-300 bg-white'}`;
-}
-
 function bodSelectProposal(idx) {
-  if (idx === AI_IDX && !BOD_AI_LAYOUT) { toast('Espera a que termine el análisis IA', 'warn'); return; }
+  if (isAi(idx) && !aiVariant(idx)) { toast('Espera a que termine el análisis IA', 'warn'); return; }
   BOD_SELECTED_IDX = idx;
   STRATEGIES.forEach((s, i) => {
     const c = document.getElementById(`prop-card-${i}`);
     if (c) c.className = _propCardClass(i, s.color);
   });
-  // Actualizar borde de la tarjeta IA
-  const aiCard = document.getElementById(`prop-card-${AI_IDX}`);
-  if (aiCard && BOD_AI_LAYOUT) {
-    const sel = idx === AI_IDX;
-    aiCard.className = `col-span-2 cursor-pointer rounded-2xl border-2 p-3 transition-all
-      ${sel ? 'border-purple-500 bg-purple-50 ring-2 ring-purple-200' : 'border-purple-200 hover:border-purple-400 bg-white'}`;
-  }
+  BOD_AI_VARIANTS.forEach((v, k) => {
+    const c = document.getElementById(`prop-card-${AI_BASE + k}`);
+    if (c) c.className = _aiCardClass(AI_BASE + k);
+  });
 }
 
 // ── Usar propuesta seleccionada ──────────────────────────────────────────────
 async function bodUseProposal() {
-  const isAI = BOD_SELECTED_IDX === AI_IDX;
-  if (isAI && !BOD_AI_LAYOUT) { toast('Espera a que termine el análisis IA', 'warn'); return; }
+  const ai = isAi(BOD_SELECTED_IDX);
+  if (ai && !aiVariant(BOD_SELECTED_IDX)) { toast('Espera a que termine el análisis IA', 'warn'); return; }
 
   const btn = document.getElementById('bod-use-btn');
   btn.disabled = true;
   btn.innerHTML = `<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full spin"></div> Preparando...`;
 
   try {
-    if (isAI) {
+    if (ai) {
       // Layout y sesión ya están listos del análisis en segundo plano
-      BOD_LAYOUT = BOD_AI_LAYOUT;
+      const v = aiVariant(BOD_SELECTED_IDX);
+      BOD_LAYOUT = v.layout;
       drawBodCanvas(BOD_LAYOUT);
-      document.getElementById('bod-info-title').textContent = '✦ IA — Orden personalizado';
+      document.getElementById('bod-info-title').textContent = `✦ ${v.label}`;
       document.getElementById('bod-info-meta').textContent =
         `${BOD_LAYOUT.canvas_width.toLocaleString()} × ${BOD_LAYOUT.canvas_height.toLocaleString()} px · ` +
         `${BOD_LAYOUT.items.length} productos · ${BOD_LAYOUT.rows_count} fila${BOD_LAYOUT.rows_count!==1?'s':''}`;
@@ -1177,13 +1461,15 @@ function paintLayout(ctx, layout, scale) {
   });
 }
 
-function renderMiniCanvas(canvas, layout, maxW) {
-  const scale = Math.min(1, maxW / layout.canvas_width);
-  canvas.width  = Math.round(layout.canvas_width  * scale);
-  canvas.height = Math.round(layout.canvas_height * scale);
+function renderMiniCanvas(canvas, layout) {
+  // El canvas mantiene la proporción real del bodegón; el contenedor de altura
+  // fija + object-contain lo encaja uniformemente. Fondo lo pone el .checker-bg.
+  const MAX = 460;  // resolución máxima del lado mayor
+  const scale = Math.min(1, MAX / Math.max(layout.canvas_width, layout.canvas_height, 1));
+  canvas.width  = Math.max(1, Math.round(layout.canvas_width  * scale));
+  canvas.height = Math.max(1, Math.round(layout.canvas_height * scale));
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = ctx.createPattern(checkerPattern(), 'repeat');
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   paintLayout(ctx, layout, scale);
 }
 
@@ -1204,7 +1490,7 @@ async function bodRender() {
   btn.disabled=true;
   btn.innerHTML=`<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full spin"></div> Renderizando...`;
   try {
-    const strategyId = BOD_SELECTED_IDX === AI_IDX ? 'ai' : STRATEGIES[BOD_SELECTED_IDX].id;
+    const strategyId = isAi(BOD_SELECTED_IDX) ? aiVariant(BOD_SELECTED_IDX).id : STRATEGIES[BOD_SELECTED_IDX].id;
     const res=await fetch('/api/bodegon/render', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({session_id:BOD_SESSION, config:buildConfig(strategyId)}),
@@ -1224,7 +1510,7 @@ async function bodRender() {
 // ── Reset ───────────────────────────────────────────────────────────────────
 function bodReset() {
   BOD_SESSION=null; BOD_LAYOUT=null; BOD_SELECTED_IDX=0;
-  BOD_AI_LAYOUT=null; BOD_AI_REASONING='';
+  BOD_AI_VARIANTS=[]; BOD_AI_REASONING='';
   BOD_FILES.forEach(f=>URL.revokeObjectURL(f.url));
   BOD_FILES=[]; BOD_BG_FILE=null;
   document.getElementById('bod-thumb-grid').innerHTML='';
@@ -1233,6 +1519,175 @@ function bodReset() {
   document.getElementById('bod-prod-input').value='';
   document.getElementById('bod-bg-input').value='';
   showBOD('bod-upload');
+}
+
+// ═══════════════════════════════════════════════════════
+// MÓDULO 3 — GENERACIÓN POR LOTES
+// ═══════════════════════════════════════════════════════
+let BATCH_GROUPS  = [];   // [{name, files:[File]}]
+let BATCH_RESULTS = [];   // [{session_id, name}]
+
+document.getElementById('batch-folder-input').addEventListener('change', function() {
+  if (this.files.length) batchAddFiles([...this.files]);
+  this.value = '';
+});
+
+function batchAddFiles(files) {
+  const imgs = files.filter(f => /\.(png|jpe?g|webp|tiff?|bmp|gif)$/i.test(f.name));
+  if (!imgs.length) { toast('La carpeta no contiene imágenes válidas'); return; }
+  const groups = {};
+  for (const f of imgs) {
+    const path = f.webkitRelativePath || f.name;
+    const seg = path.split('/');
+    // raíz/subcarpeta/archivo → grupo = subcarpeta ; raíz/archivo → grupo = raíz
+    const key = seg.length > 2 ? seg[1] : (seg.length === 2 ? seg[0] : 'Sueltos');
+    (groups[key] = groups[key] || []).push(f);
+  }
+  for (const [name, fs] of Object.entries(groups)) {
+    const ex = BATCH_GROUPS.find(g => g.name === name);
+    if (ex) ex.files.push(...fs); else BATCH_GROUPS.push({ name, files: fs });
+  }
+  renderBatchGroups();
+}
+
+function renderBatchGroups() {
+  const wrap = document.getElementById('batch-groups-wrap');
+  const list = document.getElementById('batch-groups');
+  if (!BATCH_GROUPS.length) { wrap.classList.add('hidden'); list.innerHTML = ''; return; }
+  wrap.classList.remove('hidden');
+  const totalFiles = BATCH_GROUPS.reduce((s, g) => s + g.files.length, 0);
+  document.getElementById('batch-group-count').textContent = BATCH_GROUPS.length;
+  document.getElementById('batch-file-count').textContent = totalFiles;
+  list.innerHTML = '';
+  BATCH_GROUPS.forEach((g, i) => {
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2';
+    row.innerHTML = `
+      <span class="text-base">📁</span>
+      <span class="text-xs font-semibold text-gray-700 truncate flex-1">${esc(g.name)}</span>
+      <span class="text-[10px] text-gray-400">${g.files.length} img</span>
+      <button onclick="batchRemoveGroup(${i})" class="text-xs text-red-300 hover:text-red-500">✕</button>`;
+    list.appendChild(row);
+  });
+}
+function batchRemoveGroup(i) { BATCH_GROUPS.splice(i, 1); renderBatchGroups(); }
+function batchClear() { BATCH_GROUPS = []; renderBatchGroups(); }
+
+function buildBatchConfig(mode) {
+  let cfg = { sort_strategy: mode, rows_count: 0, base_height: 760, item_gap: 40,
+              internal_padding: 120, max_vertical_boost: 1.20, aspect_w: 0, aspect_h: 0 };
+  const s = STRATEGIES.find(s => s.id === mode);   // aplica overrides geométricos si existen
+  if (s) cfg = { ...s.modifyCfg(cfg), sort_strategy: mode };
+  return cfg;
+}
+
+function batchBackToConfig() {
+  document.getElementById('batch-results').classList.add('hidden');
+  document.getElementById('batch-config').classList.remove('hidden');
+}
+
+function _batchCard(name) {
+  const card = document.createElement('div');
+  card.className = 'rounded-2xl border-2 border-gray-200 bg-white p-2.5';
+  const box = document.createElement('div');
+  box.className = 'checker-bg rounded-lg flex items-center justify-center overflow-hidden h-32 relative';
+  box.innerHTML = `<div class="w-5 h-5 border-2 border-indigo-200 border-t-indigo-600 rounded-full spin"></div>`;
+  card.appendChild(box);
+  card.insertAdjacentHTML('beforeend',
+    `<p class="text-[11px] font-bold text-gray-800 text-center mt-1.5 truncate" title="${esc(name)}">${esc(name)}</p>`);
+  return {
+    el: card,
+    done(url) {
+      box.innerHTML = `<img src="${url}" class="max-w-full max-h-full object-contain">
+        <a href="${url}" download="${esc(name)}.png"
+           class="absolute bottom-1 right-1 bg-white/90 hover:bg-white border border-gray-200 rounded-md p-1 shadow-sm" title="Descargar">
+          <svg class="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+        </a>`;
+    },
+    error(msg) {
+      card.className = 'rounded-2xl border-2 border-red-200 bg-red-50 p-2.5';
+      box.className = 'rounded-lg flex items-center justify-center h-32 text-center px-2';
+      box.innerHTML = `<p class="text-[10px] text-red-500">${esc(msg)}</p>`;
+    },
+  };
+}
+
+async function batchGenerate() {
+  if (!BATCH_GROUPS.length) { toast('Agrega al menos una carpeta'); return; }
+  const mode = document.getElementById('batch-mode').value;
+  const isAImode = mode.startsWith('ai');
+  const cfg = buildBatchConfig(mode);
+
+  const btn = document.getElementById('batch-gen-btn');
+  btn.disabled = true;
+
+  document.getElementById('batch-config').classList.add('hidden');
+  document.getElementById('batch-results').classList.remove('hidden');
+  const grid = document.getElementById('batch-grid');
+  grid.innerHTML = '';
+  BATCH_RESULTS = [];
+  const zipBtn = document.getElementById('batch-zip-btn');
+  zipBtn.disabled = true;
+
+  const total = BATCH_GROUPS.length;
+  const prog = document.getElementById('batch-progress');
+  prog.textContent = `0/${total}`;
+
+  for (let i = 0; i < total; i++) {
+    const g = BATCH_GROUPS[i];
+    const card = _batchCard(g.name);
+    grid.appendChild(card.el);
+    try {
+      const fd = new FormData();
+      g.files.forEach(f => fd.append('products', f, f.name));
+      const up = await (await fetch('/api/bodegon/upload', { method: 'POST', body: fd })).json();
+      if (!up.session_id) throw new Error(up.detail || 'Error al subir');
+      const sid = up.session_id;
+
+      if (isAImode) {
+        const ai = await fetch('/api/bodegon/ai-proposal', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sid, config: cfg }),
+        });
+        if (!ai.ok) throw new Error((await ai.json()).detail || 'Error IA');
+      }
+
+      const rd = await fetch('/api/bodegon/render', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sid, config: cfg }),
+      });
+      if (!rd.ok) throw new Error((await rd.json()).detail || 'Error al renderizar');
+
+      card.done(`/api/bodegon/download/${sid}?t=${Date.now()}`);
+      BATCH_RESULTS.push({ session_id: sid, name: g.name });
+    } catch (e) {
+      card.error(e.message);
+    }
+    prog.textContent = `${i + 1}/${total}`;
+  }
+
+  btn.disabled = false;
+  if (BATCH_RESULTS.length) zipBtn.disabled = false;
+}
+
+async function batchDownloadAll() {
+  if (!BATCH_RESULTS.length) return;
+  const zipBtn = document.getElementById('batch-zip-btn');
+  zipBtn.disabled = true;
+  const old = zipBtn.innerHTML;
+  zipBtn.innerHTML = `<div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full spin"></div> Empaquetando...`;
+  try {
+    const res = await fetch('/api/batch/zip', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: BATCH_RESULTS }),
+    });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.detail || 'Error al empaquetar');
+    const a = document.createElement('a');
+    a.href = `/api/batch/download/${d.batch_id}`; a.download = 'bodegones.zip';
+    document.body.appendChild(a); a.click(); a.remove();
+  } catch (e) { toast(e.message); }
+  finally { zipBtn.disabled = false; zipBtn.innerHTML = old; }
 }
 
 // ═══════════════════════════════════════════════════════
