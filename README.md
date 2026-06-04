@@ -5,9 +5,9 @@ Herramienta web para composición inteligente de imágenes de producto.
 
 ## Módulos
 
-**Smart Objects** — Detecta y reemplaza SmartObjectLayers en archivos `.psd` / `.psb` sin abrir Photoshop.
+**Bodegón Generator** *(principal)* — Genera composiciones de productos automáticamente con 8 estrategias de layout + propuesta IA usando Claude Vision. Recorta cada producto a su contenido real (al ras), añade sombras de contacto y composición con profundidad.
 
-**Bodegón Generator** — Genera composiciones de productos automáticamente con 6 estrategias de layout + propuesta IA usando Claude Vision.
+**Smart Objects** *(legado, oculto)* — Detecta y reemplaza SmartObjectLayers en archivos `.psd` / `.psb` sin abrir Photoshop. El backend sigue activo; la pestaña está oculta desde el evolutivo 3.
 
 ## Stack
 
@@ -35,4 +35,6 @@ O doble clic en `start.bat` (Windows).
 | Centrado | El más alto al centro de cada fila |
 | Uniforme | Todos la misma altura |
 | Dinámico | Contraste acentuado |
+| Sombra | Productos anclados con sombra de contacto |
+| Profundidad | Héroe al centro más grande, con solapamiento y sombra |
 | **✦ IA** | Claude Vision analiza y sugiere el orden óptimo |

@@ -74,13 +74,15 @@ def _center_in_rows(rows: List[_Row]) -> List[_Row]:
 
 
 SORT_STRATEGIES = {
-    'auto':      _sort_auto,
-    'area':      _sort_area,
-    'alternado': _sort_alternado,
-    'centrado':  _sort_auto,      # sort igual, post-process centra
-    'uniforme':  _sort_uniforme,
-    'dinamico':  _sort_dinamico,
-    'ai':        list,            # preserva el orden decidido por la IA
+    'auto':        _sort_auto,
+    'area':        _sort_area,
+    'alternado':   _sort_alternado,
+    'centrado':    _sort_auto,      # sort igual, post-process centra
+    'uniforme':    _sort_uniforme,
+    'dinamico':    _sort_dinamico,
+    'sombra':      _sort_auto,      # mismo orden que auto + sombra de contacto
+    'profundidad': _sort_auto,      # héroe al centro, solapamiento y sombra
+    'ai':          list,            # preserva el orden decidido por la IA
 }
 
 
@@ -101,6 +103,18 @@ def compute_layout(
 
     # Forzar padding = 0 para canvas exacto
     internal_padding = 0
+
+    # ─── Efectos de las propuestas nuevas ────────────────────────────────────
+    shadow = sort_strategy in ('sombra', 'profundidad')
+    depth = sort_strategy == 'profundidad'
+    overlap = 0.16 if depth else 0.0          # solapamiento horizontal
+    hero_scale = 1.22 if depth else 1.0       # el producto más alto crece
+    # Espacio reservado bajo cada fila para la sombra de contacto
+    shadow_margin = round(base_height * 0.12) if shadow else 0
+
+    # Profundidad: una sola fila para que el solapamiento y el héroe tengan sentido
+    if depth:
+        rows_count = 1
 
     # Uniforme y dinámico modifican el boost
     if sort_strategy == 'uniforme':
@@ -141,7 +155,13 @@ def compute_layout(
     sort_fn = SORT_STRATEGIES.get(sort_strategy, _sort_auto)
     items = sort_fn(items)
 
-    # Distribuir en filas
+    # Profundidad: el producto más alto (primero tras el sort) es el héroe → crece
+    if depth and items:
+        hero = items[0]
+        hero.sw = round(hero.sw * hero_scale)
+        hero.sh = round(hero.sh * hero_scale)
+
+    # Distribuir en filas (balance por ancho aproximado)
     rows: List[_Row] = [_Row() for _ in range(rows_count)]
     for item in items:
         row = min(rows, key=lambda r: r.width)
@@ -150,41 +170,63 @@ def compute_layout(
         if item.sh > row.height:
             row.height = item.sh
 
-    # Post-proceso "centrado"
-    if sort_strategy == 'centrado':
+    # Post-proceso "centrado" y "profundidad" → héroe al centro de la fila
+    if sort_strategy in ('centrado', 'profundidad'):
         rows = _center_in_rows(rows)
 
-    # Tamaño del canvas — exacto al contenido, sin padding
+    # Recalcular ancho/alto reales de cada fila (con o sin solapamiento)
+    for row in rows:
+        if not row.items:
+            row.width = 0.0
+            row.height = 0.0
+            continue
+        row.height = max(it.sh for it in row.items)
+        if overlap > 0:
+            # cada producto (salvo el último) avanza solo (1-overlap) de su ancho
+            total = sum(it.sw for it in row.items)
+            total -= overlap * sum(it.sw for it in row.items[:-1])
+            row.width = total
+        else:
+            row.width = sum(it.sw for it in row.items) + item_gap * (len(row.items) - 1)
+
+    # Tamaño del canvas — exacto al contenido
     widest = max(r.width for r in rows)
-    total_h = sum(r.height for r in rows)
-
-    # Canvas sin padding — tamaño exacto del contenido
-    # Restar el gap final de cada fila (no debe ocupar ancho)
-    doc_w = math.ceil(widest - item_gap)  # Último gap no cuenta
-    doc_h = math.ceil(total_h)
-
-    doc_w = min(doc_w, 30000)
-    doc_h = min(doc_h, 30000)
 
     # Calcular posiciones — sin offset, todo pegado al origen
-    gx = 0.0  # Sin centrado horizontal
-    cy = 0.0  # Sin padding vertical
+    cy = 0.0
     out = []
     for row in rows:
+        if not row.items:
+            continue
         rx = (widest - row.width) / 2
-        cx = gx + rx
-        for item in row.items:
+        cx = rx
+        n_items = len(row.items)
+        center = (n_items - 1) / 2.0
+        for idx, item in enumerate(row.items):
             item.x = cx
-            item.y = cy + (row.height - item.sh)
-            cx += item.sw + item_gap
+            item.y = cy + (row.height - item.sh)   # alineados a la base
+            # z-order: en profundidad, lo más cercano al centro queda al frente
+            z = (-abs(idx - center)) if depth else float(idx)
+            if overlap > 0:
+                cx += item.sw * (1 - overlap)
+            else:
+                cx += item.sw + item_gap
             out.append({
                 "name":     item.name,
                 "filepath": item.filepath,
                 "ow": item.w, "oh": item.h,
                 "sw": item.sw, "sh": item.sh,
                 "x":  round(item.x), "y": round(item.y),
+                "z":  round(z, 3),
             })
-        cy += row.height + item_gap
+        cy += row.height + shadow_margin + item_gap
+
+    # Alto: conserva el margen de sombra de la última fila, descarta el gap final
+    doc_w = math.ceil(widest)
+    doc_h = math.ceil(cy - item_gap)
+
+    doc_w = min(doc_w, 30000)
+    doc_h = min(doc_h, 30000)
 
     return {
         "canvas_width":  doc_w,
@@ -192,4 +234,11 @@ def compute_layout(
         "rows_count":    rows_count,
         "sort_strategy": sort_strategy,
         "items":         out,
+        "effects": {
+            "shadow":         shadow,
+            "depth":          depth,
+            "shadow_opacity": 0.30,
+            "shadow_blur":    max(8, round(base_height * 0.045)),
+            "shadow_margin":  shadow_margin,
+        },
     }
