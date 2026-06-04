@@ -120,13 +120,16 @@ def compute_layout(
 
     # ─── Efectos de las propuestas nuevas ────────────────────────────────────
     depth = sort_strategy in DEPTH_PARAMS
-    shadow = depth or sort_strategy in ('sombra', 'ai_shadow')
+    strong_shadow = depth or sort_strategy in ('sombra', 'ai_shadow')
+    shadow = True                              # grounding sutil en TODAS las propuestas
     dp = DEPTH_PARAMS.get(sort_strategy, {})
     overlap = dp.get('overlap', 0.0)          # solapamiento horizontal
     hero_scale = dp.get('hero_scale', 1.0)    # escala del producto central
     depth_falloff = dp.get('falloff', 1.0)    # caída de tamaño hacia los lados
-    # Espacio reservado bajo cada fila para la sombra de contacto
-    shadow_margin = round(base_height * 0.12) if shadow else 0
+    # Sombra de contacto: fuerte en Sombra/Profundidad, sutil en el resto
+    shadow_opacity = 0.30 if strong_shadow else 0.16
+    shadow_blur = max(8, round(base_height * (0.045 if strong_shadow else 0.034)))
+    shadow_margin = round(base_height * (0.12 if strong_shadow else 0.07))
 
     # Profundidad: una sola fila para que el solapamiento y el héroe tengan sentido
     if depth:
@@ -138,13 +141,11 @@ def compute_layout(
     elif sort_strategy == 'dinamico':
         max_vertical_boost = 1.6
 
-    # Config automática
+    # Config automática — preferir 1 fila en sets pequeños (composición más limpia)
     if rows_count == 0 or aspect_w == 0:
-        if n <= 3:
+        if n <= 6:
             rows_count = rows_count or 1; aspect_w = aspect_w or 5;  aspect_h = aspect_h or 3
-        elif n <= 8:
-            rows_count = rows_count or 2; aspect_w = aspect_w or 5;  aspect_h = aspect_h or 3
-        elif n <= 20:
+        elif n <= 15:
             rows_count = rows_count or 2; aspect_w = aspect_w or 8;  aspect_h = aspect_h or 3
         else:
             rows_count = rows_count or 3; aspect_w = aspect_w or 10; aspect_h = aspect_h or 3
@@ -182,8 +183,8 @@ def compute_layout(
         if item.sh > row.height:
             row.height = item.sh
 
-    # Post-proceso "centrado" y profundidad → el más alto al centro de la fila
-    if sort_strategy == 'centrado' or depth:
+    # Post-proceso → el más alto al centro de la fila (silueta piramidal, más estética)
+    if sort_strategy in ('centrado', 'auto', 'area') or depth:
         rows = _center_in_rows(rows)
 
     # Profundidad: escalar según la posición ya centrada
@@ -264,8 +265,8 @@ def compute_layout(
         "effects": {
             "shadow":         shadow,
             "depth":          depth,
-            "shadow_opacity": 0.30,
-            "shadow_blur":    max(8, round(base_height * 0.045)),
+            "shadow_opacity": shadow_opacity,
+            "shadow_blur":    shadow_blur,
             "shadow_margin":  shadow_margin,
         },
     }

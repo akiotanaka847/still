@@ -6,6 +6,7 @@ Módulo 2: Generador de bodegones con layout automático + propuesta IA.
 import hashlib
 import hmac
 import json
+import logging
 import os
 import re
 import secrets
@@ -22,7 +23,7 @@ import uuid
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Request
+from fastapi import FastAPI, File, HTTPException, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -31,17 +32,54 @@ from starlette.middleware.sessions import SessionMiddleware
 from layout import compute_layout
 from renderer import get_image_dimensions, render_png
 
-# ─── Importar psapi ──────────────────────────────────────────────────────────
-psapi = None
-try:
-    import psapi  # noqa: F811
-except ImportError:
-    try:
-        import photoshopapi as psapi  # noqa: F811
-    except ImportError:
-        pass
 
-PSAPI_AVAILABLE = psapi is not None
+# ─── Configuración de seguridad (por variables de entorno) ────────────────────
+def _envbool(name: str, default: bool = False) -> bool:
+    return os.environ.get(name, str(default)).strip().lower() in ("1", "true", "yes", "on")
+
+
+DEBUG = _envbool("DEBUG", False)
+# Cookie Secure: actívalo en producción detrás de HTTPS
+COOKIE_SECURE = _envbool("COOKIE_SECURE", False)
+# Registro abierto (en producción conviene cerrarlo: invitaciones/aprobación)
+REGISTRATION_OPEN = _envbool("REGISTRATION_OPEN", True)
+# Orígenes permitidos por CORS (misma-origen por defecto)
+ALLOWED_ORIGINS = [
+    o.strip() for o in os.environ.get(
+        "ALLOWED_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000"
+    ).split(",") if o.strip()
+]
+# Límites de subida
+MAX_FILE_MB = int(os.environ.get("MAX_FILE_MB", "25"))
+MAX_FILES = int(os.environ.get("MAX_FILES", "60"))
+MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024
+
+
+# ─── Rate limiting (ventana deslizante en memoria, sin dependencias) ──────────
+_rl_lock = threading.Lock()
+_rl_store: dict = {}
+
+
+def _rate_limit(key: str, limit: int, window_s: int) -> bool:
+    """Devuelve True si la petición se permite; False si se excedió el límite."""
+    now = time.time()
+    cutoff = now - window_s
+    with _rl_lock:
+        q = _rl_store.setdefault(key, [])
+        while q and q[0] < cutoff:
+            q.pop(0)
+        if len(q) >= limit:
+            return False
+        q.append(now)
+        return True
+
+
+def _client_ip(request: Request) -> str:
+    fwd = request.headers.get("x-forwarded-for", "")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
 
 # ─── Directorios ─────────────────────────────────────────────────────────────
 SESSIONS_DIR = Path("sessions")
@@ -55,7 +93,7 @@ USERS_FILE = Path("users.json")
 SECRET_FILE = Path(".secret")
 
 # Prefijos de rutas que requieren sesión iniciada
-PROTECTED_PREFIXES = ("/api/bodegon", "/api/batch", "/api/analyze", "/api/process", "/api/download")
+PROTECTED_PREFIXES = ("/api/bodegon", "/api/batch")
 
 
 def _get_secret() -> str:
@@ -108,68 +146,6 @@ def _safe_name(name: str) -> str:
     return (name[:255] or "file")
 
 
-def _open_psd(path: str):
-    """Abre un PSD/PSB detectando automáticamente la profundidad de bits."""
-    if hasattr(psapi, "LayeredFile") and hasattr(psapi.LayeredFile, "read"):
-        return psapi.LayeredFile.read(path)
-    for cls_name in ("LayeredFile_8bit", "LayeredFile_16bit", "LayeredFile_32bit"):
-        cls = getattr(psapi, cls_name, None)
-        if cls:
-            try:
-                return cls.read(path)
-            except Exception:
-                continue
-    raise ValueError("No se pudo abrir el archivo PSD")
-
-
-def _collect_smart_objects(layers, parent_path: str = "") -> list:
-    """Recorre el árbol de capas y retorna todos los SmartObjectLayer con su ruta."""
-    result = []
-    for layer in layers:
-        name = layer.name
-        path = f"{parent_path}/{name}" if parent_path else name
-        type_name = type(layer).__name__
-
-        if "SmartObject" in type_name:
-            result.append({"name": name, "path": path})
-
-        if "Group" in type_name:
-            try:
-                result.extend(_collect_smart_objects(layer.layers, path))
-            except Exception:
-                pass
-    return result
-
-
-def _apply_to_layer(
-    layers,
-    target_path: str,
-    image_path: Optional[str],
-    new_name: Optional[str],
-    current_path: str = "",
-) -> bool:
-    """Busca el SmartObjectLayer por ruta y aplica reemplazo de imagen y/o renombrado."""
-    for layer in layers:
-        name = layer.name
-        path = f"{current_path}/{name}" if current_path else name
-        type_name = type(layer).__name__
-
-        if "SmartObject" in type_name and path == target_path:
-            if image_path:
-                layer.replace(image_path, link_externally=False)
-            if new_name and new_name.strip() and new_name.strip() != name:
-                layer.name = new_name.strip()
-            return True
-
-        if "Group" in type_name:
-            try:
-                if _apply_to_layer(layer.layers, target_path, image_path, new_name, path):
-                    return True
-            except Exception:
-                pass
-    return False
-
-
 # ─── Lifespan ─────────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
@@ -184,10 +160,39 @@ async def lifespan(app_: FastAPI):
 
 
 # ─── App ──────────────────────────────────────────────────────────────────────
-app = FastAPI(title="PSD Smart Object Replacer", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="StillAI", version="1.0.0", lifespan=lifespan)
 app.add_middleware(
-    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,      # misma-origen por defecto (no "*")
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
+
+# Content-Security-Policy (permite lo que la app necesita: Tailwind CDN, Google Fonts,
+# imágenes data:/blob: y código inline). 'unsafe-inline' es necesario por el JS/CSS inline.
+_CSP = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+    "font-src 'self' https://fonts.gstatic.com; "
+    "img-src 'self' data: blob:; "
+    "connect-src 'self'; "
+    "frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+)
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    resp = await call_next(request)
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["X-Frame-Options"] = "DENY"
+    resp.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    resp.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    resp.headers["Content-Security-Policy"] = _CSP
+    if COOKIE_SECURE:
+        resp.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return resp
 
 
 @app.middleware("http")
@@ -203,9 +208,20 @@ app.add_middleware(
     SessionMiddleware,
     secret_key=_get_secret(),
     same_site="lax",
-    https_only=False,
-    max_age=60 * 60 * 24 * 7,   # 7 días
+    https_only=COOKIE_SECURE,    # Secure en producción (HTTPS)
+    max_age=60 * 60 * 24 * 7,    # 7 días
 )
+
+_logger = logging.getLogger("stillai")
+
+
+@app.exception_handler(Exception)
+async def _unhandled_exception(request: Request, exc: Exception):
+    """Evita filtrar detalles internos: registra el error y responde genérico."""
+    _logger.exception("Error no controlado en %s", request.url.path)
+    if DEBUG:
+        return JSONResponse({"detail": f"{type(exc).__name__}: {exc}"}, status_code=500)
+    return JSONResponse({"detail": "Error interno del servidor"}, status_code=500)
 
 
 # ─── Rutas ────────────────────────────────────────────────────────────────────
@@ -219,18 +235,22 @@ async def frontend() -> HTMLResponse:
 
 @app.get("/api/status")
 async def status():
-    return {"psapi_available": PSAPI_AVAILABLE}
+    return {"ok": True}
 
 
 # ─── Auth ─────────────────────────────────────────────────────────────────────
 @app.post("/api/auth/register")
 async def auth_register(request: Request, body: dict):
+    if not REGISTRATION_OPEN:
+        raise HTTPException(403, "El registro está cerrado")
+    if not _rate_limit(f"reg:{_client_ip(request)}", limit=5, window_s=3600):
+        raise HTTPException(429, "Demasiados intentos. Espera un momento.")
     u = (body.get("username") or "").strip().lower()
     p = body.get("password") or ""
-    if len(u) < 3 or len(p) < 4:
-        raise HTTPException(400, "Usuario (mín 3) y contraseña (mín 4 caracteres) requeridos")
-    if not re.match(r"^[a-z0-9_.\-]+$", u):
-        raise HTTPException(400, "Usuario inválido (usa letras, números, . _ -)")
+    if len(u) < 3 or not re.match(r"^[a-z0-9_.\-]+$", u):
+        raise HTTPException(400, "Usuario inválido (mín 3; letras, números, . _ -)")
+    if len(p) < 8:
+        raise HTTPException(400, "La contraseña debe tener al menos 8 caracteres")
     users = _load_users()
     if u in users:
         raise HTTPException(409, "Ese usuario ya existe")
@@ -242,8 +262,12 @@ async def auth_register(request: Request, body: dict):
 
 @app.post("/api/auth/login")
 async def auth_login(request: Request, body: dict):
+    # Anti fuerza-bruta: por IP y por usuario
     u = (body.get("username") or "").strip().lower()
     p = body.get("password") or ""
+    if not _rate_limit(f"login:{_client_ip(request)}", limit=10, window_s=300) or \
+       not _rate_limit(f"login_u:{u}", limit=8, window_s=300):
+        raise HTTPException(429, "Demasiados intentos de inicio de sesión. Espera unos minutos.")
     users = _load_users()
     if u not in users or not _verify_pw(p, users[u]["password"]):
         raise HTTPException(401, "Usuario o contraseña incorrectos")
@@ -265,135 +289,8 @@ async def auth_me(request: Request):
     return {"username": u}
 
 
-@app.post("/api/analyze")
-async def analyze(file: UploadFile = File(...)):
-    if not PSAPI_AVAILABLE:
-        raise HTTPException(
-            503,
-            "PhotoshopAPI no está instalado. Ejecuta en la terminal: pip install PhotoshopAPI",
-        )
-
-    ext = Path(file.filename or "").suffix.lower()
-    if ext not in (".psd", ".psb"):
-        raise HTTPException(400, "Solo se aceptan archivos .psd y .psb")
-
-    session_id = str(uuid.uuid4())
-    session_dir = SESSIONS_DIR / session_id
-    (session_dir / "original").mkdir(parents=True)
-
-    safe = _safe_name(file.filename or "file.psd")
-    psd_path = session_dir / "original" / safe
-    psd_path.write_bytes(await file.read())
-
-    try:
-        doc = _open_psd(str(psd_path))
-        smart_objects = _collect_smart_objects(doc.layers)
-
-        info = {
-            "session_id": session_id,
-            "filename": safe,
-            "psd_path": str(psd_path),
-            "width": int(doc.width),
-            "height": int(doc.height),
-            "smart_objects": smart_objects,
-        }
-        (session_dir / "session.json").write_text(
-            json.dumps(info, indent=2), encoding="utf-8"
-        )
-        return info
-
-    except Exception as e:
-        shutil.rmtree(session_dir, ignore_errors=True)
-        raise HTTPException(500, f"Error leyendo PSD: {e}")
-
-
-@app.post("/api/process")
-async def process(
-    session_id: str = Form(...),
-    replacements: str = Form(...),
-    files: List[UploadFile] = File(default=[]),
-):
-    if not PSAPI_AVAILABLE:
-        raise HTTPException(503, "PhotoshopAPI no está instalado")
-
-    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
-        raise HTTPException(400, "Session ID inválido")
-
-    session_dir = SESSIONS_DIR / session_id
-    session_file = session_dir / "session.json"
-    if not session_file.exists():
-        raise HTTPException(404, "Sesión no encontrada o expirada")
-
-    info = json.loads(session_file.read_text(encoding="utf-8"))
-    replacements_list: list = json.loads(replacements)
-
-    images_dir = session_dir / "images"
-    images_dir.mkdir(exist_ok=True)
-
-    # Guardar imágenes subidas con el file_key como nombre
-    file_map: dict[str, str] = {}
-    for f in files:
-        raw_key = f.filename or "img"
-        safe_key = _safe_name(raw_key)
-        dest = images_dir / safe_key
-        dest.write_bytes(await f.read())
-        file_map[raw_key] = str(dest)
-
-    doc = _open_psd(info["psd_path"])
-    applied: list[str] = []
-    errors: list[str] = []
-
-    for r in replacements_list:
-        path: str = r.get("path", "")
-        new_name: str = r.get("new_name", "").strip()
-        file_key: str = r.get("file_key", "")
-
-        if not file_key and not new_name:
-            continue
-
-        image_path = file_map.get(file_key) if file_key else None
-
-        try:
-            ok = _apply_to_layer(doc.layers, path, image_path, new_name or None)
-            if ok:
-                applied.append(path)
-            else:
-                errors.append(f"No encontrado: '{path}'")
-        except Exception as e:
-            errors.append(f"Error en '{path}': {e}")
-
-    output_dir = session_dir / "output"
-    output_dir.mkdir(exist_ok=True)
-    out_name = f"modified_{info['filename']}"
-    out_path = output_dir / out_name
-
-    try:
-        doc.write(str(out_path))
-    except Exception as e:
-        raise HTTPException(500, f"Error guardando PSD: {e}")
-
-    return {
-        "session_id": session_id,
-        "filename": out_name,
-        "applied": applied,
-        "errors": errors,
-    }
-
-
-@app.get("/api/download/{session_id}")
-async def download(session_id: str):
-    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
-        raise HTTPException(400, "Session ID inválido")
-    output_dir = SESSIONS_DIR / session_id / "output"
-    files = sorted(output_dir.glob("*.ps*")) if output_dir.exists() else []
-    if not files:
-        raise HTTPException(404, "Archivo de salida no encontrado")
-    f = files[0]
-    return FileResponse(str(f), filename=f.name, media_type="application/octet-stream")
-
-
 # ══════════════════════════════════════════════════════════════════════════════
-# MÓDULO 2: BODEGÓN GENERATOR
+# BODEGÓN GENERATOR
 # ══════════════════════════════════════════════════════════════════════════════
 
 VALID_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp", ".gif"}
@@ -413,6 +310,9 @@ async def bodegon_upload(
     background: Optional[UploadFile] = File(default=None),
 ):
     """Sube imágenes de productos y (opcionalmente) un fondo. Retorna dimensiones."""
+    if len(products) > MAX_FILES:
+        raise HTTPException(413, f"Máximo {MAX_FILES} imágenes por grupo")
+
     session_id = str(uuid.uuid4())
     session_dir = SESSIONS_DIR / session_id
     products_dir = session_dir / "products"
@@ -424,9 +324,13 @@ async def bodegon_upload(
         if ext not in VALID_IMAGE_EXTS:
             continue
 
+        data = await f.read()
+        if len(data) > MAX_FILE_BYTES:
+            continue   # ignora archivos demasiado grandes
+
         safe = _safe_name(f.filename or f"product_{i}{ext}")
         dest = products_dir / safe
-        dest.write_bytes(await f.read())
+        dest.write_bytes(data)
 
         try:
             w, h = get_image_dimensions(str(dest))
@@ -450,10 +354,11 @@ async def bodegon_upload(
     bg_path = None
     if background and background.filename:
         ext = Path(background.filename).suffix.lower()
-        if ext in VALID_IMAGE_EXTS:
+        bg_data = await background.read()
+        if ext in VALID_IMAGE_EXTS and len(bg_data) <= MAX_FILE_BYTES:
             bg_safe = _safe_name(background.filename)
             bg_dest = session_dir / bg_safe
-            bg_dest.write_bytes(await background.read())
+            bg_dest.write_bytes(bg_data)
             bg_path = str(bg_dest)
 
     info = {
