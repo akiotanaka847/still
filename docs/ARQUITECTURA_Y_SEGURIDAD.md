@@ -1,7 +1,10 @@
 # StillAI — Arquitectura, funcionamiento y seguridad
 
 > Documento para revisión técnica/de negocio. Estado: **prototipo funcional avanzado (MVP+)**.
-> Apto para demos y uso interno; requiere una **fase de endurecimiento** antes de oferta comercial.
+> Apto para demos y uso interno; el **hardening de seguridad a nivel de código ya está aplicado** —
+> lo pendiente es de despliegue (HTTPS) y de plataforma (base de datos, cuentas).
+>
+> **Versión:** v2.1.0 · **Fecha:** 2026-06-04 · **Repositorio:** `still` (GitHub privado).
 
 ---
 
@@ -13,10 +16,13 @@ y el sistema entrega un PNG listo para tienda, catálogo o redes. Incluye un mó
 (carpetas → muchos bodegones) y **login** de usuario.
 
 - **Madurez:** prototipo funcional, una sola instancia, almacenamiento local.
-- **Seguridad:** base correcta (contraseñas hasheadas, sesiones firmadas, rutas protegidas),
-  pero **faltan controles de producción** (HTTPS, límites de abuso, gestión de secretos, etc.).
-- **Para ofrecerlo a clientes:** se necesita una fase de *hardening* (estimada abajo) y decisiones
-  sobre privacidad de datos, porque las imágenes se procesan con proveedores de IA externos.
+- **Seguridad:** base correcta (contraseñas hasheadas, sesiones firmadas, rutas protegidas)
+  **más el hardening OWASP aplicado en v2.1.0** (rate limiting, headers de seguridad, CORS
+  restringido, límites de subida, errores genéricos, config por entorno). Lo que **resta** es de
+  **despliegue** (HTTPS/TLS, rotación de secretos) y de **plataforma** (base de datos, cuentas).
+- **Para ofrecerlo a clientes:** falta cerrar el despliegue seguro (Fase A) y cuentas/datos
+  (Fase B), más decisiones sobre privacidad, porque las imágenes se procesan con proveedores de
+  IA externos.
 
 ---
 
@@ -26,7 +32,7 @@ y el sistema entrega un PNG listo para tienda, catálogo o redes. Incluye un mó
 |---|---|
 | Backend / API | **Python 3.14 + FastAPI + Uvicorn** (ASGI) |
 | Sesiones / auth | Starlette **SessionMiddleware** (cookie firmada, `itsdangerous`) + **PBKDF2-HMAC-SHA256** |
-| Procesamiento de imagen | **Pillow** (composición, recorte, sombras) · **PhotoshopAPI** (PSD/PSB, módulo legado) |
+| Procesamiento de imagen | **Pillow** (composición, recorte al contenido, sombras de contacto) |
 | IA (orden + tamaños) | Configurable: **Groq** (Llama 4 Scout), **Google Gemini** (2.5 Flash), **Anthropic Claude** |
 | Frontend | **HTML + Vanilla JS + Tailwind CSS** (sin framework) · render con `<canvas>` |
 | Almacenamiento | **Sistema de archivos local** (`sessions/`, `users.json`) — sin base de datos aún |
@@ -34,6 +40,10 @@ y el sistema entrega un PNG listo para tienda, catálogo o redes. Incluye un mó
 
 > No hay framework de frontend (React/Vue), ni base de datos, ni colas todavía — es intencional
 > para el MVP. El roadmap (ver `ROADMAP_PLATAFORMA.md`) contempla DB, colas y nube para escalar.
+>
+> **Nota (v2.1.0):** el antiguo módulo de reemplazo de Smart Objects en PSD/PSB (PhotoshopAPI) fue
+> **retirado** del producto. StillAI se centra ahora en la generación de bodegones con fondo
+> transparente; ya no depende de `PhotoshopAPI`.
 
 ---
 
@@ -68,31 +78,37 @@ Usuario → Login (sesión por cookie)
   saneados (sin *path traversal*); extensiones de imagen filtradas.
 - **Secretos fuera del repo:** `.env`, `users.json`, `.secret` están en `.gitignore`.
 
-### ⚠️ Lo que FALTA para producción (gaps)
-| Gap | Riesgo | Prioridad |
-|---|---|---|
-| **Sin HTTPS/TLS** (corre en HTTP local) | credenciales viajan sin cifrar | 🔴 Crítico |
-| **Cookie sin `Secure`** (`https_only=False`) | depende de no-HTTPS | 🔴 Crítico (al pasar a HTTPS) |
-| **Sin rate limiting** | fuerza bruta de login, abuso de IA (costos) | 🔴 Alta |
-| **Registro abierto** | cualquiera crea cuenta | 🟠 Media |
-| **Sin límite de tamaño/cantidad de subidas** | DoS por archivos enormes/masivos | 🟠 Media |
-| **CORS permisivo** (`allow_origins=["*"]`) | endurecer al dominio real | 🟠 Media |
-| **Mensajes de error con detalle** | fuga de información interna | 🟢 Baja |
-| **Política de contraseña débil** (mín. 4) | cuentas débiles | 🟢 Baja |
-| **Sin verificación de email / reset / 2FA** | recuperación y robo de cuenta | 🟢 Baja |
-| **Dependencias sin escaneo de vulnerabilidades** | CVEs en librerías | 🟠 Media |
-
-### ✅ Hardening aplicado (esta versión — OWASP, "audit-ready")
-Implementado a nivel de código, manteniendo la app 100 % funcional:
+### ✅ Hardening aplicado en v2.1.0 (OWASP, "audit-ready")
+Implementado a nivel de código, manteniendo la app 100 % funcional, y **verificado en ejecución**
+(headers presentes, CORS rechaza orígenes no permitidos, política de contraseña activa, rate
+limiting devuelve `429` tras 8 intentos):
 - **Rate limiting** anti fuerza-bruta en login/registro (por IP y por usuario) → `429` al exceder.
 - **Headers de seguridad** en todas las respuestas: `Content-Security-Policy`, `X-Frame-Options: DENY`,
   `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy` (y `HSTS` cuando hay HTTPS).
 - **Cookie de sesión `Secure` configurable** (`COOKIE_SECURE=true` en producción) + HSTS.
 - **CORS restringido** a orígenes permitidos (ya no `*`), con credenciales.
-- **Límites de subida**: tamaño por archivo (`MAX_FILE_MB`) y cantidad por grupo (`MAX_FILES`).
+- **Límites de subida**: tamaño por archivo (`MAX_FILE_MB`) y cantidad por grupo (`MAX_FILES`) → `413`.
 - **Política de contraseña** (mín. 8) y **registro configurable** (`REGISTRATION_OPEN=false` lo cierra).
 - **Errores genéricos** en producción (no se filtran trazas internas; detalle solo con `DEBUG=true`).
 - **Config por entorno** documentada en `.env.example` (sin secretos).
+
+### 📊 Estado por control de seguridad
+| Control | Riesgo si falta | Estado |
+|---|---|---|
+| HTTPS/TLS | credenciales viajan sin cifrar | ⏳ **Pendiente** (despliegue) — la app ya soporta `COOKIE_SECURE`+HSTS al activarlo |
+| Cookie `Secure` | depende de no-HTTPS | ✅ Configurable (`COOKIE_SECURE=true`) — v2.1.0 |
+| Rate limiting (login/registro) | fuerza bruta de login | ✅ Hecho — v2.1.0 |
+| Rate limiting en endpoints de IA | abuso de costos de IA | ⏳ **Pendiente** (hoy solo login/registro) |
+| Registro abierto | cualquiera crea cuenta | ✅ Configurable (`REGISTRATION_OPEN=false`) — v2.1.0 |
+| Límite de tamaño/cantidad de subidas | DoS por archivos enormes/masivos | ✅ Hecho (`MAX_FILE_MB`/`MAX_FILES`) — v2.1.0 |
+| CORS restringido | exposición cross-origin | ✅ Hecho (`ALLOWED_ORIGINS`) — v2.1.0 |
+| Headers de seguridad (CSP, etc.) | clickjacking / XSS / sniffing | ✅ Hecho — v2.1.0 |
+| Errores genéricos en producción | fuga de información interna | ✅ Hecho (`DEBUG=false`) — v2.1.0 |
+| Política de contraseña | cuentas débiles | ✅ Mín. 8 — v2.1.0 (fuerza tipo zxcvbn pendiente) |
+| Verificación de email / reset / 2FA | recuperación y robo de cuenta | ⏳ **Pendiente** (Fase B) |
+| Escaneo de dependencias (pip-audit) | CVEs en librerías | ⏳ **Pendiente** (CI) |
+| Base de datos (vs archivos) | integridad/escala de cuentas | ⏳ **Pendiente** (Fase B) |
+| Rotación de secretos | claves de dev expuestas | 🔴 **Acción inmediata** (ver abajo) |
 
 ### 🔑 Acción inmediata
 - **Rotar las API keys** de Groq/Anthropic que se usaron en desarrollo (se compartieron en texto
@@ -134,13 +150,16 @@ una auditoría posterior sea rápida.
 
 ## 7. Plan de endurecimiento (para quedar "audit-ready")
 
-**Fase A — Seguridad base (1-2 semanas)**
-1. HTTPS/TLS obligatorio + cookies `Secure`.
-2. Rate limiting (login + endpoints de IA).
-3. Límites de tamaño y cantidad de subidas.
-4. CORS restringido al dominio real.
-5. Rotación de secretos + gestor de secretos (no `.env` plano en prod).
-6. Escaneo de dependencias (pip-audit) en CI.
+**Fase A — Seguridad base** (mayormente cubierta en v2.1.0 a nivel de código)
+1. ⏳ HTTPS/TLS obligatorio + cookies `Secure` — *soporte listo (`COOKIE_SECURE`); falta el despliegue tras HTTPS*.
+2. 🟡 Rate limiting — ✅ login/registro hecho; ⏳ falta extenderlo a los **endpoints de IA**.
+3. ✅ Límites de tamaño y cantidad de subidas — **hecho** (`MAX_FILE_MB`/`MAX_FILES`).
+4. ✅ CORS restringido al dominio real — **hecho** (`ALLOWED_ORIGINS`).
+5. ⏳ Rotación de secretos + gestor de secretos (no `.env` plano en prod) — **pendiente (acción inmediata)**.
+6. ⏳ Escaneo de dependencias (pip-audit) en CI — pendiente.
+
+> Extras ya hechos en v2.1.0 fuera de la lista original: headers de seguridad (CSP/HSTS/etc.),
+> política de contraseña (mín. 8), registro cerrable, errores genéricos en producción.
 
 **Fase B — Cuentas y datos (1-2 semanas)**
 7. Base de datos (Postgres) para usuarios/proyectos en vez de archivos.
@@ -158,8 +177,10 @@ una auditoría posterior sea rápida.
 
 ## 8. Conclusión
 
-StillAI es un **producto funcional con una base de seguridad correcta** para un MVP. Para
-ofrecerlo a clientes con confianza, recomendamos ejecutar la **Fase A + B** del plan (≈ 3-4
-semanas) antes del lanzamiento, y la **Fase C** como proceso continuo si se busca certificación
-formal (SOC 2 / ISO). Sí: **podemos implementar las mejores prácticas (OWASP) para dejarlo
-seguro y listo para auditoría.**
+StillAI es un **producto funcional con una base de seguridad correcta** para un MVP, y con
+**v2.1.0 el grueso del hardening a nivel de código (OWASP) ya está aplicado y verificado**. Para
+ofrecerlo a clientes con confianza, lo que **resta** es cerrar el **despliegue seguro** (HTTPS +
+rotación de secretos, lo que queda de Fase A) y la **Fase B** (base de datos, cuentas, privacidad)
+— estimado en **≈ 2-3 semanas**, menos que antes porque buena parte de Fase A ya está hecha. La
+**Fase C** queda como proceso continuo si se busca certificación formal (SOC 2 / ISO). Sí:
+**estamos implementando las mejores prácticas (OWASP) para dejarlo seguro y listo para auditoría.**
