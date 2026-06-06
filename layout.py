@@ -162,8 +162,21 @@ def compute_layout(
             boost = 1.0 + (max_vertical_boost - 1.0) * min(ratio / 3.0, 1.0)
         # Tamaño real relativo (lo aporta la IA; 1.0 = sin cambio). Acotado.
         rel = max(0.25, min(1.5, float(d.get("scale", 1.0))))
-        sh = round(base_height * boost * rel)
-        sw = round(sh * w / h)
+        if "scale" in d:
+            # Estrategias IA: el 'size' controla el ÁREA VISUAL, no la altura.
+            # Si se escalara la altura (como en las estrategias geométricas), un
+            # producto ancho con el mismo 'size' ocuparía mucha más área y dominaría
+            # la composición. Aquí fijamos area ∝ (base_height·boost·rel)² y la
+            # repartimos entre ancho y alto preservando el aspect ratio con √(aspect).
+            # Para productos cuadrados el resultado es idéntico al escalado por altura.
+            linear = base_height * boost * rel       # lado equivalente (caso cuadrado)
+            aspect = w / h                           # >1 ancho · <1 alto
+            sh = max(1, round(linear / math.sqrt(aspect)))
+            sw = max(1, round(linear * math.sqrt(aspect)))
+        else:
+            # Estrategias geométricas (sin 'size' de IA): escalado clásico por altura.
+            sh = round(base_height * boost * rel)
+            sw = round(sh * w / h)
         items.append(_Item(
             name=d.get("name", f"P{len(items)+1}"),
             filepath=d.get("filepath", ""),
