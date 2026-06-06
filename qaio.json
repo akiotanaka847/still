@@ -1,0 +1,65 @@
+{
+  "id": "still-studio",
+  "name": "Still Studio",
+  "description": "Genera bodegones (still life) de producto listos para publicar. Recibe fotos de productos, decide el orden y el tamaño real relativo de cada uno con visión IA, y compone el PNG final con sombras de contacto y profundidad usando un motor geométrico determinista. Soporta lotes por SKU. La IA solo decide orden y tamaños — el motor hace la composición, siempre igual.",
+  "icon": "Images",
+  "category": "creative",
+  "author": "QStrauss",
+  "tags": [
+    "bodegon",
+    "still-life",
+    "producto",
+    "composicion",
+    "layout",
+    "ecommerce",
+    "imagenes",
+    "fotografia",
+    "branding",
+    "batch"
+  ],
+  "tabs": [
+    {
+      "id": "activity",
+      "label": "Activity",
+      "builtIn": "board",
+      "badge": "activity"
+    },
+    {
+      "id": "routines",
+      "label": "Routines",
+      "builtIn": "routines"
+    },
+    {
+      "id": "job-description",
+      "label": "Job Description",
+      "builtIn": "job-description"
+    },
+    {
+      "id": "files",
+      "label": "Files",
+      "builtIn": "files"
+    },
+    {
+      "id": "integrations",
+      "label": "Integrations",
+      "builtIn": "integrations"
+    }
+  ],
+  "defaultTab": "activity",
+  "agentSeeds": {
+    "outputs.json": "[]",
+    "run-index.json": "[]",
+    "config/still-config.json": "{\n  \"engine\": {\n    \"repo\": \"https://github.com/akiotanaka847/still.git\",\n    \"mode\": \"sidecar\",\n    \"base_url\": \"http://localhost:8000\"\n  },\n  \"defaults\": {\n    \"base_height\": 760,\n    \"item_gap\": 40,\n    \"max_vertical_boost\": 1.2,\n    \"default_strategy\": \"ai_depth\"\n  },\n  \"ai\": {\n    \"provider\": \"qaio\",\n    \"note\": \"La propuesta (orden + tamaños) la hace este agente con visión, usando la suscripción. No requiere API key externa para uso interno.\"\n  }\n}",
+    "config/sku-index.json": "{}",
+    ".qaio/routines/routines.json": "[{\"id\": \"weekly-batch-bodegones\", \"name\": \"Lote semanal de bodegones\", \"description\": \"Cada lunes: revisa la carpeta de productos nuevos, agrupa por el CSV grupo,sku y genera un bodegón por grupo. Silencioso si no hay productos nuevos.\", \"prompt\": \"Revisa si hay productos o grupos nuevos sin procesar desde la última corrida. Si los hay, usa la skill batch-my-bodegones para generar un bodegón por grupo y deja los PNG en outputs/. Si no hay nada nuevo, termina con ROUTINE_OK para quedarte en silencio.\", \"schedule\": \"0 9 * * 1\", \"enabled\": true, \"suppress_when_silent\": true, \"created_at\": \"2026-06-06T00:00:00Z\", \"updated_at\": \"2026-06-06T00:00:00Z\"}]"
+  },
+  "version": "0.1.0",
+  "image": "studio",
+  "integrations": [
+    "googledrive",
+    "googlesheets",
+    "dropbox",
+    "slack",
+    "notion"
+  ]
+}
