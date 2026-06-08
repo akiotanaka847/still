@@ -141,6 +141,7 @@ def compose(spec: Dict[str, Any], out_path: str, work_dir: Optional[str] = None)
     strategies = _strategies(spec)
     multi = len(strategies) > 1
 
+    want_psd = bool(spec.get("psd", False))   # PSD por capas para diseñadores
     proposals: List[Dict[str, Any]] = []
     for strat in strategies:
         layout = compute_layout(
@@ -154,11 +155,22 @@ def compose(spec: Dict[str, Any], out_path: str, work_dir: Optional[str] = None)
         )
         outp = base.with_name(f"{base.stem}_{strat}{base.suffix}") if multi else base
         render_png(layout, str(outp), background_path=background)
-        proposals.append({
+        entry = {
             "strategy": strat,
             "path": str(outp),
             "canvas": {"width": layout["canvas_width"], "height": layout["canvas_height"]},
-        })
+        }
+        if want_psd:
+            # PSD por capas (cada producto su capa + Sombras + Fondo). Import perezoso
+            # para no exigir pytoshop cuando solo se piden PNG.
+            try:
+                from psd_export import export_psd
+                psd_path = str(outp.with_suffix(".psd"))
+                export_psd(layout, psd_path, background_path=background)
+                entry["psd"] = psd_path
+            except Exception as e:  # noqa: BLE001 - reportar, no romper el PNG
+                entry["psd_error"] = str(e)
+        proposals.append(entry)
 
     return {
         "ok": True,
