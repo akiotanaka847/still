@@ -110,6 +110,7 @@ def compute_layout(
     max_vertical_boost: float = 1.20,
     aspect_w: int = 0,
     aspect_h: int = 0,
+    shadow: bool = False,
 ) -> dict:
     n = len(images)
     if n == 0:
@@ -119,17 +120,20 @@ def compute_layout(
     internal_padding = 0
 
     # ─── Efectos de las propuestas nuevas ────────────────────────────────────
+    # Sombra: APAGADA por defecto (cutout limpio premium). El llamador la activa
+    # explícitamente (intake B1 = Sutil/Marcada). Las estrategias 'sombra'/'ai_shadow'/
+    # profundidad solo determinan la INTENSIDAD cuando la sombra está activa.
     depth = sort_strategy in DEPTH_PARAMS
-    strong_shadow = depth or sort_strategy in ('sombra', 'ai_shadow')
-    shadow = True                              # grounding sutil en TODAS las propuestas
+    strong_shadow = shadow and (depth or sort_strategy in ('sombra', 'ai_shadow'))
     dp = DEPTH_PARAMS.get(sort_strategy, {})
     overlap = dp.get('overlap', 0.0)          # solapamiento horizontal
     hero_scale = dp.get('hero_scale', 1.0)    # escala del producto central
     depth_falloff = dp.get('falloff', 1.0)    # caída de tamaño hacia los lados
-    # Sombra de contacto: fuerte en Sombra/Profundidad, sutil en el resto
-    shadow_opacity = 0.30 if strong_shadow else 0.16
-    shadow_blur = max(8, round(base_height * (0.045 if strong_shadow else 0.034)))
-    shadow_margin = round(base_height * (0.12 if strong_shadow else 0.07))
+    # Sombra de contacto realista: fuerte en Sombra/Profundidad, sutil en el resto.
+    # Con sombra apagada → 0 opacidad y 0 margen (canvas pegado al contenido).
+    shadow_opacity = (0.28 if strong_shadow else 0.14) if shadow else 0.0
+    shadow_blur = max(8, round(base_height * (0.05 if strong_shadow else 0.038)))
+    shadow_margin = round(base_height * (0.12 if strong_shadow else 0.07)) if shadow else 0
 
     # Profundidad: una sola fila para que el solapamiento y el héroe tengan sentido
     if depth:

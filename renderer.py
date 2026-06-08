@@ -75,26 +75,47 @@ def _load_trimmed(filepath: str):
     return img.crop(_content_bbox(img))
 
 
-def _draw_contact_shadow(canvas, item, opacity, blur):
-    """Dibuja una sombra de contacto elíptica y difuminada bajo el producto."""
+def _draw_silhouette_shadow(canvas, item, product_img, opacity, blur):
+    """
+    Sombra de contacto REAL basada en la silueta del producto (no una elipse genérica).
+
+    Toma el canal alfa del producto, lo aplasta verticalmente al plano del piso
+    (proyección de contacto), le aplica un degradado de opacidad (más oscuro donde el
+    producto toca el piso, desvaneciéndose hacia afuera) y lo difumina. El resultado
+    respeta la forma real del producto — calidad de fotografía, no un manchón ovalado.
+    """
     sw, sh = item["sw"], item["sh"]
     x, y = item["x"], item["y"]
     base_y = y + sh
 
-    ell_w = max(4, int(sw * 0.92))
-    ell_h = max(6, int(sh * 0.11))
-    pad = max(1, blur * 3)
+    # Silueta del producto (ya viene a tamaño sw×sh).
+    alpha = product_img.split()[-1]
 
-    layer = Image.new("RGBA", (ell_w + pad * 2, ell_h + pad * 2), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(layer)
-    alpha = max(0, min(255, int(255 * opacity)))
-    draw.ellipse([pad, pad, pad + ell_w, pad + ell_h], fill=(0, 0, 0, alpha))
+    # Aplastar al plano del piso: la sombra es una franja baja (~16% de la altura).
+    shadow_h = max(6, int(sh * 0.16))
+    squashed = alpha.resize((max(1, sw), shadow_h), Image.LANCZOS)
+
+    # Degradado vertical: 1.0 en el contacto (arriba) → 0 abajo.
+    grad = Image.new("L", (1, shadow_h))
+    for i in range(shadow_h):
+        grad.putpixel((0, i), int(255 * (1.0 - i / max(1, shadow_h - 1))))
+    grad = grad.resize((max(1, sw), shadow_h))
+
+    # Silueta × degradado × opacidad → alfa de la sombra.
+    shadow_alpha = ImageChops.multiply(squashed, grad)
+    op = max(0.0, min(1.0, opacity))
+    shadow_alpha = shadow_alpha.point(lambda a: int(a * op))
+
+    # Capa negra con ese alfa, con padding para que el blur no se recorte.
+    pad = max(2, int(blur * 2))
+    layer = Image.new("RGBA", (sw + pad * 2, shadow_h + pad * 2), (0, 0, 0, 0))
+    black = Image.new("RGBA", (sw, shadow_h), (0, 0, 0, 255))
+    layer.paste(black, (pad, pad), shadow_alpha)
     layer = layer.filter(ImageFilter.GaussianBlur(blur))
 
-    cx = x + sw // 2
-    px = cx - (ell_w // 2 + pad)
-    # La sombra se asienta en la base, ligeramente solapada hacia arriba
-    py = base_y - (ell_h // 2 + pad) - int(ell_h * 0.10)
+    # Asentar en la base, ligeramente solapada hacia arriba para el contacto.
+    px = x - pad
+    py = base_y - int(shadow_h * 0.35) - pad
     canvas.alpha_composite(layer, (px, py))
 
 
@@ -131,28 +152,30 @@ def render_png(layout: dict, output_path: str, background_path: str = None) -> N
     # Ordenar por z para respetar la profundidad (lo de mayor z se pinta encima)
     items = sorted(layout["items"], key=lambda it: it.get("z", 0))
 
-    # Sombras primero (en el mismo orden), para que ningún producto las tape
-    if shadow:
-        for item in items:
-            fp = item.get("filepath", "")
-            if not fp or not Path(fp).exists():
-                continue
-            try:
-                _draw_contact_shadow(canvas, item, shadow_opacity, shadow_blur)
-            except Exception as e:
-                print(f"Advertencia: sombra fallida en {Path(fp).name}: {e}")
-
-    # Productos — recortados a su contenido real
+    # Precargar cada producto UNA vez (recortado + escalado), alineado a su item.
+    # Se reutiliza tanto para la sombra de silueta como para el composite final.
+    loaded = []  # (item, img)
     for item in items:
         fp = item.get("filepath", "")
         if not fp or not Path(fp).exists():
             continue
         try:
-            img = _load_trimmed(fp)
-            img = img.resize((item["sw"], item["sh"]), Image.LANCZOS)
-            canvas.alpha_composite(img, (item["x"], item["y"]))
+            img = _load_trimmed(fp).resize((item["sw"], item["sh"]), Image.LANCZOS)
+            loaded.append((item, img))
         except Exception as e:
-            print(f"Advertencia: no se pudo renderizar {Path(fp).name}: {e}")
+            print(f"Advertencia: no se pudo cargar {Path(fp).name}: {e}")
+
+    # Sombras primero (basadas en la silueta real), para que ningún producto las tape.
+    if shadow:
+        for item, img in loaded:
+            try:
+                _draw_silhouette_shadow(canvas, item, img, shadow_opacity, shadow_blur)
+            except Exception as e:
+                print(f"Advertencia: sombra fallida en {item.get('name', '?')}: {e}")
+
+    # Productos encima.
+    for item, img in loaded:
+        canvas.alpha_composite(img, (item["x"], item["y"]))
 
     canvas.save(output_path, "PNG", optimize=True)
 

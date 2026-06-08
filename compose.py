@@ -150,6 +150,7 @@ def compose(spec: Dict[str, Any], out_path: str, work_dir: Optional[str] = None)
             item_gap=int(spec.get("item_gap", 40)),
             aspect_w=int(spec.get("aspect_w", 0)),
             aspect_h=int(spec.get("aspect_h", 0)),
+            shadow=bool(spec.get("shadow", False)),   # APAGADA por defecto (cutout limpio)
         )
         outp = base.with_name(f"{base.stem}_{strat}{base.suffix}") if multi else base
         render_png(layout, str(outp), background_path=background)
