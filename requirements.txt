@@ -7,3 +7,10 @@ anthropic>=0.40.0
 google-genai>=0.8.0
 groq>=0.11.0
 python-dotenv>=1.0.0
+# F1 normalization (background removal at ingest). rembg[cpu] pulls onnxruntime,
+# numpy, scipy, scikit-image, numba — total install ~300-400MB on disk.
+# First run downloads the u2net model (~176MB) to ~/.u2net/; guarded for
+# offline/failure with an explicit FAILED status in normalize.py.
+rembg[cpu]>=2.0.50
+onnxruntime>=1.16.0
+

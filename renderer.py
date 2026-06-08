@@ -64,7 +64,13 @@ def _content_bbox(img, alpha_threshold=DEFAULT_ALPHA_THRESHOLD,
 
 
 def _load_trimmed(filepath: str):
-    """Abre la imagen y la recorta a su contenido real. Retorna la imagen RGBA recortada."""
+    """Abre la imagen y la recorta a su contenido real. Retorna la imagen RGBA recortada.
+
+    NOTA: tras F1 las entradas ya están pre-normalizadas por normalize.py (packshot
+    transparente y con bbox ajustado), por lo que ``_content_bbox`` solo hace
+    ``alpha.getbbox()`` (casi un no-op) y la rama de color-de-esquina queda como
+    defensa-en-profundidad para entradas legacy/no normalizadas.
+    """
     img = Image.open(filepath).convert("RGBA")
     return img.crop(_content_bbox(img))
 

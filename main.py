@@ -29,8 +29,11 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
+from dataclasses import asdict
+
 from layout import compute_layout
 from renderer import get_image_dimensions, render_png
+from normalize import BgMethod, NormalizeStatus, normalize_image
 
 
 # ─── Configuración de seguridad (por variables de entorno) ────────────────────
@@ -318,7 +321,15 @@ async def bodegon_upload(
     products_dir = session_dir / "products"
     products_dir.mkdir(parents=True)
 
+    # Método de remoción de fondo configurable (rembg CPU en F1, BiRefNet GPU en F2).
+    try:
+        bg_method = BgMethod(os.environ.get("BG_METHOD", "rembg"))
+    except ValueError:
+        bg_method = BgMethod.REMBG
+
     images = []
+    failures = []   # SKUs sin packshot usable — se reportan, no se compositan
+    degraded = []   # SKUs con packshot de baja confianza — requieren revisión humana
     for i, f in enumerate(products):
         ext = Path(f.filename or "").suffix.lower()
         if ext not in VALID_IMAGE_EXTS:
@@ -329,26 +340,47 @@ async def bodegon_upload(
             continue   # ignora archivos demasiado grandes
 
         safe = _safe_name(f.filename or f"product_{i}{ext}")
-        dest = products_dir / safe
-        dest.write_bytes(data)
+        name = Path(safe).stem.upper().replace(" ", "_")
+        raw_dest = products_dir / safe
+        raw_dest.write_bytes(data)
 
-        try:
-            w, h = get_image_dimensions(str(dest))
-        except Exception:
-            dest.unlink(missing_ok=True)
+        # Normalización en ingesta (UNA vez): alpha → (bg removal) → trim → features.
+        # El motor consume el PACKSHOT (transparente, bbox ajustado), no el raw.
+        pack_dest = products_dir / f"{Path(safe).stem}.packshot.png"
+        res = normalize_image(str(raw_dest), str(pack_dest), bg_method=bg_method, name=name)
+
+        if res.status == NormalizeStatus.FAILED:
+            # Falla explícita: NUNCA se pasa la imagen cruda (caja blanca) aguas abajo.
+            failures.append({"filename": safe, "name": name, "error": res.error})
+            raw_dest.unlink(missing_ok=True)
             continue
 
-        images.append({
-            "name": Path(safe).stem.upper().replace(" ", "_"),
+        feats = asdict(res.features)
+        entry = {
+            "name": name,
             "filename": safe,
-            "filepath": str(dest),
-            "width": w,
-            "height": h,
-        })
+            "filepath": str(pack_dest),          # ← el motor consume el PACKSHOT
+            "raw_filepath": str(raw_dest),
+            "width": res.features.width,         # dims del bbox ajustado (sin re-trim)
+            "height": res.features.height,
+            "features": feats,                   # dominant_color, orientation, ratio, hint
+            "normalize": {
+                "status": res.status.value,
+                "method": res.method.value,
+                "confidence": res.confidence,
+            },
+        }
+        images.append(entry)
+        if res.status == NormalizeStatus.DEGRADED:
+            degraded.append({"filename": safe, "name": name,
+                             "confidence": res.confidence, "method": res.method.value})
 
     if not images:
         shutil.rmtree(session_dir, ignore_errors=True)
-        raise HTTPException(400, "No se encontraron imágenes válidas")
+        detail = "No se encontraron imágenes válidas"
+        if failures:
+            detail += f" ({len(failures)} fallaron la normalización)"
+        raise HTTPException(400, detail)
 
     # Fondo opcional
     bg_path = None
@@ -365,6 +397,8 @@ async def bodegon_upload(
         "session_id": session_id,
         "images": images,
         "background_path": bg_path,
+        "failures": failures,
+        "degraded": degraded,
     }
     (session_dir / "bodegon.json").write_text(json.dumps(info, indent=2), encoding="utf-8")
 
@@ -373,10 +407,13 @@ async def bodegon_upload(
         "count": len(images),
         "images": [
             {"name": img["name"], "filename": img["filename"],
-             "width": img["width"], "height": img["height"]}
+             "width": img["width"], "height": img["height"],
+             "features": img.get("features"), "normalize": img.get("normalize")}
             for img in images
         ],
         "has_background": bg_path is not None,
+        "failures": failures,    # gate de revisión: SKUs sin packshot usable
+        "degraded": degraded,    # SKUs de baja confianza para revisión humana
     }
 
 
