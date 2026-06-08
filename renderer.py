@@ -173,11 +173,46 @@ def render_png(layout: dict, output_path: str, background_path: str = None) -> N
             except Exception as e:
                 print(f"Advertencia: sombra fallida en {item.get('name', '?')}: {e}")
 
-    # Productos encima.
-    for item, img in loaded:
+    # Productos, de atrás hacia adelante (loaded ya viene ordenado por z).
+    # Antes de pintar cada producto (salvo el del fondo), proyecta su SOMBRA DE
+    # OCLUSIÓN sobre lo ya pintado: así el producto de adelante ensombrece al de
+    # atrás donde se solapan → lee como profundidad real, no como recortes pegados.
+    # La sombra se enmascara con el alfa actual del canvas, por lo que es invisible
+    # cuando los productos NO se solapan (estilos sin solapamiento quedan limpios).
+    for idx, (item, img) in enumerate(loaded):
+        if idx > 0:
+            try:
+                _draw_occlusion_shadow(canvas, item, img)
+            except Exception as e:
+                print(f"Advertencia: oclusión fallida en {item.get('name', '?')}: {e}")
         canvas.alpha_composite(img, (item["x"], item["y"]))
 
     canvas.save(output_path, "PNG", optimize=True)
+
+
+def _draw_occlusion_shadow(canvas, item, product_img, opacity=0.32):
+    """
+    Sombra que el producto de ADELANTE proyecta sobre lo que ya está pintado detrás,
+    SOLO donde se solapan (se enmascara con el alfa actual del canvas). Esto da la
+    separación de profundidad que evita el look de "recortes pegados". Si no hay
+    solapamiento, la máscara queda vacía y no se dibuja nada.
+    """
+    cw, ch = canvas.size
+    sw, sh = item["sw"], item["sh"]
+    x, y = item["x"], item["y"]
+    blur = max(4, int(sw * 0.05))
+    # Desplazamiento sutil (el producto "levanta" del plano de atrás).
+    dx, dy = int(sw * 0.05), int(sh * 0.03)
+
+    sil = product_img.split()[-1]
+    occ = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
+    black = Image.new("RGBA", (sw, sh), (0, 0, 0, int(255 * opacity)))
+    occ.paste(black, (x + dx, y + dy), sil)        # silueta negra desplazada
+    occ = occ.filter(ImageFilter.GaussianBlur(blur))
+    # Solo donde ya hay contenido pintado detrás (intersección con el alfa del canvas).
+    masked = ImageChops.multiply(occ.split()[-1], canvas.split()[-1])
+    occ.putalpha(masked)
+    canvas.alpha_composite(occ)
 
 
 def get_image_dimensions(filepath: str) -> tuple:
