@@ -110,6 +110,61 @@ def _normalize_products(products: List[Dict[str, Any]], bg_method: BgMethod,
     return images, failures, degraded
 
 
+def _resolve_vision(images: List[Dict[str, Any]], spec: Dict[str, Any]):
+    """
+    Decide orden + tamaños SIN depender de que el modelo del chat vea imágenes.
+
+    Prioridad:
+      1. Si el chat ya aportó `size` por producto → se respeta (modo 'agent').
+      2. Si el spec pide `vision` y hay una API key de visión en el entorno → el MOTOR
+         hace la visión (`ai_proposal.analyze_products`), reordena y asigna tamaños
+         (modo 'engine'). Esto libera del proveedor del chat: Kimi/Gemini/Claude solo
+         orquestan.
+      3. Si no → fallback honesto: orden de entrada, tamaños iguales (modo 'none'/'failed'),
+         y se reporta para que el usuario configure una key o dé el orden.
+    """
+    if any("scale" in im for im in images):
+        return images, {"mode": "agent", "note": "orden y tamaños decididos por el agente del chat"}
+
+    vcfg = spec.get("vision")
+    if not vcfg:
+        for im in images:
+            im["scale"] = 1.0
+        return images, {"mode": "none",
+                        "note": "sin visión: orden de entrada y tamaños iguales (configura 'vision' + API key para orden inteligente)"}
+
+    import os
+    provider = vcfg.get("provider") if isinstance(vcfg, dict) else None
+    try:
+        from ai_proposal import analyze_products
+        prop = analyze_products(
+            [{"name": im["name"], "filepath": im["filepath"]} for im in images],
+            groq_key=os.environ.get("GROQ_API_KEY"),
+            gemini_key=os.environ.get("GEMINI_API_KEY"),
+            anthropic_key=os.environ.get("ANTHROPIC_API_KEY"),
+            provider=provider,
+        )
+        order = prop.get("order") or [im["name"] for im in images]
+        sizes = prop.get("sizes") or {}
+        by_name = {im["name"]: im for im in images}
+        ordered = []
+        for n in order:
+            if n in by_name:
+                im = by_name.pop(n)
+                im["scale"] = float(sizes.get(n, 1.0))
+                ordered.append(im)
+        for im in by_name.values():        # productos no mencionados → al final
+            im["scale"] = float(sizes.get(im["name"], 1.0))
+            ordered.append(im)
+        return ordered, {"mode": "engine", "provider": provider,
+                         "hero": prop.get("hero"), "reasoning": prop.get("reasoning")}
+    except Exception as e:  # noqa: BLE001 - degradar con aviso, no romper
+        for im in images:
+            im["scale"] = 1.0
+        return images, {"mode": "failed",
+                        "note": f"visión del motor falló ({e}); orden de entrada y tamaños iguales"}
+
+
 def compose(spec: Dict[str, Any], out_path: str, work_dir: Optional[str] = None) -> Dict[str, Any]:
     """
     Normaliza una vez y genera UNA o VARIAS propuestas de estilo.
@@ -130,6 +185,9 @@ def compose(spec: Dict[str, Any], out_path: str, work_dir: Optional[str] = None)
     if not images:
         return {"ok": False, "error": "ningún producto sobrevivió la normalización",
                 "failures": failures}
+
+    # Orden + tamaños: agente, visión del motor, o fallback (vendor-neutral).
+    images, vision_info = _resolve_vision(images, spec)
 
     background = spec.get("background")
     if background and not Path(background).exists():
@@ -176,7 +234,8 @@ def compose(spec: Dict[str, Any], out_path: str, work_dir: Optional[str] = None)
         "ok": True,
         "proposals": proposals,
         "transparent": transparent,   # True = fondo 100% transparente (sin background)
-        "hero": spec.get("hero"),
+        "hero": vision_info.get("hero") or spec.get("hero"),
+        "vision": vision_info,        # cómo se decidió orden/tamaños (agent|engine|none|failed)
         "count": len(images),
         "failures": failures,
         "degraded": degraded,
