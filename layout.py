@@ -87,17 +87,95 @@ SORT_STRATEGIES = {
     'ai':               list,         # IA: preserva el orden, plano
     'ai_depth':         list,         # IA + profundidad (preserva orden, centra héroe)
     'ai_shadow':        list,         # IA + sombra de contacto (preserva orden)
+    'impacto':          _sort_auto,   # héroe al centro + abanico de inclinaciones
+    'ai_impacto':       list,         # IA + impacto (preserva orden, centra héroe)
+    'fila_recta':       _sort_auto,   # derechos en línea, sin héroe centrado
+    'ai_fila_recta':    list,         # IA + fila recta (preserva orden)
+    'cruce':            _sort_auto,   # inclinados unos hacia otros (convergen al centro)
+    'ai_cruce':         list,         # IA + cruce (preserva orden)
+    'inclinado_derecha':    _sort_auto,   # todos inclinados 30° parejo, hacia la derecha
+    'ai_inclinado_derecha': list,
+    'inclinado_izquierda':    _sort_auto,  # todos inclinados 30° parejo, hacia la izquierda
+    'ai_inclinado_izquierda': list,
+    'inclinado_derecha_45':    _sort_auto,   # todos inclinados 45° parejo, hacia la derecha
+    'ai_inclinado_derecha_45': list,
+    'inclinado_izquierda_45':    _sort_auto,  # todos inclinados 45° parejo, hacia la izquierda
+    'ai_inclinado_izquierda_45': list,
 }
 
 # Parámetros de las propuestas de profundidad
 #   overlap: solapamiento horizontal | hero_scale: escala del producto central
 #   falloff: factor de escala que se aplica por distancia al centro (1.0 = sin caída)
+#   tilt: si True, cada producto se inclina según su distancia al pivote
+#   tilt_mode: 'fan' = abanico hacia afuera desde el héroe (impacto)
+#              'converge' = inclinación hacia el centro de la fila (cruce)
+#              'uniform' = mismo ángulo fijo para TODOS, sin fórmula por distancia
+#   tilt_angle: solo para tilt_mode='uniform' — grados fijos (+ o -) para todos
+#   center_hero: si False, no reordena para centrar al más alto (deja el orden natural)
 DEPTH_PARAMS = {
     'profundidad':      {'overlap': 0.16, 'hero_scale': 1.22, 'falloff': 1.00},
     'profundidad_xl':   {'overlap': 0.24, 'hero_scale': 1.50, 'falloff': 1.00},
     'profundidad_grad': {'overlap': 0.20, 'hero_scale': 1.18, 'falloff': 0.84},
     'ai_depth':         {'overlap': 0.16, 'hero_scale': 1.22, 'falloff': 1.00},
+    'impacto':          {'overlap': 0.22, 'hero_scale': 1.35, 'falloff': 0.92, 'tilt': True, 'tilt_mode': 'fan'},
+    'ai_impacto':       {'overlap': 0.22, 'hero_scale': 1.35, 'falloff': 0.92, 'tilt': True, 'tilt_mode': 'fan'},
+    'fila_recta':       {'overlap': 0.16, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False},
+    'ai_fila_recta':    {'overlap': 0.16, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False},
+    'cruce':            {'overlap': 0.32, 'hero_scale': 1.15, 'falloff': 1.00, 'tilt': True, 'tilt_mode': 'converge'},
+    'ai_cruce':         {'overlap': 0.32, 'hero_scale': 1.15, 'falloff': 1.00, 'tilt': True, 'tilt_mode': 'converge'},
+    'inclinado_derecha':    {'overlap': 0.18, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False,
+                              'tilt': True, 'tilt_mode': 'uniform', 'tilt_angle': 30.0},
+    'ai_inclinado_derecha': {'overlap': 0.18, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False,
+                              'tilt': True, 'tilt_mode': 'uniform', 'tilt_angle': 30.0},
+    'inclinado_izquierda':    {'overlap': 0.18, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False,
+                                'tilt': True, 'tilt_mode': 'uniform', 'tilt_angle': -30.0},
+    'ai_inclinado_izquierda': {'overlap': 0.18, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False,
+                                'tilt': True, 'tilt_mode': 'uniform', 'tilt_angle': -30.0},
+    'inclinado_derecha_45':    {'overlap': 0.14, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False,
+                                 'tilt': True, 'tilt_mode': 'uniform', 'tilt_angle': 45.0},
+    'ai_inclinado_derecha_45': {'overlap': 0.14, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False,
+                                 'tilt': True, 'tilt_mode': 'uniform', 'tilt_angle': 45.0},
+    'inclinado_izquierda_45':    {'overlap': 0.14, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False,
+                                   'tilt': True, 'tilt_mode': 'uniform', 'tilt_angle': -45.0},
+    'ai_inclinado_izquierda_45': {'overlap': 0.14, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False,
+                                   'tilt': True, 'tilt_mode': 'uniform', 'tilt_angle': -45.0},
 }
+
+# Inclinación del abanico en "impacto": grados por producto según distancia al héroe
+TILT_BASE = 20.0   # inclinación del primer producto a cada lado del héroe
+TILT_STEP = 10.0   # incremento por cada paso adicional de distancia
+TILT_MAX = 30.0    # tope (los productos más externos llegan a este máximo)
+
+
+def _scale_items(images: List[dict], base_height: int, max_vertical_boost: float = 1.20) -> List[_Item]:
+    """Escala cada imagen a su tamaño base (según proporción y el 'scale'
+    relativo que aporta la IA). Compartido por compute_layout() y los layouts
+    standalone (cascada, radial) para no duplicar la lógica de escalado."""
+    items: List[_Item] = []
+    for d in images:
+        w = max(int(d.get("width", 1)), 1)
+        h = max(int(d.get("height", 1)), 1)
+        ratio = h / w
+        boost = 1.0
+        if ratio > 1.35:
+            boost = 1.0 + (max_vertical_boost - 1.0) * min(ratio / 3.0, 1.0)
+        rel = max(0.25, min(1.5, float(d.get("scale", 1.0))))
+        sh = round(base_height * boost * rel)
+        sw = round(sh * w / h)
+        items.append(_Item(
+            name=d.get("name", f"P{len(items)+1}"),
+            filepath=d.get("filepath", ""),
+            w=w, h=h, sw=sw, sh=sh,
+        ))
+    return items
+
+
+def _rotated_bbox(w: float, h: float, degrees: float) -> tuple:
+    """Ancho/alto del recuadro que contiene a (w,h) rotado 'degrees' grados."""
+    rad = math.radians(abs(degrees))
+    new_w = w * abs(math.cos(rad)) + h * abs(math.sin(rad))
+    new_h = w * abs(math.sin(rad)) + h * abs(math.cos(rad))
+    return new_w, new_h
 
 
 def compute_layout(
@@ -126,6 +204,8 @@ def compute_layout(
     overlap = dp.get('overlap', 0.0)          # solapamiento horizontal
     hero_scale = dp.get('hero_scale', 1.0)    # escala del producto central
     depth_falloff = dp.get('falloff', 1.0)    # caída de tamaño hacia los lados
+    tilt = bool(dp.get('tilt', False))        # abanico/convergencia de inclinaciones
+    tilt_mode = dp.get('tilt_mode', 'fan')    # 'fan' (impacto) | 'converge' (cruce)
     # Sombra de contacto: fuerte en Sombra/Profundidad, sutil en el resto
     shadow_opacity = 0.30 if strong_shadow else 0.16
     shadow_blur = max(8, round(base_height * (0.045 if strong_shadow else 0.034)))
@@ -152,23 +232,7 @@ def compute_layout(
     aspect_h = aspect_h or 3
 
     # Escalar items
-    items: List[_Item] = []
-    for d in images:
-        w = max(int(d.get("width", 1)), 1)
-        h = max(int(d.get("height", 1)), 1)
-        ratio = h / w
-        boost = 1.0
-        if ratio > 1.35:
-            boost = 1.0 + (max_vertical_boost - 1.0) * min(ratio / 3.0, 1.0)
-        # Tamaño real relativo (lo aporta la IA; 1.0 = sin cambio). Acotado.
-        rel = max(0.25, min(1.5, float(d.get("scale", 1.0))))
-        sh = round(base_height * boost * rel)
-        sw = round(sh * w / h)
-        items.append(_Item(
-            name=d.get("name", f"P{len(items)+1}"),
-            filepath=d.get("filepath", ""),
-            w=w, h=h, sw=sw, sh=sh,
-        ))
+    items: List[_Item] = _scale_items(images, base_height, max_vertical_boost)
 
     # Aplicar estrategia de ordenamiento
     sort_fn = SORT_STRATEGIES.get(sort_strategy, _sort_auto)
@@ -184,7 +248,10 @@ def compute_layout(
             row.height = item.sh
 
     # Post-proceso → el más alto al centro de la fila (silueta piramidal, más estética)
-    if sort_strategy in ('centrado', 'auto', 'area') or depth:
+    # 'fila_recta' desactiva esto con center_hero=False: deja el orden natural,
+    # sin pirámide (así se ven "en línea", como una foto de producto convencional).
+    center_hero = dp.get('center_hero', True)
+    if sort_strategy in ('centrado', 'auto', 'area') or (depth and center_hero):
         rows = _center_in_rows(rows)
 
     # Profundidad: escalar según la posición ya centrada
@@ -235,6 +302,26 @@ def compute_layout(
             item.y = cy + (row.height - item.sh)   # alineados a la base
             # z-order: en profundidad, el héroe (y lo cercano a él) queda al frente
             z = (-abs(idx - hero_idx)) if depth else float(idx)
+            # Inclinación: en modo 'fan' (impacto) el héroe queda recto y los
+            # laterales se inclinan hacia AFUERA desde su índice. En modo
+            # 'converge' (cruce) se inclinan hacia el CENTRO GEOMÉTRICO de la
+            # fila (no del héroe), para que converjan entre sí aunque no haya
+            # un solo producto "recto" de referencia (p. ej. con 2 productos).
+            # En modo 'uniform' TODOS —incluido el que sería héroe— llevan el
+            # mismo ángulo fijo (tilt_angle): sin fórmula por distancia.
+            rotation = 0.0
+            if tilt:
+                if tilt_mode == 'uniform':
+                    rotation = dp.get('tilt_angle', 30.0)
+                else:
+                    pivot = hero_idx if tilt_mode == 'fan' else (len(row.items) - 1) / 2.0
+                    d = idx - pivot
+                    if d != 0:
+                        mag = min(TILT_MAX, TILT_BASE + TILT_STEP * (abs(d) - 1))
+                        sign = 1 if d > 0 else -1
+                        if tilt_mode == 'converge':
+                            sign = -sign
+                        rotation = sign * mag
             if overlap > 0:
                 cx += item.sw * (1 - overlap)
             else:
@@ -246,12 +333,34 @@ def compute_layout(
                 "sw": item.sw, "sh": item.sh,
                 "x":  round(item.x), "y": round(item.y),
                 "z":  round(z, 3),
+                "rotation": round(rotation, 2),
             })
         cy += row.height + shadow_margin + item_gap
 
     # Alto: conserva el margen de sombra de la última fila, descarta el gap final
     doc_w = math.ceil(widest)
     doc_h = math.ceil(cy - item_gap)
+
+    # La inclinación hace que las esquinas del producto sobresalgan de su caja
+    # original. Se calcula cuánto crece cada caja al rotar (bbox real, no una
+    # estimación) y se usa el máximo como margen, para que ningún ángulo —ni
+    # los cercanos al tope de 30°— recorte el producto contra el borde.
+    if tilt:
+        margin_x = margin_y = 0.0
+        for it in out:
+            rot = it.get("rotation", 0.0)
+            if not rot:
+                continue
+            new_w, new_h = _rotated_bbox(it["sw"], it["sh"], rot)
+            margin_x = max(margin_x, (new_w - it["sw"]) / 2)
+            margin_y = max(margin_y, (new_h - it["sh"]) / 2)
+        margin_x = math.ceil(margin_x) + 4
+        margin_y = math.ceil(margin_y) + 4
+        for it in out:
+            it["x"] += margin_x
+            it["y"] += margin_y
+        doc_w += margin_x * 2
+        doc_h += margin_y * 2
 
     doc_w = min(doc_w, 30000)
     doc_h = min(doc_h, 30000)
@@ -265,8 +374,356 @@ def compute_layout(
         "effects": {
             "shadow":         shadow,
             "depth":          depth,
+            "tilt":           tilt,
             "shadow_opacity": shadow_opacity,
             "shadow_blur":    shadow_blur,
             "shadow_margin":  shadow_margin,
         },
     }
+
+
+# ─── Layouts standalone (no encajan en el modelo de filas/héroe) ──────────────
+
+def compute_layout_cascada(
+    images: List[dict],
+    base_height: int = 760,
+    max_vertical_boost: float = 1.20,
+    growth: float = 1.28,
+    overlap: float = 0.28,
+    tilt_deg: float = -14.0,
+    step_up: float = 0.32,
+    **_ignored,
+) -> dict:
+    """Cascada diagonal: todos los productos inclinados en la MISMA dirección
+    (no en abanico), creciendo en tamaño hacia una esquina, solapados —
+    transmite flujo/movimiento en vez de simetría. Pensado para una línea de
+    producto (mismo SKU en variantes) más que para un héroe puntual."""
+    n = len(images)
+    if n == 0:
+        raise ValueError("No se proporcionaron imágenes")
+
+    base_items = _scale_items(images, base_height, max_vertical_boost)
+    order = sorted(range(n), key=lambda i: base_items[i].sh)  # menor a mayor
+
+    prepared = []
+    g = 1.0
+    for i in order:
+        it = base_items[i]
+        sh = round(it.sh * g)
+        sw = round(sh * it.w / it.h)
+        prepared.append({"item": it, "sw": sw, "sh": sh})
+        g *= growth
+
+    xs, x = [], 0.0
+    for p in prepared:
+        xs.append(x)
+        x += p["sw"] * (1 - overlap)
+
+    ys, cursor_y = [], 0.0
+    for i, p in enumerate(prepared):
+        if i > 0:
+            cursor_y -= p["sh"] * step_up
+        ys.append(cursor_y)
+    min_y = min(ys)
+
+    margin = round(base_height * 0.14)
+    out = []
+    max_right = max_bottom = 0.0
+    for i, p in enumerate(prepared):
+        it, sw, sh = p["item"], p["sw"], p["sh"]
+        x0 = xs[i] + margin
+        y0 = (ys[i] - min_y) + margin
+        rw, rh = _rotated_bbox(sw, sh, tilt_deg)
+        out.append({
+            "name": it.name, "filepath": it.filepath,
+            "ow": it.w, "oh": it.h, "sw": sw, "sh": sh,
+            "x": round(x0), "y": round(y0),
+            "z": float(i),
+            "rotation": round(tilt_deg, 2),
+        })
+        max_right = max(max_right, x0 + rw / 2 + sw / 2)
+        max_bottom = max(max_bottom, y0 + rh / 2 + sh / 2)
+
+    doc_w = min(math.ceil(max_right) + margin, 30000)
+    doc_h = min(math.ceil(max_bottom) + margin, 30000)
+
+    return {
+        "canvas_width": doc_w, "canvas_height": doc_h,
+        "rows_count": 1, "sort_strategy": "cascada", "items": out,
+        "effects": {
+            "shadow": True, "depth": True, "tilt": True,
+            "shadow_opacity": 0.30,
+            "shadow_blur": max(8, round(base_height * 0.045)),
+            "shadow_margin": round(base_height * 0.12),
+        },
+    }
+
+
+def compute_layout_radial(
+    images: List[dict],
+    base_height: int = 760,
+    max_vertical_boost: float = 1.20,
+    overlap: float = -0.06,   # negativo = separación en vez de solapamiento
+    max_tilt: float = 22.0,
+    height_jitter: float = 0.12,
+    **_ignored,
+) -> dict:
+    """Radial/Explosión: alturas y ángulos variados por posición — ninguno
+    sobre una única línea de base, como si irradiaran desde un punto central.
+    Pensado para grupos de 3+ productos distintos entre sí."""
+    n = len(images)
+    if n == 0:
+        raise ValueError("No se proporcionaron imágenes")
+
+    items = _scale_items(images, base_height, max_vertical_boost)
+    order = sorted(range(n), key=lambda i: items[i].sh, reverse=True)
+    mid = (n - 1) / 2.0
+
+    prepared = []
+    for rank, i in enumerate(order):
+        it = items[i]
+        d = rank - mid
+        # Alterna arriba/abajo según la paridad de la distancia al centro,
+        # así no queda un semicírculo parejo sino más orgánico.
+        yfrac = (height_jitter if rank % 2 == 0 else -height_jitter) * (abs(d) / max(mid, 1))
+        rot = 0.0 if abs(d) < 1e-6 else max(-max_tilt, min(max_tilt, d * (max_tilt / max(mid, 1))))
+        prepared.append({"item": it, "yfrac": yfrac, "rotation": rot})
+
+    # Mismo criterio que el motor de filas: overlap>0 solapa (avanza menos que
+    # sw), overlap<0 separa (avanza más que sw). Por defecto Radial separa un
+    # poco (overlap=-0.06) para que se lean como productos distintos irradiando.
+    xs, x = [], 0.0
+    for p in prepared:
+        xs.append(x)
+        x += p["item"].sw * (1 - overlap)
+
+    max_h = max(p["item"].sh for p in prepared)
+    margin = round(base_height * 0.18)
+
+    out = []
+    max_right = max_bottom = 0.0
+    min_top = 0.0
+    ys = []
+    for p in prepared:
+        it = p["item"]
+        y = (max_h - it.sh) / 2 + p["yfrac"] * max_h
+        ys.append(y)
+        min_top = min(min_top, y)
+
+    for i, p in enumerate(prepared):
+        it = p["item"]
+        rot = p["rotation"]
+        x0 = xs[i] + margin
+        y0 = (ys[i] - min_top) + margin
+        rw, rh = _rotated_bbox(it.sw, it.sh, rot) if rot else (it.sw, it.sh)
+        out.append({
+            "name": it.name, "filepath": it.filepath,
+            "ow": it.w, "oh": it.h, "sw": it.sw, "sh": it.sh,
+            "x": round(x0), "y": round(y0),
+            "z": -abs(i - (len(prepared) - 1) / 2.0),
+            "rotation": round(rot, 2),
+        })
+        max_right = max(max_right, x0 + rw / 2 + it.sw / 2)
+        max_bottom = max(max_bottom, y0 + rh / 2 + it.sh / 2)
+
+    doc_w = min(math.ceil(max_right) + margin, 30000)
+    doc_h = min(math.ceil(max_bottom) + margin, 30000)
+
+    return {
+        "canvas_width": doc_w, "canvas_height": doc_h,
+        "rows_count": 1, "sort_strategy": "radial", "items": out,
+        "effects": {
+            "shadow": True, "depth": True, "tilt": True,
+            "shadow_opacity": 0.28,
+            "shadow_blur": max(8, round(base_height * 0.04)),
+            "shadow_margin": round(base_height * 0.10),
+        },
+    }
+
+
+FLOAT_AMPLITUDE = 0.30   # cuánto puede subir/bajar cada producto (fracción de la altura máx.)
+FLOAT_TILT_MAX = 8.0     # inclinación leve para que se sienta orgánico, no una fila prolija
+
+
+def compute_layout_flotante(
+    images: List[dict],
+    base_height: int = 760,
+    max_vertical_boost: float = 1.20,
+    overlap: float = -0.04,
+    **_ignored,
+) -> dict:
+    """Flotante: cada producto a su propia altura (sin línea de base
+    compartida) e inclinación leve, como si flotaran a distintas distancias
+    del piso. La sombra de contacto se achica/desvanece según qué tan
+    'lejos' flota cada uno (ver float_drop → renderer._draw_contact_shadow)."""
+    n = len(images)
+    if n == 0:
+        raise ValueError("No se proporcionaron imágenes")
+
+    items = _scale_items(images, base_height, max_vertical_boost)
+    order = sorted(range(n), key=lambda i: items[i].sh, reverse=True)
+
+    prepared = []
+    for rank, i in enumerate(order):
+        it = items[i]
+        # Onda determinística (ángulo ~dorado) para que las alturas no caigan
+        # en un patrón simétrico/repetido incluso con pocos productos.
+        phase = rank * 2.4
+        yfrac = FLOAT_AMPLITUDE * math.sin(phase)
+        # La inclinación se deriva de cuánto "sube" cada uno (no de una fase
+        # independiente): más alto = más inclinado, como si estuviera girando
+        # al flotar. Evita además que dos senos con distinta frecuencia caigan
+        # por coincidencia cerca de 0 al mismo tiempo con pocos productos.
+        rot = FLOAT_TILT_MAX * (yfrac / FLOAT_AMPLITUDE)
+        prepared.append({"item": it, "yfrac": yfrac, "rotation": rot})
+
+    xs, x = [], 0.0
+    for p in prepared:
+        xs.append(x)
+        x += p["item"].sw * (1 - overlap)
+
+    max_h = max(p["item"].sh for p in prepared)
+    margin = round(base_height * 0.20)
+
+    ys, min_top = [], 0.0
+    for p in prepared:
+        it = p["item"]
+        y = (max_h - it.sh) / 2 + p["yfrac"] * max_h
+        ys.append(y)
+        min_top = min(min_top, y)
+
+    # Piso de referencia = la base más baja entre todos los productos.
+    floor_y = max(ys[i] - min_top + p["item"].sh for i, p in enumerate(prepared))
+
+    out = []
+    max_right = max_bottom = 0.0
+    for i, p in enumerate(prepared):
+        it, rot = p["item"], p["rotation"]
+        x0 = xs[i] + margin
+        y0 = (ys[i] - min_top) + margin
+        rw, rh = _rotated_bbox(it.sw, it.sh, rot) if rot else (it.sw, it.sh)
+        drop = max(0.0, floor_y - ((ys[i] - min_top) + it.sh))
+        out.append({
+            "name": it.name, "filepath": it.filepath,
+            "ow": it.w, "oh": it.h, "sw": it.sw, "sh": it.sh,
+            "x": round(x0), "y": round(y0),
+            "z": float(i),
+            "rotation": round(rot, 2),
+            "float_drop": round(min(1.0, drop / max_h), 3),
+        })
+        max_right = max(max_right, x0 + rw / 2 + it.sw / 2)
+        max_bottom = max(max_bottom, y0 + rh / 2 + it.sh / 2)
+
+    doc_w = min(math.ceil(max_right) + margin, 30000)
+    doc_h = min(math.ceil(max_bottom) + margin, 30000)
+
+    return {
+        "canvas_width": doc_w, "canvas_height": doc_h,
+        "rows_count": 1, "sort_strategy": "flotante", "items": out,
+        "effects": {
+            "shadow": True, "depth": True, "tilt": True,
+            "shadow_opacity": 0.26,
+            "shadow_blur": max(8, round(base_height * 0.04)),
+            "shadow_margin": round(base_height * 0.10),
+            "floating_shadow": True,
+        },
+    }
+
+
+def compute_layout_ai_freeform(
+    images: List[dict],
+    free_layout: dict,
+    base_height: int = 760,
+    max_vertical_boost: float = 1.20,
+    **_ignored,
+) -> dict:
+    """'IA · Libre': la composición (posición + rotación de cada producto) la
+    propone directamente la IA de visión (ver ai_proposal._build_prompt),
+    no una fórmula geométrica nuestra. Este layout SOLO traduce esas
+    coordenadas normalizadas (0-1, sobre un lienzo cuadrado de referencia) a
+    píxeles y ajusta el canvas al contenido — la IA nunca toca las imágenes
+    en sí, siguen siendo las fotos reales, así que no hay riesgo de que se
+    altere ninguna etiqueta.
+
+    free_layout: {nombre: {"cx":0-1, "cy":0-1, "rotation":-35_a_35}, ...}
+    (ver ai_proposal._normalize_free_layout — siempre trae los 3 campos,
+    con 0.5/0.5/0 de default si la IA no propuso algo válido para ese item).
+    """
+    n = len(images)
+    if n == 0:
+        raise ValueError("No se proporcionaron imágenes")
+    free_layout = free_layout or {}
+
+    items = _scale_items(images, base_height, max_vertical_boost)
+    # Lienzo de referencia derivado del tamaño REAL ya escalado de los
+    # productos (no de base_height a secas) — si no, con pocos productos
+    # altos el cuadrado de referencia queda enorme comparado con ellos y las
+    # posiciones 0-1 de la IA terminan dispersas, con huecos vacíos entre
+    # medio en vez de la superposición/profundidad que pide el prompt.
+    total_w = sum(it.sw for it in items)
+    max_h = max(it.sh for it in items)
+    ref_side = max(max_h, total_w * 0.6) * 1.15
+
+    placed = []
+    min_left = min_top = 0.0
+    max_right = max_bottom = 0.0
+    for it in items:
+        pos = free_layout.get(it.name, {"cx": 0.5, "cy": 0.5, "rotation": 0.0})
+        cx = float(pos.get("cx", 0.5)) * ref_side
+        cy = float(pos.get("cy", 0.5)) * ref_side
+        rot = float(pos.get("rotation", 0.0))
+        rw, rh = _rotated_bbox(it.sw, it.sh, rot) if rot else (it.sw, it.sh)
+        placed.append((it, cx, cy, rot))
+        min_left = min(min_left, cx - rw / 2)
+        min_top = min(min_top, cy - rh / 2)
+        max_right = max(max_right, cx + rw / 2)
+        max_bottom = max(max_bottom, cy + rh / 2)
+
+    margin = round(base_height * 0.12)
+    # Sin dato de profundidad explícito de la IA: el más grande (más
+    # prominente) se pinta al frente, criterio consistente con el resto del motor.
+    order_by_size = sorted(range(len(placed)), key=lambda i: placed[i][0].sh)
+
+    out = []
+    for rank, idx in enumerate(order_by_size):
+        it, cx, cy, rot = placed[idx]
+        x0 = (cx - it.sw / 2) - min_left + margin
+        y0 = (cy - it.sh / 2) - min_top + margin
+        out.append({
+            "name": it.name, "filepath": it.filepath,
+            "ow": it.w, "oh": it.h, "sw": it.sw, "sh": it.sh,
+            "x": round(x0), "y": round(y0),
+            "z": float(rank),
+            "rotation": round(rot, 2),
+        })
+
+    doc_w = min(math.ceil(max_right - min_left) + margin * 2, 30000)
+    doc_h = min(math.ceil(max_bottom - min_top) + margin * 2, 30000)
+
+    return {
+        "canvas_width": doc_w, "canvas_height": doc_h,
+        "rows_count": 1, "sort_strategy": "ai_libre", "items": out,
+        "effects": {
+            "shadow": True, "depth": True, "tilt": True,
+            "shadow_opacity": 0.28,
+            "shadow_blur": max(8, round(base_height * 0.04)),
+            "shadow_margin": round(base_height * 0.10),
+        },
+    }
+
+
+STANDALONE_STRATEGIES = {
+    'cascada':  compute_layout_cascada,
+    'radial':   compute_layout_radial,
+    'flotante': compute_layout_flotante,
+}
+
+
+def compute_layout_any(images: List[dict], sort_strategy: str = 'auto', **kwargs) -> dict:
+    """Punto de entrada único: enruta a compute_layout() (motor de filas) o a
+    un layout standalone (cascada/radial) según la estrategia pedida."""
+    fn = STANDALONE_STRATEGIES.get(sort_strategy)
+    if fn:
+        return fn(images, base_height=kwargs.get('base_height', 760),
+                   max_vertical_boost=kwargs.get('max_vertical_boost', 1.20))
+    return compute_layout(images, sort_strategy=sort_strategy, **kwargs)

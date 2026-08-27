@@ -4,7 +4,11 @@
 > Apto para demos y uso interno; el **hardening de seguridad a nivel de código ya está aplicado** —
 > lo pendiente es de despliegue (HTTPS) y de plataforma (base de datos, cuentas).
 >
-> **Versión:** v2.1.0 · **Fecha:** 2026-06-04 · **Repositorio:** `still` (GitHub privado).
+> **Versión:** v2 · **Fecha:** 2026-08-26 · **Repositorio:** `still` (GitHub).
+>
+> Para el detalle funcional del Generador de Bodegón (30 estrategias de layout, los 4
+> proveedores de IA, fondos de estudio y zoom de detalle, agregado en v2) ver
+> **`GENERADOR_BODEGON.md`** — este documento se queda con stack/seguridad.
 
 ---
 
@@ -33,7 +37,7 @@ y el sistema entrega un PNG listo para tienda, catálogo o redes. Incluye un mó
 | Backend / API | **Python 3.14 + FastAPI + Uvicorn** (ASGI) |
 | Sesiones / auth | Starlette **SessionMiddleware** (cookie firmada, `itsdangerous`) + **PBKDF2-HMAC-SHA256** |
 | Procesamiento de imagen | **Pillow** (composición, recorte al contenido, sombras de contacto) |
-| IA (orden + tamaños) | Configurable: **Groq** (Llama 4 Scout), **Google Gemini** (2.5 Flash), **Anthropic Claude** |
+| IA (orden + tamaños + composición) | Configurable: **Groq** (Qwen3.6-27B), **Google Gemini** (2.5 Flash), **Anthropic Claude** (Sonnet 4.6), **OpenAI** (GPT-5.1) |
 | Frontend | **HTML + Vanilla JS + Tailwind CSS** (sin framework) · render con `<canvas>` |
 | Almacenamiento | **Sistema de archivos local** (`sessions/`, `users.json`) — sin base de datos aún |
 | Empaquetado | ZIP nativo (`zipfile`) para descargas por lote |
@@ -61,8 +65,11 @@ Usuario → Login (sesión por cookie)
          → descarga todo en ZIP
 ```
 
-- **La IA solo decide el ORDEN y el TAMAÑO** de los productos; la composición la hace un motor
-  geométrico propio (determinista). El fondo siempre es transparente.
+- **La IA solo decide números** (orden, tamaño real, y desde v2 también posición/ángulo en la
+  propuesta "IA · Libre", y qué zona ampliar en el zoom de detalle); la composición la ejecuta un
+  motor geométrico propio (determinista) sobre las fotos reales — la IA nunca genera ni altera un
+  producto. El fondo es transparente por defecto, o uno de una galería pre-generada (v2) —
+  detalle completo en `GENERADOR_BODEGON.md`.
 - Cada trabajo vive en una **sesión con UUID** en disco; limpieza automática a las 24 h.
 
 ---
@@ -120,8 +127,8 @@ limiting devuelve `429` tras 8 intentos):
 
 ## 5. Privacidad de datos (importante para ofrecerlo)
 
-Las imágenes de producto se envían a **proveedores de IA externos** (Groq / Google / Anthropic)
-para el análisis de orden y tamaño. Implicaciones:
+Las imágenes de producto se envían a **proveedores de IA externos** (Groq / Google / Anthropic /
+OpenAI, según cuál esté activo en `AI_PROVIDER`) para el análisis de orden y tamaño. Implicaciones:
 - Los datos del cliente **salen de nuestra infraestructura** hacia terceros.
 - Hay que revisar los **términos de retención** de cada proveedor (varios ofrecen *zero data
   retention* para empresas).

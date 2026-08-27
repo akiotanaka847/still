@@ -3,12 +3,14 @@ Módulo de propuesta de layout con IA.
 Analiza los productos (visión) y sugiere el orden óptimo para el bodegón.
 
 Proveedores soportados:
+  - Groq    (groq)           → modelo qwen/qwen3.6-27b
   - Gemini  (google-genai)   → modelo gemini-2.5-flash
   - Claude  (anthropic)      → modelo claude-sonnet-4-6
+  - OpenAI  (openai)         → modelo gpt-5.1
 
-Ambos devuelven el MISMO contrato: {order: [...], hero: str, reasoning: str}.
-El fondo sigue siendo transparente: la IA solo decide el ORDEN, el motor
-geométrico (layout.py) compone igual que siempre.
+Los cuatro devuelven el MISMO contrato: {order, hero, sizes, detail_crop, reasoning}.
+El fondo sigue siendo transparente: la IA solo decide el ORDEN/TAMAÑO/zoom, el
+motor geométrico (layout.py) compone igual que siempre.
 """
 import base64
 import io
@@ -62,6 +64,26 @@ NO te bases en el tamaño del recorte de la imagen, sino en el tamaño real del 
 Asigna a cada producto un valor de tamaño relativo entre 0.3 y 1.0, donde 1.0 = el producto más
 grande del conjunto y los demás en proporción (un producto que mide la mitad de alto ≈ 0.5).
 
+ZOOM DE DETALLE: además, mirando específicamente el producto "héroe", identifica una zona
+pequeña con contenido interesante para un close-up ampliado (un logo, un sello, texto
+distintivo, un ícono) — NO un área lisa/vacía sin nada que mostrar. Da su ubicación como
+un recuadro en fracciones de 0.0 a 1.0 relativas SOLO al recuadro del héroe (x,y = esquina
+superior izquierda del recuadro; w,h = ancho/alto), pensado para una burbuja circular de
+zoom de ~30% de ancho x 20% de alto del producto.
+
+COMPOSICIÓN LIBRE (lo más importante de esta tarea): además de la fila ordenada de arriba,
+actuá como director de arte y proponé vos mismo una composición fotográfica profesional —
+con superposición, profundidad y ángulos dinámicos, como la armaría un fotógrafo de producto
+para una campaña publicitaria — en vez de una simple fila prolija. Para cada producto, sobre
+un lienzo cuadrado imaginario de 0.0 a 1.0 en cada eje (0,0 = arriba-izquierda, 1,1 =
+abajo-derecha), dame:
+  - cx, cy: el CENTRO del producto. El héroe suele ir más al centro y grande; los secundarios
+    pueden ir más chicos, superpuestos o a los costados — pero mantené todos entre 0.12 y 0.88
+    en ambos ejes para que ninguno quede cortado contra el borde.
+  - rotation: inclinación en grados, de -35 a 35. Usalo con criterio para dar dinamismo (no
+    pongas todos rectos, no repitas siempre el mismo ángulo).
+Pensá como composición real: triángulos visuales, ritmo, que el ojo recorra la imagen.
+
 Nombres exactos de los productos: {json.dumps(names)}
 
 Responde ÚNICAMENTE con este JSON (sin texto adicional, sin markdown):
@@ -69,6 +91,8 @@ Responde ÚNICAMENTE con este JSON (sin texto adicional, sin markdown):
   "order": [lista con los {len(names)} nombres exactos en el orden sugerido],
   "hero": "nombre del producto más prominente",
   "sizes": {{"NOMBRE_EXACTO": tamaño_relativo_0.3_a_1.0, ...}} para los {len(names)} productos,
+  "detail_crop": {{"x": 0.0_a_1.0, "y": 0.0_a_1.0, "w": 0.0_a_1.0, "h": 0.0_a_1.0}},
+  "free_layout": {{"NOMBRE_EXACTO": {{"cx": 0.0_a_1.0, "cy": 0.0_a_1.0, "rotation": -35_a_35}}, ...}} para los {len(names)} productos,
   "reasoning": "explicación de 1-2 oraciones en español que mencione el orden y los tamaños"
 }}"""
 
@@ -94,7 +118,46 @@ def _parse_result(raw: str, names: list) -> dict:
     result.setdefault("hero", result["order"][0] if result["order"] else "")
     result.setdefault("reasoning", "")
     result["sizes"] = _normalize_sizes(result.get("sizes", {}), names)
+    result["detail_crop"] = _normalize_detail_crop(result.get("detail_crop"))
+    result["free_layout"] = _normalize_free_layout(result.get("free_layout"), names)
     return result
+
+
+def _normalize_free_layout(free_layout, names):
+    """Valida la composición libre (posición/rotación por producto) que
+    propone la IA. Si un producto falta o vino con datos inválidos, se le
+    asigna una posición central neutra en vez de descartar toda la
+    propuesta — así 'IA · Libre' siempre tiene algo razonable donde pintar
+    incluso si la IA se equivocó en uno solo."""
+    free_layout = free_layout if isinstance(free_layout, dict) else {}
+    out = {}
+    for i, n in enumerate(names):
+        pos = free_layout.get(n)
+        pos = pos if isinstance(pos, dict) else {}
+        try:
+            cx = max(0.08, min(0.92, float(pos.get("cx", 0.5))))
+            cy = max(0.08, min(0.92, float(pos.get("cy", 0.5))))
+            rot = max(-35.0, min(35.0, float(pos.get("rotation", 0.0))))
+        except (TypeError, ValueError):
+            cx, cy, rot = 0.5, 0.5, 0.0
+        out[n] = {"cx": round(cx, 3), "cy": round(cy, 3), "rotation": round(rot, 1)}
+    return out
+
+
+def _normalize_detail_crop(crop):
+    """Valida el recuadro de zoom que sugiere la IA. Si falta o es inválido,
+    devuelve None — el renderer cae automáticamente al detector por bordes/
+    contraste (ver renderer._auto_detail_region), no hace falta un default acá."""
+    if not isinstance(crop, dict):
+        return None
+    try:
+        x = max(0.0, min(0.9, float(crop.get("x", 0))))
+        y = max(0.0, min(0.9, float(crop.get("y", 0))))
+        w = max(0.05, min(1.0 - x, float(crop.get("w", 0))))
+        h = max(0.05, min(1.0 - y, float(crop.get("h", 0))))
+    except (TypeError, ValueError):
+        return None
+    return {"x": round(x, 3), "y": round(y, 3), "w": round(w, 3), "h": round(h, 3)}
 
 
 def _normalize_sizes(sizes: dict, names: list) -> dict:
@@ -197,8 +260,9 @@ def _analyze_claude(images: list, api_key: str) -> dict:
     return _parse_result(response.content[0].text, names)
 
 
-# ─── Backend: Groq (Llama 4 Scout, visión) ────────────────────────────────────
-# Groq limita la visión de Llama 4 a ~5 imágenes por petición.
+# ─── Backend: Groq (Qwen3, visión) ─────────────────────────────────────────────
+# llama-4-scout (deprecado por Groq el 17/07/2026) fue reemplazado por qwen3.6-27b,
+# que soporta hasta 5 imágenes por petición.
 GROQ_MAX_IMAGES = 5
 
 
@@ -227,10 +291,43 @@ def _analyze_groq(images: list, api_key: str) -> dict:
     content.append({"type": "text", "text": _build_prompt(names)})
 
     response = client.chat.completions.create(
-        model="meta-llama/llama-4-scout-17b-16e-instruct",
+        model="qwen/qwen3.6-27b",
         messages=[{"role": "user", "content": content}],
         temperature=0.4,
-        max_completion_tokens=4096,
+        max_completion_tokens=1024,
+        reasoning_effort="none",  # sin esto, el modo "thinking" agota el budget de tokens
+        response_format={"type": "json_object"},
+    )
+    return _parse_result(response.choices[0].message.content, names)
+
+
+# ─── Backend: OpenAI (GPT-5.1, visión) ─────────────────────────────────────────
+def _analyze_openai(images: list, api_key: str) -> dict:
+    try:
+        from openai import OpenAI
+    except ImportError as e:
+        raise RuntimeError("Falta el SDK de OpenAI. Ejecuta: pip install openai") from e
+
+    names = [img["name"] for img in images]
+    client = OpenAI(api_key=api_key)
+
+    content = []
+    for item in images:
+        content.append({"type": "text", "text": f"[{item['name']}]"})
+        fp = item.get("filepath", "")
+        if fp and Path(fp).exists():
+            b64 = base64.standard_b64encode(_to_jpeg_bytes(fp)).decode()
+            content.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
+            })
+    content.append({"type": "text", "text": _build_prompt(names)})
+
+    response = client.chat.completions.create(
+        model="gpt-5.1",
+        messages=[{"role": "user", "content": content}],
+        temperature=0.4,
+        max_completion_tokens=1536,
         response_format={"type": "json_object"},
     )
     return _parse_result(response.choices[0].message.content, names)
@@ -242,13 +339,14 @@ def analyze_products(
     groq_key: str = None,
     gemini_key: str = None,
     anthropic_key: str = None,
+    openai_key: str = None,
     provider: str = None,
 ) -> dict:
     """
     Envía los thumbnails de los productos a la IA y obtiene el orden óptimo.
 
-    provider: "groq" | "gemini" | "claude" | None
-              (auto: groq → gemini → claude, según la primera key disponible).
+    provider: "groq" | "gemini" | "claude" | "openai" | None
+              (auto: groq → gemini → claude → openai, según la primera key disponible).
     Returns: {order: [nombres], hero: nombre, reasoning: str}
     """
     if not PIL_AVAILABLE:
@@ -261,7 +359,8 @@ def analyze_products(
     # Resolver proveedor
     if not provider:
         provider = ("groq" if groq_key else
-                    "gemini" if gemini_key else "claude")
+                    "gemini" if gemini_key else
+                    "claude" if anthropic_key else "openai")
 
     if provider == "groq":
         if not groq_key:
@@ -277,5 +376,10 @@ def analyze_products(
         if not anthropic_key:
             raise RuntimeError("ANTHROPIC_API_KEY no configurada")
         return _analyze_claude(images, anthropic_key)
+
+    if provider == "openai":
+        if not openai_key:
+            raise RuntimeError("OPENAI_API_KEY no configurada")
+        return _analyze_openai(images, openai_key)
 
     raise RuntimeError(f"Proveedor de IA desconocido: {provider}")

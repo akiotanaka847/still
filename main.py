@@ -23,14 +23,14 @@ import uuid
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, File, HTTPException, UploadFile, Request
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
-from layout import compute_layout
-from renderer import get_image_dimensions, render_png
+from layout import compute_layout_any, compute_layout_ai_freeform
+from renderer import get_image_dimensions, render_png, STUDIO_BACKGROUND_STYLES
 
 
 # ─── Configuración de seguridad (por variables de entorno) ────────────────────
@@ -169,11 +169,11 @@ app.add_middleware(
     allow_headers=["Content-Type"],
 )
 
-# Content-Security-Policy (permite lo que la app necesita: Tailwind CDN, Google Fonts,
+# Content-Security-Policy (permite lo que la app necesita: Tailwind local, Google Fonts,
 # imágenes data:/blob: y código inline). 'unsafe-inline' es necesario por el JS/CSS inline.
 _CSP = (
     "default-src 'self'; "
-    "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; "
+    "script-src 'self' 'unsafe-inline'; "
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
     "font-src 'self' https://fonts.gstatic.com; "
     "img-src 'self' data: blob:; "
@@ -297,19 +297,43 @@ VALID_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp", "
 
 # Propuestas IA: mismo análisis (orden + tamaños), distinto tratamiento de layout
 AI_VARIANT_DEFS = [
-    ("ai",        "IA · Equilibrado", "Orden y tamaños inteligentes"),
-    ("ai_depth",  "IA · Profundidad", "Héroe al frente + solapamiento"),
-    ("ai_shadow", "IA · Sombra",      "Anclado con sombra de contacto"),
+    ("ai",             "IA · Equilibrado",  "Orden y tamaños inteligentes"),
+    ("ai_depth",       "IA · Profundidad",  "Héroe al frente + solapamiento"),
+    ("ai_shadow",      "IA · Sombra",       "Anclado con sombra de contacto"),
+    ("ai_impacto",     "IA · Impacto",      "Abanico dinámico tipo anuncio"),
+    ("ai_fila_recta",  "IA · Fila recta",   "Derechos en línea, sin héroe"),
+    ("ai_cruce",       "IA · Cruce",        "Inclinados uno hacia el otro"),
+    ("ai_libre",       "IA · Libre",        "Composición 100% propuesta por la IA"),
+    ("ai_inclinado_derecha",   "IA · Inclinado derecha",   "Todos a 30° parejo, hacia la derecha"),
+    ("ai_inclinado_izquierda", "IA · Inclinado izquierda", "Todos a 30° parejo, hacia la izquierda"),
+    ("ai_inclinado_derecha_45",   "IA · Inclinado derecha 45°",   "Todos a 45° parejo, hacia la derecha"),
+    ("ai_inclinado_izquierda_45", "IA · Inclinado izquierda 45°", "Todos a 45° parejo, hacia la izquierda"),
 ]
 AI_STRATEGY_IDS = {vid for vid, _, _ in AI_VARIANT_DEFS}
+
+# Galería de fondos de estudio (IA, pre-generados) — id debe existir en
+# renderer.STUDIO_BACKGROUND_STYLES. La miniatura vive en static/backgrounds/thumbs/.
+BACKGROUND_STYLE_DEFS = [
+    ("studio_dark", "Estudio oscuro", "Fondo oscuro con spot cálido"),
+    ("electric",    "Eléctrico",      "Rayos de energía, alto impacto"),
+    ("splash",      "Splash",         "Chorros de líquido a dos colores"),
+]
 
 
 @app.post("/api/bodegon/upload")
 async def bodegon_upload(
     products: List[UploadFile] = File(...),
     background: Optional[UploadFile] = File(default=None),
+    product_names: Optional[List[str]] = Form(default=None),
 ):
-    """Sube imágenes de productos y (opcionalmente) un fondo. Retorna dimensiones."""
+    """Sube imágenes de productos y (opcionalmente) un fondo. Retorna dimensiones.
+
+    product_names (opcional, mismo orden que 'products'): nombre que ya
+    calculó el cliente para cada archivo — el frontend lo desambigua ahí
+    (permite subir la misma foto dos veces sin que colapsen en un producto).
+    Si no viene (p. ej. el flujo de Por lotes), se deriva del filename acá,
+    con la misma desambiguación como respaldo.
+    """
     if len(products) > MAX_FILES:
         raise HTTPException(413, f"Máximo {MAX_FILES} imágenes por grupo")
 
@@ -319,6 +343,7 @@ async def bodegon_upload(
     products_dir.mkdir(parents=True)
 
     images = []
+    seen_names: dict = {}   # red de seguridad: desambigua igual si algo llega repetido
     for i, f in enumerate(products):
         ext = Path(f.filename or "").suffix.lower()
         if ext not in VALID_IMAGE_EXTS:
@@ -328,7 +353,16 @@ async def bodegon_upload(
         if len(data) > MAX_FILE_BYTES:
             continue   # ignora archivos demasiado grandes
 
-        safe = _safe_name(f.filename or f"product_{i}{ext}")
+        provided = product_names[i] if product_names and i < len(product_names) else None
+        raw_base = provided or Path(_safe_name(f.filename or f"product_{i}{ext}")).stem
+        base_name = re.sub(r"[^\w]", "_", raw_base.upper()).strip("_") or f"PRODUCT_{i}"
+        count = seen_names.get(base_name, 0) + 1
+        seen_names[base_name] = count
+        # 1ª vez: nombre tal cual. 2ª+: sufijo _2, _3... — así dos fotos con
+        # el mismo nombre (o la misma foto subida dos veces) no se pisan
+        # entre sí en disco ni colapsan en un solo producto.
+        name = base_name if count == 1 else f"{base_name}_{count}"
+        safe = f"{name}{ext}"
         dest = products_dir / safe
         dest.write_bytes(data)
 
@@ -339,7 +373,7 @@ async def bodegon_upload(
             continue
 
         images.append({
-            "name": Path(safe).stem.upper().replace(" ", "_"),
+            "name": name,
             "filename": safe,
             "filepath": str(dest),
             "width": w,
@@ -395,7 +429,7 @@ async def bodegon_compute(body: dict):
     info = json.loads(info_file.read_text(encoding="utf-8"))
 
     cfg = body.get("config", {})
-    layout = compute_layout(
+    layout = compute_layout_any(
         images=info["images"],
         sort_strategy=cfg.get("sort_strategy", "auto"),
         rows_count=int(cfg.get("rows_count", 0)),
@@ -436,32 +470,69 @@ async def bodegon_render(body: dict):
             render_images = info["ai_images"]
         else:
             render_images = info["images"]
-        layout = compute_layout(
-            images=render_images,
-            sort_strategy=cfg.get("sort_strategy", "auto"),
-            rows_count=int(cfg.get("rows_count", 0)),
-            base_height=int(cfg.get("base_height", 760)),
-            item_gap=int(cfg.get("item_gap", 40)),
-            internal_padding=int(cfg.get("internal_padding", 120)),
-            max_vertical_boost=float(cfg.get("max_vertical_boost", 1.20)),
-            aspect_w=int(cfg.get("aspect_w", 0)),
-            aspect_h=int(cfg.get("aspect_h", 0)),
-        )
+        if cfg.get("sort_strategy") == "ai_libre":
+            layout = compute_layout_ai_freeform(
+                images=render_images,
+                free_layout=info.get("ai_free_layout"),
+                base_height=int(cfg.get("base_height", 760)),
+                max_vertical_boost=float(cfg.get("max_vertical_boost", 1.20)),
+            )
+        else:
+            layout = compute_layout_any(
+                images=render_images,
+                sort_strategy=cfg.get("sort_strategy", "auto"),
+                rows_count=int(cfg.get("rows_count", 0)),
+                base_height=int(cfg.get("base_height", 760)),
+                item_gap=int(cfg.get("item_gap", 40)),
+                internal_padding=int(cfg.get("internal_padding", 120)),
+                max_vertical_boost=float(cfg.get("max_vertical_boost", 1.20)),
+                aspect_w=int(cfg.get("aspect_w", 0)),
+                aspect_h=int(cfg.get("aspect_h", 0)),
+            )
+        background_style = cfg.get("background_style") or None
+        zoom_detail = None
+        if cfg.get("zoom_detail"):
+            is_ai = cfg.get("sort_strategy") in AI_STRATEGY_IDS
+            zoom_detail = {
+                "target": info.get("ai_hero") if is_ai else None,
+                "region": info.get("ai_detail_crop") if is_ai else None,
+            }
     elif "layout" in info:
         layout = info["layout"]
+        background_style = None
+        zoom_detail = None
     else:
         raise HTTPException(400, "Ejecuta /compute primero")
+
+    if background_style not in (None, "none") and background_style not in STUDIO_BACKGROUND_STYLES:
+        raise HTTPException(400, "Estilo de fondo inválido")
 
     output_dir = session_dir / "output"
     output_dir.mkdir(exist_ok=True)
     out_path = output_dir / "bodegon.png"
 
     try:
-        render_png(layout, str(out_path), background_path=info.get("background_path"))
+        render_png(
+            layout, str(out_path),
+            background_path=info.get("background_path"),
+            background_style=(background_style if background_style != "none" else None),
+            zoom_detail=zoom_detail,
+        )
     except Exception as e:
         raise HTTPException(500, f"Error renderizando PNG: {e}")
 
     return {"session_id": session_id, "filename": "bodegon.png"}
+
+
+@app.get("/api/bodegon/background-styles")
+async def bodegon_background_styles():
+    """Lista la galería de fondos de estudio (IA, pre-generados) disponibles."""
+    return {
+        "styles": [
+            {"id": sid, "label": label, "desc": desc, "thumb": f"/static/backgrounds/thumbs/{sid}.jpg"}
+            for sid, label, desc in BACKGROUND_STYLE_DEFS
+        ]
+    }
 
 
 @app.get("/api/bodegon/download/{session_id}")
@@ -490,9 +561,10 @@ async def bodegon_ai_proposal(body: dict):
     groq_key = os.environ.get("GROQ_API_KEY", "").strip()
     gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
     provider = os.environ.get("AI_PROVIDER", "").strip().lower() or None
-    if not (groq_key or gemini_key or anthropic_key):
-        raise HTTPException(503, "Configura GROQ_API_KEY, GEMINI_API_KEY o ANTHROPIC_API_KEY en .env")
+    if not (groq_key or gemini_key or anthropic_key or openai_key):
+        raise HTTPException(503, "Configura GROQ_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY u OPENAI_API_KEY en .env")
 
     info = json.loads(info_file.read_text(encoding="utf-8"))
 
@@ -503,6 +575,7 @@ async def bodegon_ai_proposal(body: dict):
             groq_key=groq_key or None,
             gemini_key=gemini_key or None,
             anthropic_key=anthropic_key or None,
+            openai_key=openai_key or None,
             provider=provider,
         )
     except Exception as e:
@@ -518,15 +591,27 @@ async def bodegon_ai_proposal(body: dict):
             img["scale"] = float(sizes.get(n, 1.0))
             ordered.append(img)
 
-    # Persistir el orden + tamaños para que el render del PNG los respete
+    # Persistir el orden + tamaños para que el render del PNG los respete,
+    # + la región de zoom y la composición libre sugeridas (si el usuario
+    # activa "Zoom de detalle" / elige la propuesta "IA · Libre")
     info["ai_images"] = ordered
+    info["ai_hero"] = suggestion.get("hero", "")
+    info["ai_detail_crop"] = suggestion.get("detail_crop")
+    info["ai_free_layout"] = suggestion.get("free_layout")
     info_file.write_text(json.dumps(info, indent=2), encoding="utf-8")
 
     # Varias propuestas IA desde el MISMO análisis (orden + tamaños), distinto layout
     cfg = body.get("config", {})
 
     def _ai_layout(strategy_id: str):
-        return compute_layout(
+        if strategy_id == "ai_libre":
+            return compute_layout_ai_freeform(
+                images=ordered,
+                free_layout=suggestion.get("free_layout"),
+                base_height=int(cfg.get("base_height", 760)),
+                max_vertical_boost=float(cfg.get("max_vertical_boost", 1.20)),
+            )
+        return compute_layout_any(
             images=ordered,
             sort_strategy=strategy_id,
             rows_count=int(cfg.get("rows_count", 0)),
