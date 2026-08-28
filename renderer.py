@@ -421,13 +421,27 @@ def render_png(layout: dict, output_path: str, background_path: str = None,
             img = img.resize((item["sw"], item["sh"]), Image.LANCZOS)
             rotation = item.get("rotation", 0.0)
             if rotation:
-                # Rota alrededor del centro del recuadro original (expand agranda
-                # el lienzo del recorte para no perder las esquinas al girar).
+                # expand agranda el lienzo del recorte para no perder las
+                # esquinas al girar — pero eso corre el centro del recuadro
+                # rotado respecto al original, y por cuánto depende del
+                # ángulo Y del tamaño de CADA producto. Con anchor="bottom"
+                # (las estrategias en fila, donde todos comparten el mismo
+                # borde inferior antes de rotar) hay que conservar ESE borde
+                # tal cual, si no cada producto "flota" un poco distinto y
+                # ya no quedan al ras entre sí. El resto de las estrategias
+                # (Cascada/Radial/Flotante/IA Libre) posicionan por CENTRO,
+                # no por una base compartida, así que ahí sí corresponde
+                # mantener el centro fijo al rotar (comportamiento previo).
                 cx = item["x"] + item["sw"] / 2
-                cy = item["y"] + item["sh"] / 2
-                img = img.rotate(-rotation, expand=True, resample=Image.BICUBIC)
-                px = round(cx - img.width / 2)
-                py = round(cy - img.height / 2)
+                img_r = img.rotate(-rotation, expand=True, resample=Image.BICUBIC)
+                px = round(cx - img_r.width / 2)
+                if item.get("anchor") == "bottom":
+                    bottom = item["y"] + item["sh"]
+                    py = round(bottom - img_r.height)
+                else:
+                    cy = item["y"] + item["sh"] / 2
+                    py = round(cy - img_r.height / 2)
+                img = img_r
             else:
                 px, py = item["x"], item["y"]
 

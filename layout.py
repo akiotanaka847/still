@@ -342,6 +342,12 @@ def compute_layout(
                 "x":  round(item.x), "y": round(item.y),
                 "z":  round(z, 3),
                 "rotation": round(rotation, 2),
+                # Todos los productos de una fila comparten el mismo borde
+                # inferior (ver "alineados a la base" arriba) — al rotar,
+                # el renderer debe conservar ESE borde, no el centro, para
+                # que sigan quedando al ras entre sí sin importar que cada
+                # uno tenga un ángulo/tamaño distinto (ver renderer._compose).
+                "anchor": "bottom",
             })
         cy += row.height + shadow_margin + item_gap
 
