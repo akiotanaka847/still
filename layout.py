@@ -396,8 +396,8 @@ def compute_layout(
         shift_x = pad - min_left
         shift_y = pad - min_top
         for it in out:
-            it["x"] += shift_x
-            it["y"] += shift_y
+            it["x"] = round(it["x"] + shift_x)
+            it["y"] = round(it["y"] + shift_y)
         doc_w = math.ceil(max_right - min_left) + pad * 2
         doc_h = math.ceil(max_bottom - min_top) + pad + bottom_pad
 

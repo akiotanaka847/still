@@ -461,6 +461,26 @@ def render_png(layout: dict, output_path: str, background_path: str = None,
         except Exception as e:
             print(f"Advertencia: no se pudo componer el zoom de detalle: {e}")
 
+    # El canvas se arma con margen de sobra (para que ninguna rotación ni la
+    # sombra difuminada queden cortadas contra el borde durante el compose),
+    # pero el margen "correcto" depende de qué se terminó dibujando de
+    # verdad (sombra on/off, zoom de detalle, fondo de estudio...) — calcular
+    # eso de antemano en layout.py implicaría duplicar esa lógica ahí. Más
+    # simple y siempre exacto: recortar acá, al final, al contenido real ya
+    # compuesto (mismo criterio de _content_bbox que ya usan las fotos de
+    # producto en la subida) — el fondo transparente queda al ras de lo que
+    # se ve, sin importar la estrategia ni los efectos activados. Si hay un
+    # fondo propio o de estudio, el canvas queda opaco de punta a punta y
+    # esto no recorta nada (correcto: ese fondo es intencional).
+    l, t, r, b = _content_bbox(canvas)
+    if (l, t, r, b) != (0, 0, cw, ch):
+        pad = 4
+        l = max(0, l - pad)
+        t = max(0, t - pad)
+        r = min(cw, r + pad)
+        b = min(ch, b + pad)
+        canvas = canvas.crop((l, t, r, b))
+
     canvas.save(output_path, "PNG", optimize=True)
 
 
