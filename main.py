@@ -318,6 +318,13 @@ def _is_ai_strategy(sort_strategy: str) -> bool:
     return sort_strategy in AI_STRATEGY_IDS or sort_strategy.startswith("ai_libre_")
 
 
+def _owned_by(info: dict, request: Request) -> bool:
+    """True si la sesión es del usuario actual, o si es una sesión vieja sin
+    dueño (de antes de este campo) — nunca bloquea lo que ya funcionaba."""
+    owner = info.get("owner")
+    return owner is None or owner == request.session.get("user")
+
+
 def _tilt_angle_from_cfg(cfg: dict):
     """Ángulo elegido por el usuario para Inclinado derecha/izquierda (slider
     en la UI). None si no vino — layout.py usa su default (30°) en ese caso."""
@@ -340,6 +347,7 @@ BACKGROUND_STYLE_DEFS = [
 
 @app.post("/api/bodegon/upload")
 async def bodegon_upload(
+    request: Request,
     products: List[UploadFile] = File(...),
     background: Optional[UploadFile] = File(default=None),
     product_names: Optional[List[str]] = Form(default=None),
@@ -422,6 +430,8 @@ async def bodegon_upload(
         "session_id": session_id,
         "images": images,
         "background_path": bg_path,
+        "owner": request.session.get("user"),
+        "created": time.time(),
     }
     (session_dir / "bodegon.json").write_text(json.dumps(info, indent=2), encoding="utf-8")
 
@@ -528,6 +538,14 @@ async def bodegon_render(body: dict):
                 "region": info.get("ai_detail_crop") if is_ai else None,
             }
         shadow_enabled = bool(cfg.get("shadow", True))
+        # Persistir el layout renderizado — es la única propuesta que /compute
+        # NO alcanza a guardar sola: las tarjetas ✦ IA (incluida ai_libre_N) se
+        # arman con el layout que ya trajo /ai-proposal, sin volver a llamar a
+        # /compute. Guardarlo acá (además de en /compute) asegura que "la
+        # última propuesta" quede igual sin importar qué camino se usó, para
+        # que reabrir la sesión (Mis bodegones) muestre exactamente esa.
+        info["layout"] = layout
+        info_file.write_text(json.dumps(info, indent=2), encoding="utf-8")
     elif "layout" in info:
         layout = info["layout"]
         background_style = None
@@ -569,14 +587,92 @@ async def bodegon_background_styles():
 
 
 @app.get("/api/bodegon/download/{session_id}")
-async def bodegon_download(session_id: str):
+async def bodegon_download(session_id: str, request: Request):
     """Descarga el PNG generado."""
     if not re.match(r"^[0-9a-f\-]{36}$", session_id):
         raise HTTPException(400, "Session ID inválido")
-    out = SESSIONS_DIR / session_id / "output" / "bodegon.png"
+    session_dir = SESSIONS_DIR / session_id
+    info_file = session_dir / "bodegon.json"
+    if info_file.exists():
+        info = json.loads(info_file.read_text(encoding="utf-8"))
+        if not _owned_by(info, request):
+            raise HTTPException(404, "PNG no encontrado. Ejecuta el render primero.")
+    out = session_dir / "output" / "bodegon.png"
     if not out.exists():
         raise HTTPException(404, "PNG no encontrado. Ejecuta el render primero.")
     return FileResponse(str(out), filename="bodegon.png", media_type="image/png")
+
+
+@app.get("/api/bodegon/mine")
+async def bodegon_mine(request: Request):
+    """Lista las sesiones (grupos de productos) del usuario actual, más
+    reciente primero — para la galería 'Mis bodegones' y para precargar
+    automáticamente los últimos productos al entrar."""
+    user = request.session.get("user")
+    out = []
+    for d in SESSIONS_DIR.iterdir():
+        if not d.is_dir() or d.name == "_batch":
+            continue
+        info_file = d / "bodegon.json"
+        if not info_file.exists():
+            continue
+        try:
+            info = json.loads(info_file.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            continue
+        if info.get("owner") != user:   # a diferencia de _owned_by: acá NO se
+            continue                     # listan las sesiones viejas sin dueño
+        layout = info.get("layout") or {}
+        out.append({
+            "session_id": info.get("session_id", d.name),
+            "created": info.get("created") or info_file.stat().st_mtime,
+            "product_count": len(info.get("images", [])),
+            "has_render": (d / "output" / "bodegon.png").exists(),
+            "sort_strategy": layout.get("sort_strategy"),
+        })
+    out.sort(key=lambda x: x["created"], reverse=True)
+    return {"sessions": out[:60]}
+
+
+@app.get("/api/bodegon/session/{session_id}")
+async def bodegon_session_get(session_id: str, request: Request):
+    """Devuelve el estado completo de una sesión propia para reabrirla (Mis
+    bodegones / precarga automática): productos + la última propuesta
+    guardada, si hay una."""
+    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
+        raise HTTPException(400, "Session ID inválido")
+    session_dir = SESSIONS_DIR / session_id
+    info_file = session_dir / "bodegon.json"
+    if not info_file.exists():
+        raise HTTPException(404, "Sesión no encontrada")
+    info = json.loads(info_file.read_text(encoding="utf-8"))
+    if info.get("owner") != request.session.get("user"):
+        raise HTTPException(404, "Sesión no encontrada")
+    return {
+        "session_id": session_id,
+        "images": [{"name": i["name"], "filename": i["filename"]} for i in info.get("images", [])],
+        "layout": info.get("layout"),
+    }
+
+
+@app.get("/api/bodegon/product-file/{session_id}/{filename}")
+async def bodegon_product_file(session_id: str, filename: str, request: Request):
+    """Sirve la foto original de un producto ya subido (para repintar el
+    preview en el navegador al reabrir una sesión propia — no requiere volver
+    a subir nada)."""
+    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
+        raise HTTPException(400, "Session ID inválido")
+    session_dir = SESSIONS_DIR / session_id
+    info_file = session_dir / "bodegon.json"
+    if not info_file.exists():
+        raise HTTPException(404, "Sesión no encontrada")
+    info = json.loads(info_file.read_text(encoding="utf-8"))
+    if info.get("owner") != request.session.get("user"):
+        raise HTTPException(404, "Sesión no encontrada")
+    fp = session_dir / "products" / Path(filename).name   # .name neutraliza / y ..
+    if not fp.exists():
+        raise HTTPException(404, "Archivo no encontrado")
+    return FileResponse(str(fp))
 
 
 @app.post("/api/bodegon/ai-proposal")
