@@ -26,6 +26,17 @@ except ImportError:
 
 
 # ─── Helpers compartidos ──────────────────────────────────────────────────────
+def _dynamic_max_tokens(n: int, base: int = 500, per_item: int = 140, cap: int = 8000) -> int:
+    """El JSON de respuesta escala con la cantidad de productos — sobre todo
+    por 'free_layout_options' (3 composiciones libres, cada una con
+    cx/cy/rotation POR PRODUCTO). Con un límite fijo, un grupo grande corta
+    la respuesta a la mitad de una entrada y json.loads() falla con
+    'Expecting X delimiter' — no es que la IA "se equivoque", es que no la
+    dejamos terminar de escribir. Se calcula un presupuesto proporcional a
+    la cantidad de productos en vez de un número fijo pensado para pocos."""
+    return min(cap, base + per_item * max(1, n))
+
+
 def _to_jpeg_bytes(filepath: str, max_size: int = 512) -> bytes:
     """Redimensiona una imagen y la devuelve como JPEG (bytes) para la API de visión."""
     with Image.open(filepath) as img:
@@ -71,18 +82,28 @@ un recuadro en fracciones de 0.0 a 1.0 relativas SOLO al recuadro del héroe (x,
 superior izquierda del recuadro; w,h = ancho/alto), pensado para una burbuja circular de
 zoom de ~30% de ancho x 20% de alto del producto.
 
-COMPOSICIÓN LIBRE (lo más importante de esta tarea): además de la fila ordenada de arriba,
-actuá como director de arte y proponé vos mismo una composición fotográfica profesional —
-con superposición, profundidad y ángulos dinámicos, como la armaría un fotógrafo de producto
-para una campaña publicitaria — en vez de una simple fila prolija. Para cada producto, sobre
-un lienzo cuadrado imaginario de 0.0 a 1.0 en cada eje (0,0 = arriba-izquierda, 1,1 =
-abajo-derecha), dame:
+COMPOSICIÓN LIBRE (lo más importante de esta tarea, y lo que más se nota que lo hizo una IA
+—no una fórmula fija—): actuá como director de arte y proponé TRES composiciones fotográficas
+profesionales completas, cada una con una intención bien distinta entre sí (nunca variaciones
+menores de la misma idea):
+  1. "Dinámica": máxima energía — superposición fuerte, ángulos marcados y contrastantes,
+     tamaños con mucha diferencia entre el héroe y el resto.
+  2. "Elegante": minimalista — más espacio en blanco entre productos, ángulos sutiles o nulos,
+     composición serena tipo producto premium.
+  3. "Editorial": asimétrica y con ritmo — como una revista de moda: tamaños contrastados,
+     algún producto bien arriba o abajo del resto, no todos a la misma altura.
+Para cada una, y para cada producto, sobre un lienzo cuadrado imaginario de 0.0 a 1.0 en cada
+eje (0,0 = arriba-izquierda, 1,1 = abajo-derecha), dame:
   - cx, cy: el CENTRO del producto. El héroe suele ir más al centro y grande; los secundarios
-    pueden ir más chicos, superpuestos o a los costados — pero mantené todos entre 0.12 y 0.88
-    en ambos ejes para que ninguno quede cortado contra el borde.
-  - rotation: inclinación en grados, de -35 a 35. Usalo con criterio para dar dinamismo (no
-    pongas todos rectos, no repitas siempre el mismo ángulo).
-Pensá como composición real: triángulos visuales, ritmo, que el ojo recorra la imagen.
+    pueden ir más chicos, superpuestos, a los costados o a distinta altura — pero mantené todos
+    entre 0.12 y 0.88 en ambos ejes para que ninguno quede cortado contra el borde. IMPORTANTE:
+    con 2 productos, sus cx NUNCA deben quedar a menos de ~0.2 de distancia entre sí (p. ej. 0.35
+    y 0.65, no 0.48 y 0.52) — si quedan casi en el mismo punto, uno tapa por completo al otro y
+    se pierde el producto. En "Elegante" en particular, separalos con criterio generoso: se busca
+    espacio en blanco entre ellos, NO amontonados.
+  - rotation: inclinación en grados, de -35 a 35 (en "Elegante" pueden ser todos cercanos a 0).
+Las tres deben poder distinguirse a simple vista entre sí — si dos quedan parecidas, no cumpliste
+la consigna.
 
 Nombres exactos de los productos: {json.dumps(names)}
 
@@ -92,7 +113,11 @@ Responde ÚNICAMENTE con este JSON (sin texto adicional, sin markdown):
   "hero": "nombre del producto más prominente",
   "sizes": {{"NOMBRE_EXACTO": tamaño_relativo_0.3_a_1.0, ...}} para los {len(names)} productos,
   "detail_crop": {{"x": 0.0_a_1.0, "y": 0.0_a_1.0, "w": 0.0_a_1.0, "h": 0.0_a_1.0}},
-  "free_layout": {{"NOMBRE_EXACTO": {{"cx": 0.0_a_1.0, "cy": 0.0_a_1.0, "rotation": -35_a_35}}, ...}} para los {len(names)} productos,
+  "free_layout_options": [
+    {{"label": "Dinámica", "layout": {{"NOMBRE_EXACTO": {{"cx":0.0_a_1.0,"cy":0.0_a_1.0,"rotation":-35_a_35}}, ...}} para los {len(names)} productos}},
+    {{"label": "Elegante", "layout": {{...}} para los {len(names)} productos}},
+    {{"label": "Editorial", "layout": {{...}} para los {len(names)} productos}}
+  ],
   "reasoning": "explicación de 1-2 oraciones en español que mencione el orden y los tamaños"
 }}"""
 
@@ -119,8 +144,24 @@ def _parse_result(raw: str, names: list) -> dict:
     result.setdefault("reasoning", "")
     result["sizes"] = _normalize_sizes(result.get("sizes", {}), names)
     result["detail_crop"] = _normalize_detail_crop(result.get("detail_crop"))
-    result["free_layout"] = _normalize_free_layout(result.get("free_layout"), names)
+    result["free_layout_options"] = _normalize_free_layout_options(result.get("free_layout_options"), names)
     return result
+
+
+def _normalize_free_layout_options(options, names):
+    """Valida la lista de composiciones libres (cada una con su 'label' y su
+    'layout' posición/rotación por producto). Si la IA no devolvió nada
+    usable, la lista queda vacía y 'IA · Libre' simplemente no aparece —
+    mejor eso que forzar 3 composiciones inventadas sin criterio real."""
+    if not isinstance(options, list):
+        return []
+    out = []
+    for i, opt in enumerate(options[:3]):   # tope de 3, por costo/tamaño de UI
+        if not isinstance(opt, dict):
+            continue
+        label = str(opt.get("label") or f"Libre {i + 1}").strip()[:40] or f"Libre {i + 1}"
+        out.append({"label": label, "layout": _normalize_free_layout(opt.get("layout"), names)})
+    return out
 
 
 def _normalize_free_layout(free_layout, names):
@@ -227,7 +268,7 @@ def _analyze_gemini(images: list, api_key: str) -> dict:
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
             temperature=0.4,
-            max_output_tokens=4096,
+            max_output_tokens=_dynamic_max_tokens(len(names)),
         ),
     )
     return _parse_result(response.text, names)
@@ -254,7 +295,7 @@ def _analyze_claude(images: list, api_key: str) -> dict:
 
     response = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=4096,
+        max_tokens=_dynamic_max_tokens(len(names)),
         messages=[{"role": "user", "content": content}],
     )
     return _parse_result(response.content[0].text, names)
@@ -294,7 +335,13 @@ def _analyze_groq(images: list, api_key: str) -> dict:
         model="qwen/qwen3.6-27b",
         messages=[{"role": "user", "content": content}],
         temperature=0.4,
-        max_completion_tokens=1024,
+        # Tope bajo a propósito: la cuenta free de Groq tiene un límite de
+        # 8000 tokens/minuto que ya se va casi entero en las imágenes (hasta
+        # GROQ_MAX_IMAGES=5 × 2048c/u) — pedir un budget grande acá dispara
+        # "Request too large" en vez de arreglar el truncado. Con grupos
+        # grandes, Groq va a quedar corto de por sí (limitación de su tier
+        # gratuito, no de este código); para eso conviene otro proveedor.
+        max_completion_tokens=_dynamic_max_tokens(len(names), base=300, per_item=90, cap=2500),
         reasoning_effort="none",  # sin esto, el modo "thinking" agota el budget de tokens
         response_format={"type": "json_object"},
     )
@@ -327,7 +374,7 @@ def _analyze_openai(images: list, api_key: str) -> dict:
         model="gpt-5.1",
         messages=[{"role": "user", "content": content}],
         temperature=0.4,
-        max_completion_tokens=1536,
+        max_completion_tokens=_dynamic_max_tokens(len(names)),
         response_format={"type": "json_object"},
     )
     return _parse_result(response.choices[0].message.content, names)

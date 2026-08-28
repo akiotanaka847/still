@@ -557,6 +557,15 @@
           </span>
         </label>
 
+        <label class="bg-white border border-gray-200 rounded-2xl p-4 mb-4 flex items-start gap-3 cursor-pointer hover:border-indigo-300 transition-all">
+          <input type="checkbox" id="shadow-toggle" checked onchange="onShadowToggle()"
+                 class="mt-0.5 w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-400 flex-shrink-0">
+          <span>
+            <span class="text-xs font-medium text-gray-700 block">Sombra de contacto</span>
+            <span class="text-[11px] text-gray-400 block mt-0.5">Sombra elíptica debajo de cada producto, para que se sientan "apoyados". Desactivala si tu fondo o composición se ven mejor sin ella.</span>
+          </span>
+        </label>
+
         <button id="bod-render-btn" onclick="bodRender()"
                 class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 rounded-2xl
                        shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2">
@@ -618,6 +627,16 @@
             <input type="range" id="cfg-gap" min="0" max="200" value="40" step="5"
                    class="w-full accent-indigo-600"
                    oninput="document.getElementById('lbl-gap').textContent=this.value+' px'">
+          </div>
+          <!-- Ángulo (solo Inclinado derecha/izquierda) -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-xs font-medium text-gray-500">Ángulo de inclinación <span class="text-gray-300 font-normal">(estrategias Inclinado)</span></label>
+              <span class="text-xs font-semibold text-gray-700" id="lbl-tilt-angle">30°</span>
+            </div>
+            <input type="range" id="cfg-tilt-angle" min="5" max="60" value="30" step="1"
+                   class="w-full accent-indigo-600"
+                   oninput="document.getElementById('lbl-tilt-angle').textContent=this.value+'°'">
           </div>
         </div>
 
@@ -742,15 +761,8 @@
           <optgroup label="✦ Inteligente (IA)">
             <option value="ai_depth" selected>IA · Profundidad</option>
             <option value="ai">IA · Equilibrado</option>
-            <option value="ai_shadow">IA · Sombra</option>
             <option value="ai_impacto">IA · Impacto</option>
-            <option value="ai_fila_recta">IA · Fila recta</option>
-            <option value="ai_cruce">IA · Cruce</option>
-            <option value="ai_libre">IA · Libre</option>
-            <option value="ai_inclinado_derecha">IA · Inclinado derecha</option>
-            <option value="ai_inclinado_izquierda">IA · Inclinado izquierda</option>
-            <option value="ai_inclinado_derecha_45">IA · Inclinado derecha 45°</option>
-            <option value="ai_inclinado_izquierda_45">IA · Inclinado izquierda 45°</option>
+            <option value="ai_libre_1">IA · Libre</option>
           </optgroup>
           <optgroup label="Geométrico">
             <option value="auto">Auto</option>
@@ -767,8 +779,6 @@
             <option value="flotante">Flotante</option>
             <option value="inclinado_derecha">Inclinado derecha</option>
             <option value="inclinado_izquierda">Inclinado izquierda</option>
-            <option value="inclinado_derecha_45">Inclinado derecha 45°</option>
-            <option value="inclinado_izquierda_45">Inclinado izquierda 45°</option>
           </optgroup>
         </select>
         <p class="text-[11px] text-gray-400">Los modos <strong class="text-gray-500">IA</strong> analizan cada grupo (orden + tamaños). Más lentos pero mejores. Los geométricos son instantáneos.</p>
@@ -877,6 +887,16 @@ function toast(msg, type='error') {
   _toastTimer = setTimeout(() => w.classList.replace('opacity-100','opacity-0'), 4500);
 }
 
+function _warnSkipped(upData) {
+  // Antes de esto, un archivo con problemas (formato raro, muy pesado, no se
+  // pudo leer) desaparecía en silencio — subías 2 productos y veías 1, sin
+  // ninguna pista de por qué. Ahora el backend informa cuáles y por qué.
+  const skipped = upData && upData.skipped;
+  if (!skipped || !skipped.length) return;
+  const detail = skipped.map(s => `${s.filename}: ${s.reason}`).join(' · ');
+  toast(`${skipped.length} imagen${skipped.length!==1?'es':''} no se pudo${skipped.length!==1?'ieron':''} cargar — ${detail}`, 'warn');
+}
+
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -896,6 +916,7 @@ let BOD_AI_VARIANTS  = [];   // [{id,label,desc,layout}] devueltas por la IA
 let BOD_AI_REASONING = '';   // razonamiento (compartido por las variantes)
 let BOD_BACKGROUND_STYLE = null;  // id del fondo de estudio elegido (null = sin fondo)
 let BOD_ZOOM_DETAIL = false;      // burbuja de zoom sobre el héroe
+let BOD_SHADOW = true;            // sombra de contacto (activada por defecto, como siempre)
 let BG_STYLES = null;             // caché de /api/bodegon/background-styles
 const BG_IMG_CACHE = {};          // caché de <img> ya cargadas, por style id
 
@@ -1054,9 +1075,10 @@ const STRATEGIES = [
     postProcess: rows => rows,
   },
   {
-    // Inclinado derecha: TODOS el mismo ángulo fijo (30°), sin fórmula por
-    // distancia — línea prolija pero pareja, no en abanico ni convergencia.
-    id: 'inclinado_derecha', label: 'Inclinado derecha', desc: 'Todos a 30° parejo',
+    // Inclinado derecha: TODOS el mismo ángulo, sin fórmula por distancia —
+    // línea prolija pero pareja, no en abanico ni convergencia. La magnitud
+    // la elige el usuario con el slider "Ángulo de inclinación" (5°-60°).
+    id: 'inclinado_derecha', label: 'Inclinado derecha', desc: 'Todos parejo — ángulo configurable',
     color: 'emerald',
     shadow: true, depth: true, tilt: true, tiltMode: 'uniform', tiltAngle: 30,
     overlap: 0.18, heroScale: 1.0, falloff: 1.0,
@@ -1065,29 +1087,10 @@ const STRATEGIES = [
     postProcess: rows => rows,
   },
   {
-    id: 'inclinado_izquierda', label: 'Inclinado izquierda', desc: 'Todos a -30° parejo',
+    id: 'inclinado_izquierda', label: 'Inclinado izquierda', desc: 'Todos parejo — ángulo configurable',
     color: 'violet',
     shadow: true, depth: true, tilt: true, tiltMode: 'uniform', tiltAngle: -30,
     overlap: 0.18, heroScale: 1.0, falloff: 1.0,
-    prepareItems: items => [...items].sort((a,b) => b.sh - a.sh),
-    modifyCfg:   cfg => ({...cfg, rows_count:1}),
-    postProcess: rows => rows,
-  },
-  {
-    // Mismo criterio que Inclinado derecha/izquierda, pero a 45° — más dramático.
-    id: 'inclinado_derecha_45', label: 'Inclinado derecha 45°', desc: 'Todos a 45° parejo',
-    color: 'blue',
-    shadow: true, depth: true, tilt: true, tiltMode: 'uniform', tiltAngle: 45,
-    overlap: 0.14, heroScale: 1.0, falloff: 1.0,
-    prepareItems: items => [...items].sort((a,b) => b.sh - a.sh),
-    modifyCfg:   cfg => ({...cfg, rows_count:1}),
-    postProcess: rows => rows,
-  },
-  {
-    id: 'inclinado_izquierda_45', label: 'Inclinado izquierda 45°', desc: 'Todos a -45° parejo',
-    color: 'green',
-    shadow: true, depth: true, tilt: true, tiltMode: 'uniform', tiltAngle: -45,
-    overlap: 0.14, heroScale: 1.0, falloff: 1.0,
     prepareItems: items => [...items].sort((a,b) => b.sh - a.sh),
     modifyCfg:   cfg => ({...cfg, rows_count:1}),
     postProcess: rows => rows,
@@ -1120,7 +1123,9 @@ const STRATEGIES = [
 
 // Las propuestas IA ocupan índices a partir de AI_BASE
 const AI_BASE = STRATEGIES.length;
-const AI_VARIANT_LABELS = ['IA · Equilibrado', 'IA · Profundidad', 'IA · Sombra', 'IA · Impacto', 'IA · Fila recta', 'IA · Cruce', 'IA · Libre', 'IA · Inclinado derecha', 'IA · Inclinado izquierda', 'IA · Inclinado derecha 45°', 'IA · Inclinado izquierda 45°'];
+// Placeholders mientras carga (los 3 últimos son genéricos: el label real de
+// "IA · Libre" lo define la IA en cada análisis — ver free_layout_options).
+const AI_VARIANT_LABELS = ['IA · Equilibrado', 'IA · Profundidad', 'IA · Impacto', 'IA · Libre 1', 'IA · Libre 2', 'IA · Libre 3'];
 
 // Inclinación del abanico en "impacto" (espejo de TILT_* en layout.py)
 const TILT_BASE = 20.0, TILT_STEP = 10.0, TILT_MAX = 30.0;
@@ -1212,10 +1217,17 @@ function computeLayoutJS(images, cfg, strategy) {
         // 'converge' (cruce): pivote = centro geométrico de la fila, se
         // inclinan hacia el centro aunque no haya un producto recto de
         // referencia (p. ej. con 2 productos, ninguno es "el héroe").
-        // 'uniform' (inclinado izq/der): TODOS el mismo ángulo fijo, sin fórmula.
+        // 'uniform' (inclinado izq/der): TODOS el mismo ángulo, sin fórmula
+        // por distancia — la magnitud la elige el usuario (slider), el signo
+        // (derecha/izquierda) lo define la estrategia. Mismo criterio que
+        // layout.py:compute_layout (parámetro tilt_angle).
         const tiltMode = strategy.tiltMode || 'fan';
         if (tiltMode === 'uniform') {
-          rotation = strategy.tiltAngle ?? 30;
+          const defaultAngle = strategy.tiltAngle ?? 30;
+          const userAngle = cfg.tilt_angle;
+          rotation = (userAngle != null && !isNaN(userAngle))
+            ? (defaultAngle >= 0 ? 1 : -1) * Math.abs(userAngle)
+            : defaultAngle;
         } else {
           const pivot = tiltMode === 'fan' ? hi : (row.items.length - 1) / 2.0;
           const d = idx - pivot;
@@ -1549,6 +1561,8 @@ function buildConfig(strategyId='auto') {
     aspect_h:          BOD_ASPECT_H,
     background_style:  BOD_BACKGROUND_STYLE || 'none',
     zoom_detail:       BOD_ZOOM_DETAIL,
+    tilt_angle:        +document.getElementById('cfg-tilt-angle').value,
+    shadow:            BOD_SHADOW,
   };
   // Aplicar overrides de la estrategia (aspect, rows, boost)
   const s = STRATEGIES.find(s => s.id === strategyId);
@@ -1637,6 +1651,7 @@ async function bodUploadAndAnalyzeAI(cfg) {
     const upData = await upRes.json();
     if (!upRes.ok) throw new Error(upData.detail||'Error subiendo');
     BOD_SESSION = upData.session_id;
+    _warnSkipped(upData);
 
     const aiRes = await fetch('/api/bodegon/ai-proposal', {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -1727,6 +1742,7 @@ async function bodUseProposal() {
       const upData = await upRes.json();
       if (!upRes.ok) throw new Error(upData.detail);
       BOD_SESSION = upData.session_id;
+      _warnSkipped(upData);
     }
 
     document.getElementById('bod-loading-msg').textContent = 'Calculando layout final...';
@@ -1771,7 +1787,7 @@ function paintLayout(ctx, layout, scale) {
   const eff = layout.effects || {};
   const items = [...layout.items].sort((a,b)=>(a.z||0)-(b.z||0));
   // Sombras de contacto primero (para que ningún producto las tape)
-  if (eff.shadow) {
+  if (eff.shadow && BOD_SHADOW) {
     const blur = Math.max(1, (eff.shadow_blur||12) * scale);
     items.forEach(item => {
       const w=item.sw*scale, h=item.sh*scale, x=item.x*scale, y=item.y*scale;
@@ -1905,6 +1921,11 @@ function onZoomDetailToggle() {
   // recién en el PNG final, igual que el reflejo/luz de borde del fondo.
 }
 
+function onShadowToggle() {
+  BOD_SHADOW = document.getElementById('shadow-toggle').checked;
+  if (BOD_LAYOUT) drawBodCanvas(BOD_LAYOUT);   // la sombra sí se ve en el preview, a diferencia del zoom
+}
+
 // ── Render PNG ──────────────────────────────────────────────────────────────
 async function bodRender() {
   if (!BOD_SESSION) { toast('Elige una propuesta primero'); return; }
@@ -1932,8 +1953,9 @@ async function bodRender() {
 // ── Reset ───────────────────────────────────────────────────────────────────
 function bodReset() {
   BOD_SESSION=null; BOD_LAYOUT=null; BOD_SELECTED_IDX=0;
-  BOD_AI_VARIANTS=[]; BOD_AI_REASONING=''; BOD_BACKGROUND_STYLE=null; BOD_ZOOM_DETAIL=false;
+  BOD_AI_VARIANTS=[]; BOD_AI_REASONING=''; BOD_BACKGROUND_STYLE=null; BOD_ZOOM_DETAIL=false; BOD_SHADOW=true;
   { const cb=document.getElementById('zoom-detail-toggle'); if (cb) cb.checked=false; }
+  { const cb=document.getElementById('shadow-toggle'); if (cb) cb.checked=true; }
   BOD_FILES.forEach(f=>URL.revokeObjectURL(f.url));
   BOD_FILES=[]; BOD_BG_FILE=null;
   document.getElementById('bod-thumb-grid').innerHTML='';

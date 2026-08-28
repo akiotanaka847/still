@@ -7,6 +7,12 @@ from pathlib import Path
 try:
     from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageEnhance, ImageOps
     PIL_AVAILABLE = True
+    # Fotografía de producto real (usuarios autenticados, no uploads anónimos)
+    # puede venir en resoluciones muy altas — el límite por defecto de Pillow
+    # (~89 MP, pensado para frenar "decompression bombs" de origen anónimo)
+    # rechazaba en silencio algunas fotos de estudio válidas. Se sube a un
+    # techo generoso en vez de sacarlo del todo, para no perder la protección.
+    Image.MAX_IMAGE_PIXELS = 300_000_000
 except ImportError:
     PIL_AVAILABLE = False
 
@@ -18,6 +24,60 @@ STUDIO_BACKGROUND_STYLES = {
     "electric":    "electric.png",
     "splash":      "splash.png",
 }
+
+# ─── Resolución de exportación ─────────────────────────────────────────────
+# El layout se calcula en unidades "de preview" (base_height chico, para que
+# la vista previa/miniaturas sean instantáneas) — pero el PNG final no debe
+# quedarse en esa resolución si el usuario subió fotos de mayor calidad.
+MAX_EXPORT_SCALE = 2.0   # no upscalear más que esto aunque el original sea gigante
+MAX_CANVAS_DIM = 4000    # tope duro del lado mayor del canvas final (peso/tiempo de render)
+
+
+def _compute_export_scale(layout: dict) -> float:
+    """Cuánto agrandar el layout completo para el render final, de modo que
+    NINGÚN producto quede innecesariamente submuestreado respecto a su
+    resolución ORIGINAL. Mira los {oh/sh} de TODOS los productos (no solo el
+    de mayor tamaño asignado) — en estrategias sin escala de héroe (Fila
+    recta, Inclinado ★, etc.) todos miden parecido en el layout aunque las
+    fotos originales tengan resoluciones muy distintas, así que el que más
+    "resolución sin usar" tiene puede no ser el más grande en pantalla.
+    No toca la vista previa — layout.py sigue calculando posiciones/tamaños
+    relativos con base_height chico; esto solo escala el resultado antes de
+    componer el PNG final."""
+    items = layout.get("items") or []
+    ratios = [it["oh"] / it["sh"] for it in items
+              if it.get("sh", 0) > 0 and it.get("oh", 0) > 0]
+    if not ratios:
+        return 1.0
+    scale = max(1.0, min(MAX_EXPORT_SCALE, max(ratios)))
+    max_dim = max(layout.get("canvas_width", 0), layout.get("canvas_height", 0), 1)
+    if max_dim * scale > MAX_CANVAS_DIM:
+        scale = MAX_CANVAS_DIM / max_dim
+    return max(1.0, scale)
+
+
+def _scale_layout(layout: dict, scale: float) -> dict:
+    """Copia el layout con todas las medidas multiplicadas por 'scale' — la
+    composición (posiciones relativas, ángulos, orden, qué tapa a qué) queda
+    idéntica; solo cambia la resolución de salida."""
+    if scale == 1.0:
+        return layout
+    out = dict(layout)
+    out["canvas_width"] = round(layout["canvas_width"] * scale)
+    out["canvas_height"] = round(layout["canvas_height"] * scale)
+    out["items"] = [
+        {**it,
+         "x": round(it["x"] * scale), "y": round(it["y"] * scale),
+         "sw": round(it["sw"] * scale), "sh": round(it["sh"] * scale)}
+        for it in layout["items"]
+    ]
+    eff = dict(layout.get("effects") or {})
+    if "shadow_blur" in eff:
+        eff["shadow_blur"] = max(1, round(eff["shadow_blur"] * scale))
+    if "shadow_margin" in eff:
+        eff["shadow_margin"] = round(eff["shadow_margin"] * scale)
+    out["effects"] = eff
+    return out
 
 
 # Tolerancia por defecto para detectar el borde del producto.
@@ -262,7 +322,8 @@ def _composite_zoom_detail(canvas, items, rendered, zoom_detail):
 
 
 def render_png(layout: dict, output_path: str, background_path: str = None,
-                background_style: str = None, zoom_detail: dict = None) -> None:
+                background_style: str = None, zoom_detail: dict = None,
+                export_quality: bool = True, shadow: bool = True) -> None:
     """
     Composita las imágenes del layout en un canvas y guarda como PNG.
 
@@ -273,17 +334,28 @@ def render_png(layout: dict, output_path: str, background_path: str = None,
     background_style: id de un fondo de estudio de la galería (IA, ver
         STUDIO_BACKGROUND_STYLES). A diferencia de background_path, además
         activa reflejo + luz de borde + grading en cada producto — pensado
+        para fondos oscuros/dramáticos donde esos efectos leen bien; se deja
+        fuera de background_path para no cambiar el comportamiento de fondos
+        propios que el usuario ya sube hoy.
     zoom_detail: dict opcional {"target": nombre|None, "region": {x,y,w,h}|None}
         — agrega una burbuja circular con un recorte ampliado de un producto
         (el "target", o si no se da el de mayor área) sobre la región dada
         (fracciones 0-1 relativas a SU propio recuadro). Sin esto no cambia
         nada del render normal.
-        para fondos oscuros/dramáticos donde esos efectos leen bien; se deja
-        fuera de background_path para no cambiar el comportamiento de fondos
-        propios que el usuario ya sube hoy.
+    export_quality: si True (default), agranda el layout completo antes de
+        componer para que el producto protagónico se acerque a su resolución
+        ORIGINAL (ver _compute_export_scale) — el PNG final no debe quedarse
+        en la resolución chica de preview solo porque el layout se calculó
+        así. Ponelo en False para un render rápido/liviano (p. ej. previews).
+    shadow: si False, apaga la sombra de contacto sin importar lo que pida
+        la estrategia (todas la traen activada por defecto). Control manual
+        del usuario — algunas composiciones/fondos se ven mejor sin ella.
     """
     if not PIL_AVAILABLE:
         raise RuntimeError("Pillow no instalado. Ejecuta: pip install Pillow")
+
+    if export_quality:
+        layout = _scale_layout(layout, _compute_export_scale(layout))
 
     cw = layout["canvas_width"]
     ch = layout["canvas_height"]
@@ -314,7 +386,7 @@ def render_png(layout: dict, output_path: str, background_path: str = None,
             print(f"Advertencia: no se pudo cargar el fondo: {e}")
 
     effects = layout.get("effects", {})
-    shadow = bool(effects.get("shadow"))
+    shadow = shadow and bool(effects.get("shadow"))  # el toggle del usuario manda, pero no fuerza sombra donde la estrategia no la trae
     shadow_opacity = float(effects.get("shadow_opacity", 0.30))
     shadow_blur = int(effects.get("shadow_blur", 12))
     floating_shadow = bool(effects.get("floating_shadow"))

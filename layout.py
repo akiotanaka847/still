@@ -93,14 +93,10 @@ SORT_STRATEGIES = {
     'ai_fila_recta':    list,         # IA + fila recta (preserva orden)
     'cruce':            _sort_auto,   # inclinados unos hacia otros (convergen al centro)
     'ai_cruce':         list,         # IA + cruce (preserva orden)
-    'inclinado_derecha':    _sort_auto,   # todos inclinados 30° parejo, hacia la derecha
+    'inclinado_derecha':    _sort_auto,   # todos inclinados parejo hacia la derecha (ángulo configurable)
     'ai_inclinado_derecha': list,
-    'inclinado_izquierda':    _sort_auto,  # todos inclinados 30° parejo, hacia la izquierda
+    'inclinado_izquierda':    _sort_auto,  # todos inclinados parejo hacia la izquierda (ángulo configurable)
     'ai_inclinado_izquierda': list,
-    'inclinado_derecha_45':    _sort_auto,   # todos inclinados 45° parejo, hacia la derecha
-    'ai_inclinado_derecha_45': list,
-    'inclinado_izquierda_45':    _sort_auto,  # todos inclinados 45° parejo, hacia la izquierda
-    'ai_inclinado_izquierda_45': list,
 }
 
 # Parámetros de las propuestas de profundidad
@@ -113,32 +109,33 @@ SORT_STRATEGIES = {
 #   tilt_angle: solo para tilt_mode='uniform' — grados fijos (+ o -) para todos
 #   center_hero: si False, no reordena para centrar al más alto (deja el orden natural)
 DEPTH_PARAMS = {
-    'profundidad':      {'overlap': 0.16, 'hero_scale': 1.22, 'falloff': 1.00},
+    # hero_scale/falloff son el ÚNICO factor de diferenciación visual cuando
+    # los productos tienen tamaño real muy parecido (p. ej. varios snacks de
+    # ~40g) — ahí la IA no tiene de dónde sacar una diferencia de tamaño
+    # "real", así que el % de boost tiene que notarse por sí solo. Valores
+    # subidos (antes profundidad=1.22/1.00, impacto=1.35/0.92) para que la
+    # jerarquía se vea aunque el origen sea prácticamente plano.
+    'profundidad':      {'overlap': 0.16, 'hero_scale': 1.32, 'falloff': 0.93},
     'profundidad_xl':   {'overlap': 0.24, 'hero_scale': 1.50, 'falloff': 1.00},
     'profundidad_grad': {'overlap': 0.20, 'hero_scale': 1.18, 'falloff': 0.84},
-    'ai_depth':         {'overlap': 0.16, 'hero_scale': 1.22, 'falloff': 1.00},
-    'impacto':          {'overlap': 0.22, 'hero_scale': 1.35, 'falloff': 0.92, 'tilt': True, 'tilt_mode': 'fan'},
-    'ai_impacto':       {'overlap': 0.22, 'hero_scale': 1.35, 'falloff': 0.92, 'tilt': True, 'tilt_mode': 'fan'},
+    'ai_depth':         {'overlap': 0.16, 'hero_scale': 1.32, 'falloff': 0.93},
+    'impacto':          {'overlap': 0.22, 'hero_scale': 1.50, 'falloff': 0.88, 'tilt': True, 'tilt_mode': 'fan'},
+    'ai_impacto':       {'overlap': 0.22, 'hero_scale': 1.50, 'falloff': 0.88, 'tilt': True, 'tilt_mode': 'fan'},
     'fila_recta':       {'overlap': 0.16, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False},
     'ai_fila_recta':    {'overlap': 0.16, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False},
     'cruce':            {'overlap': 0.32, 'hero_scale': 1.15, 'falloff': 1.00, 'tilt': True, 'tilt_mode': 'converge'},
     'ai_cruce':         {'overlap': 0.32, 'hero_scale': 1.15, 'falloff': 1.00, 'tilt': True, 'tilt_mode': 'converge'},
-    'inclinado_derecha':    {'overlap': 0.18, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False,
+    # tilt_angle acá es el DEFAULT si no viene 'tilt_angle' en compute_layout()
+    # (el usuario lo elige con un slider en la UI) — el signo define la
+    # dirección (derecha/izquierda), la magnitud la pisa lo que mande el usuario.
+    'inclinado_derecha':    {'overlap': 0.16, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False,
                               'tilt': True, 'tilt_mode': 'uniform', 'tilt_angle': 30.0},
-    'ai_inclinado_derecha': {'overlap': 0.18, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False,
+    'ai_inclinado_derecha': {'overlap': 0.16, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False,
                               'tilt': True, 'tilt_mode': 'uniform', 'tilt_angle': 30.0},
-    'inclinado_izquierda':    {'overlap': 0.18, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False,
+    'inclinado_izquierda':    {'overlap': 0.16, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False,
                                 'tilt': True, 'tilt_mode': 'uniform', 'tilt_angle': -30.0},
-    'ai_inclinado_izquierda': {'overlap': 0.18, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False,
+    'ai_inclinado_izquierda': {'overlap': 0.16, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False,
                                 'tilt': True, 'tilt_mode': 'uniform', 'tilt_angle': -30.0},
-    'inclinado_derecha_45':    {'overlap': 0.14, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False,
-                                 'tilt': True, 'tilt_mode': 'uniform', 'tilt_angle': 45.0},
-    'ai_inclinado_derecha_45': {'overlap': 0.14, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False,
-                                 'tilt': True, 'tilt_mode': 'uniform', 'tilt_angle': 45.0},
-    'inclinado_izquierda_45':    {'overlap': 0.14, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False,
-                                   'tilt': True, 'tilt_mode': 'uniform', 'tilt_angle': -45.0},
-    'ai_inclinado_izquierda_45': {'overlap': 0.14, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False,
-                                   'tilt': True, 'tilt_mode': 'uniform', 'tilt_angle': -45.0},
 }
 
 # Inclinación del abanico en "impacto": grados por producto según distancia al héroe
@@ -188,6 +185,9 @@ def compute_layout(
     max_vertical_boost: float = 1.20,
     aspect_w: int = 0,
     aspect_h: int = 0,
+    tilt_angle: float = None,  # solo tilt_mode='uniform' (Inclinado ★): magnitud en grados
+                                # elegida por el usuario; el signo lo define la estrategia
+                                # (derecha/izquierda). None = usa el default de DEPTH_PARAMS.
 ) -> dict:
     n = len(images)
     if n == 0:
@@ -312,7 +312,15 @@ def compute_layout(
             rotation = 0.0
             if tilt:
                 if tilt_mode == 'uniform':
-                    rotation = dp.get('tilt_angle', 30.0)
+                    default_angle = dp.get('tilt_angle', 30.0)
+                    if tilt_angle is not None:
+                        # El usuario da la MAGNITUD (siempre positiva desde el
+                        # slider); el signo (derecha/izquierda) lo define la
+                        # estrategia elegida, no lo que tipeó el usuario.
+                        sign = 1.0 if default_angle >= 0 else -1.0
+                        rotation = sign * abs(float(tilt_angle))
+                    else:
+                        rotation = default_angle
                 else:
                     pivot = hero_idx if tilt_mode == 'fan' else (len(row.items) - 1) / 2.0
                     d = idx - pivot
@@ -630,6 +638,34 @@ def compute_layout_flotante(
     }
 
 
+MIN_SEPARATION_FRAC = 0.42  # fracción del ancho combinado que debe haber, como mínimo, entre centros
+
+
+def _enforce_min_separation(placed, min_frac: float = MIN_SEPARATION_FRAC):
+    """Si dos productos quedan con los centros demasiado juntos (uno tapando
+    casi por completo al otro), los separa horizontalmente lo mínimo
+    necesario. Solo toca X — Y y rotación quedan exactamente como los
+    propuso la IA, así no se pierde el ritmo/ángulos de la composición,
+    solo se corrige el caso patológico de superposición casi total.
+
+    placed: [(item, cx, cy, rotation), ...] en píxeles del lienzo de
+    referencia. Recorre los pares ORDENADOS por cx de izquierda a derecha
+    (no todos-contra-todos) — alcanza para el caso típico de una fila con
+    solapamiento, y evita que separar un par vuelva a juntar otro."""
+    placed = list(placed)
+    order = sorted(range(len(placed)), key=lambda i: placed[i][1])
+    for a, b in zip(order, order[1:]):
+        it_a, cx_a, cy_a, rot_a = placed[a]
+        it_b, cx_b, cy_b, rot_b = placed[b]
+        min_gap = min_frac * (it_a.sw + it_b.sw) / 2
+        gap = cx_b - cx_a
+        if gap < min_gap:
+            push = (min_gap - gap) / 2
+            placed[a] = (it_a, cx_a - push, cy_a, rot_a)
+            placed[b] = (it_b, cx_b + push, cy_b, rot_b)
+    return placed
+
+
 def compute_layout_ai_freeform(
     images: List[dict],
     free_layout: dict,
@@ -665,15 +701,24 @@ def compute_layout_ai_freeform(
     ref_side = max(max_h, total_w * 0.6) * 1.15
 
     placed = []
-    min_left = min_top = 0.0
-    max_right = max_bottom = 0.0
     for it in items:
         pos = free_layout.get(it.name, {"cx": 0.5, "cy": 0.5, "rotation": 0.0})
         cx = float(pos.get("cx", 0.5)) * ref_side
         cy = float(pos.get("cy", 0.5)) * ref_side
         rot = float(pos.get("rotation", 0.0))
-        rw, rh = _rotated_bbox(it.sw, it.sh, rot) if rot else (it.sw, it.sh)
         placed.append((it, cx, cy, rot))
+
+    # Red de seguridad: la IA propone coordenadas "a ciegas" (sin ver un
+    # render real), y a veces dos productos quedan con los centros demasiado
+    # juntos — uno tapando casi por completo al otro. Se separan lo mínimo
+    # necesario en X, sin tocar Y ni rotación (no se pierde el ritmo/ángulos
+    # que sí propuso la IA, solo se corrige el caso patológico).
+    placed = _enforce_min_separation(placed)
+
+    min_left = min_top = 0.0
+    max_right = max_bottom = 0.0
+    for it, cx, cy, rot in placed:
+        rw, rh = _rotated_bbox(it.sw, it.sh, rot) if rot else (it.sw, it.sh)
         min_left = min(min_left, cx - rw / 2)
         min_top = min(min_top, cy - rh / 2)
         max_right = max(max_right, cx + rw / 2)

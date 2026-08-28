@@ -296,20 +296,38 @@ async def auth_me(request: Request):
 VALID_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp", ".gif"}
 
 # Propuestas IA: mismo análisis (orden + tamaños), distinto tratamiento de layout
+# Solo quedan las variantes donde el orden/tamaño que decide la IA cambia
+# realmente el resultado (el héroe se escala/centra distinto). Se sacaron
+# ai_shadow/ai_fila_recta/ai_cruce/ai_inclinado_* porque su fórmula geométrica
+# es fija — con la IA se veían casi idénticas a la versión gratis, sin ningún
+# valor visible a cambio de gastar la llamada de IA. Las composiciones
+# "IA · Libre" (varias, con criterio propio de la IA) se arman aparte, ver
+# free_layout_options en bodegon_ai_proposal — esas sí muestran una IA
+# decidiendo de verdad, no alimentando una fórmula nuestra.
 AI_VARIANT_DEFS = [
     ("ai",             "IA · Equilibrado",  "Orden y tamaños inteligentes"),
     ("ai_depth",       "IA · Profundidad",  "Héroe al frente + solapamiento"),
-    ("ai_shadow",      "IA · Sombra",       "Anclado con sombra de contacto"),
     ("ai_impacto",     "IA · Impacto",      "Abanico dinámico tipo anuncio"),
-    ("ai_fila_recta",  "IA · Fila recta",   "Derechos en línea, sin héroe"),
-    ("ai_cruce",       "IA · Cruce",        "Inclinados uno hacia el otro"),
-    ("ai_libre",       "IA · Libre",        "Composición 100% propuesta por la IA"),
-    ("ai_inclinado_derecha",   "IA · Inclinado derecha",   "Todos a 30° parejo, hacia la derecha"),
-    ("ai_inclinado_izquierda", "IA · Inclinado izquierda", "Todos a 30° parejo, hacia la izquierda"),
-    ("ai_inclinado_derecha_45",   "IA · Inclinado derecha 45°",   "Todos a 45° parejo, hacia la derecha"),
-    ("ai_inclinado_izquierda_45", "IA · Inclinado izquierda 45°", "Todos a 45° parejo, hacia la izquierda"),
 ]
 AI_STRATEGY_IDS = {vid for vid, _, _ in AI_VARIANT_DEFS}
+
+
+def _is_ai_strategy(sort_strategy: str) -> bool:
+    """'ai_libre_1'/'ai_libre_2'/... son dinámicas (una por cada composición
+    libre que devolvió la IA), no entradas fijas de AI_VARIANT_DEFS."""
+    return sort_strategy in AI_STRATEGY_IDS or sort_strategy.startswith("ai_libre_")
+
+
+def _tilt_angle_from_cfg(cfg: dict):
+    """Ángulo elegido por el usuario para Inclinado derecha/izquierda (slider
+    en la UI). None si no vino — layout.py usa su default (30°) en ese caso."""
+    val = cfg.get("tilt_angle")
+    if val in (None, ""):
+        return None
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return None
 
 # Galería de fondos de estudio (IA, pre-generados) — id debe existir en
 # renderer.STUDIO_BACKGROUND_STYLES. La miniatura vive en static/backgrounds/thumbs/.
@@ -343,15 +361,19 @@ async def bodegon_upload(
     products_dir.mkdir(parents=True)
 
     images = []
+    skipped = []   # [{filename, reason}] — antes se descartaban en silencio; ahora se avisan
     seen_names: dict = {}   # red de seguridad: desambigua igual si algo llega repetido
     for i, f in enumerate(products):
+        original_name = f.filename or f"archivo_{i + 1}"
         ext = Path(f.filename or "").suffix.lower()
         if ext not in VALID_IMAGE_EXTS:
+            skipped.append({"filename": original_name, "reason": "Formato no soportado"})
             continue
 
         data = await f.read()
         if len(data) > MAX_FILE_BYTES:
-            continue   # ignora archivos demasiado grandes
+            skipped.append({"filename": original_name, "reason": f"Supera el máximo de {MAX_FILE_MB} MB"})
+            continue
 
         provided = product_names[i] if product_names and i < len(product_names) else None
         raw_base = provided or Path(_safe_name(f.filename or f"product_{i}{ext}")).stem
@@ -368,8 +390,9 @@ async def bodegon_upload(
 
         try:
             w, h = get_image_dimensions(str(dest))
-        except Exception:
+        except Exception as e:
             dest.unlink(missing_ok=True)
+            skipped.append({"filename": original_name, "reason": f"No se pudo leer la imagen ({e})"})
             continue
 
         images.append({
@@ -411,6 +434,7 @@ async def bodegon_upload(
             for img in images
         ],
         "has_background": bg_path is not None,
+        "skipped": skipped,   # [{filename, reason}] — antes desaparecían sin avisar
     }
 
 
@@ -439,6 +463,7 @@ async def bodegon_compute(body: dict):
         max_vertical_boost=float(cfg.get("max_vertical_boost", 1.20)),
         aspect_w=int(cfg.get("aspect_w", 0)),
         aspect_h=int(cfg.get("aspect_h", 0)),
+        tilt_angle=_tilt_angle_from_cfg(cfg),
     )
 
     info["layout"] = layout
@@ -466,21 +491,25 @@ async def bodegon_render(body: dict):
         cfg = body["config"]
         # Para las estrategias de IA usamos las imágenes ordenadas + escaladas
         # que persistió /ai-proposal
-        if cfg.get("sort_strategy") in AI_STRATEGY_IDS and info.get("ai_images"):
+        strategy_id = cfg.get("sort_strategy", "auto")
+        if _is_ai_strategy(strategy_id) and info.get("ai_images"):
             render_images = info["ai_images"]
         else:
             render_images = info["images"]
-        if cfg.get("sort_strategy") == "ai_libre":
+        if strategy_id.startswith("ai_libre_"):
+            options = info.get("ai_free_layout_options") or []
+            idx = int(strategy_id.rsplit("_", 1)[-1]) - 1
+            free_layout = options[idx]["layout"] if 0 <= idx < len(options) else None
             layout = compute_layout_ai_freeform(
                 images=render_images,
-                free_layout=info.get("ai_free_layout"),
+                free_layout=free_layout,
                 base_height=int(cfg.get("base_height", 760)),
                 max_vertical_boost=float(cfg.get("max_vertical_boost", 1.20)),
             )
         else:
             layout = compute_layout_any(
                 images=render_images,
-                sort_strategy=cfg.get("sort_strategy", "auto"),
+                sort_strategy=strategy_id,
                 rows_count=int(cfg.get("rows_count", 0)),
                 base_height=int(cfg.get("base_height", 760)),
                 item_gap=int(cfg.get("item_gap", 40)),
@@ -488,19 +517,22 @@ async def bodegon_render(body: dict):
                 max_vertical_boost=float(cfg.get("max_vertical_boost", 1.20)),
                 aspect_w=int(cfg.get("aspect_w", 0)),
                 aspect_h=int(cfg.get("aspect_h", 0)),
+                tilt_angle=_tilt_angle_from_cfg(cfg),
             )
         background_style = cfg.get("background_style") or None
         zoom_detail = None
         if cfg.get("zoom_detail"):
-            is_ai = cfg.get("sort_strategy") in AI_STRATEGY_IDS
+            is_ai = _is_ai_strategy(strategy_id)
             zoom_detail = {
                 "target": info.get("ai_hero") if is_ai else None,
                 "region": info.get("ai_detail_crop") if is_ai else None,
             }
+        shadow_enabled = bool(cfg.get("shadow", True))
     elif "layout" in info:
         layout = info["layout"]
         background_style = None
         zoom_detail = None
+        shadow_enabled = True
     else:
         raise HTTPException(400, "Ejecuta /compute primero")
 
@@ -517,6 +549,7 @@ async def bodegon_render(body: dict):
             background_path=info.get("background_path"),
             background_style=(background_style if background_style != "none" else None),
             zoom_detail=zoom_detail,
+            shadow=shadow_enabled,
         )
     except Exception as e:
         raise HTTPException(500, f"Error renderizando PNG: {e}")
@@ -597,20 +630,13 @@ async def bodegon_ai_proposal(body: dict):
     info["ai_images"] = ordered
     info["ai_hero"] = suggestion.get("hero", "")
     info["ai_detail_crop"] = suggestion.get("detail_crop")
-    info["ai_free_layout"] = suggestion.get("free_layout")
+    info["ai_free_layout_options"] = suggestion.get("free_layout_options", [])
     info_file.write_text(json.dumps(info, indent=2), encoding="utf-8")
 
     # Varias propuestas IA desde el MISMO análisis (orden + tamaños), distinto layout
     cfg = body.get("config", {})
 
     def _ai_layout(strategy_id: str):
-        if strategy_id == "ai_libre":
-            return compute_layout_ai_freeform(
-                images=ordered,
-                free_layout=suggestion.get("free_layout"),
-                base_height=int(cfg.get("base_height", 760)),
-                max_vertical_boost=float(cfg.get("max_vertical_boost", 1.20)),
-            )
         return compute_layout_any(
             images=ordered,
             sort_strategy=strategy_id,
@@ -621,12 +647,29 @@ async def bodegon_ai_proposal(body: dict):
             max_vertical_boost=float(cfg.get("max_vertical_boost", 1.20)),
             aspect_w=int(cfg.get("aspect_w", 0)),
             aspect_h=int(cfg.get("aspect_h", 0)),
+            tilt_angle=_tilt_angle_from_cfg(cfg),
         )
 
     variants = [
         {"id": vid, "label": label, "desc": desc, "layout": _ai_layout(vid)}
         for vid, label, desc in AI_VARIANT_DEFS
     ]
+
+    # "IA · Libre": una tarjeta por cada composición que propuso la IA (ver
+    # free_layout_options en ai_proposal._build_prompt) — no una fórmula fija
+    # nuestra, así que no pasa por compute_layout_any.
+    for i, opt in enumerate(suggestion.get("free_layout_options", [])):
+        variants.append({
+            "id": f"ai_libre_{i + 1}",
+            "label": f"IA · Libre — {opt['label']}",
+            "desc": "Composición 100% propuesta por la IA",
+            "layout": compute_layout_ai_freeform(
+                images=ordered,
+                free_layout=opt.get("layout"),
+                base_height=int(cfg.get("base_height", 760)),
+                max_vertical_boost=float(cfg.get("max_vertical_boost", 1.20)),
+            ),
+        })
 
     return {
         "variants": variants,
