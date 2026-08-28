@@ -510,18 +510,6 @@
             <span id="ai-status" class="text-[11px] text-purple-400">Analizando con IA…</span>
           </div>
           <p id="ai-reasoning" class="text-[11px] text-gray-500 mb-2.5 leading-relaxed max-w-3xl"></p>
-
-          <div class="flex items-center gap-2 mb-3 max-w-3xl">
-            <input id="ai-custom-input" type="text" maxlength="200"
-                   placeholder="Describí una composición a tu manera (opcional) — ej: minimalista, fondo oscuro, producto al frente..."
-                   class="flex-1 text-xs border border-gray-200 rounded-lg px-3 py-2 focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
-                   onkeydown="if(event.key==='Enter'){event.preventDefault(); bodGenerateCustomAI();}">
-            <button id="ai-custom-btn" onclick="bodGenerateCustomAI()"
-                    class="flex-shrink-0 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-2 rounded-lg transition-all whitespace-nowrap">
-              ✦ Generar con mi idea
-            </button>
-          </div>
-
           <div id="ai-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-5xl"></div>
         </div>
 
@@ -1656,7 +1644,6 @@ function bodShowProposals() {
   const aiGrid = document.getElementById('ai-grid');
   aiGrid.innerHTML = '';
   document.getElementById('ai-reasoning').textContent = '';
-  document.getElementById('ai-custom-input').value = '';
   const st = document.getElementById('ai-status');
   st.textContent = 'Analizando con IA…'; st.classList.remove('hidden');
   AI_VARIANT_LABELS.forEach((lab, k) => {
@@ -1719,52 +1706,6 @@ async function bodUploadAndAnalyzeAI(cfg) {
           <p class="text-[10px] text-red-500 mt-0.5">${esc(e.message)}</p>
         </div>
       </div>`;
-  }
-}
-
-// Pide una composición extra dirigida por una instrucción del usuario — se
-// suma a Dinámica/Elegante/Editorial (no las reemplaza). Reusa la sesión ya
-// subida (BOD_SESSION), sin volver a mandar los archivos: solo repite el
-// análisis con esa instrucción de más, así que las 4 tarjetas se refrescan
-// juntas (mismo criterio que "Regenerar").
-async function bodGenerateCustomAI() {
-  const input = document.getElementById('ai-custom-input');
-  const text = input.value.trim();
-  if (!text) { toast('Escribí una idea primero', 'warn'); return; }
-  if (!BOD_SESSION) { toast('Esperá a que termine el análisis inicial', 'warn'); return; }
-
-  const btn = document.getElementById('ai-custom-btn');
-  const oldLabel = btn.innerHTML;
-  btn.disabled = true; input.disabled = true;
-  btn.innerHTML = `<div class="w-3.5 h-3.5 border-2 border-purple-300 border-t-purple-600 rounded-full spin inline-block align-middle"></div>`;
-
-  try {
-    const cfg = buildConfig();
-    const aiRes = await fetch('/api/bodegon/ai-proposal', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({session_id: BOD_SESSION, config: cfg, custom_prompt: text}),
-    });
-    const aiData = await aiRes.json();
-    if (!aiRes.ok) throw new Error(aiData.detail || 'Error IA');
-
-    BOD_AI_VARIANTS  = aiData.variants || [];
-    BOD_AI_REASONING = (aiData.suggestion && aiData.suggestion.reasoning) || '';
-    document.getElementById('ai-reasoning').textContent = BOD_AI_REASONING;
-
-    const aiGrid = document.getElementById('ai-grid');
-    aiGrid.innerHTML = '';
-    BOD_AI_VARIANTS.forEach((v, k) => {
-      const idx = AI_BASE + k;
-      const { card, cv } = _makeProposalCard(idx, v.label, v.desc || '', 'text-purple-800', _aiCardClass);
-      aiGrid.appendChild(card);
-      if (v.layout) renderMiniCanvas(cv, v.layout);
-    });
-    toast('Propuesta generada con tu idea', 'warn');
-  } catch (e) {
-    toast(e.message);
-  } finally {
-    btn.disabled = false; input.disabled = false;
-    btn.innerHTML = oldLabel;
   }
 }
 
@@ -2046,7 +1987,6 @@ function bodReset() {
   bodClearBg();
   document.getElementById('bod-prod-input').value='';
   document.getElementById('bod-bg-input').value='';
-  { const ci=document.getElementById('ai-custom-input'); if (ci) ci.value=''; }
   showBOD('bod-upload');
 }
 

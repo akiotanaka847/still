@@ -718,12 +718,6 @@ async def bodegon_ai_proposal(body: dict):
 
     info = json.loads(info_file.read_text(encoding="utf-8"))
 
-    # Instrucción libre opcional del usuario ("quiero algo minimalista con
-    # fondo oscuro...") — se suma como una 4ª composición en "IA · Libre",
-    # no reemplaza a Dinámica/Elegante/Editorial. Ver custom_prompt en
-    # ai_proposal._build_prompt.
-    custom_prompt = (body.get("custom_prompt") or "").strip()[:200] or None
-
     try:
         from ai_proposal import analyze_products
         suggestion = analyze_products(
@@ -733,7 +727,6 @@ async def bodegon_ai_proposal(body: dict):
             anthropic_key=anthropic_key or None,
             openai_key=openai_key or None,
             provider=provider,
-            custom_prompt=custom_prompt,
         )
     except Exception as e:
         raise HTTPException(500, f"Error en análisis IA: {e}")
