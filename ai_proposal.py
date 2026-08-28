@@ -26,7 +26,8 @@ except ImportError:
 
 
 # ─── Helpers compartidos ──────────────────────────────────────────────────────
-def _dynamic_max_tokens(n: int, base: int = 800, per_item: int = 220, cap: int = 16000) -> int:
+def _dynamic_max_tokens(n: int, base: int = 800, per_item: int = 220, cap: int = 16000,
+                         has_custom: bool = False) -> int:
     """El JSON de respuesta escala con la cantidad de productos — sobre todo
     por 'free_layout_options' (3 composiciones libres, cada una con
     cx/cy/rotation POR PRODUCTO). Con un límite fijo, un grupo grande corta
@@ -42,7 +43,14 @@ def _dynamic_max_tokens(n: int, base: int = 800, per_item: int = 220, cap: int =
     'free_layout_options'), y con nombres largos tipo código de barras
     ('7501000111602_F_1675808320287') eso pesa bastante más de lo que
     parece a simple vista — se confirmó truncando en la práctica con un
-    grupo de 60 productos reales antes de subir este ajuste."""
+    grupo de 60 productos reales antes de subir este ajuste.
+
+    has_custom: True cuando el usuario dio su propia instrucción (ver
+    custom_prompt en _build_prompt) — agrega una 4ª composición a
+    'free_layout_options', ~33% más JSON solo en esa sección."""
+    if has_custom:
+        per_item = round(per_item * 1.35)
+        cap = round(cap * 1.2)
     return min(cap, base + per_item * max(1, n))
 
 
@@ -66,7 +74,27 @@ def _to_jpeg_bytes(filepath: str, max_size: int = 512) -> bytes:
         return buf.getvalue()
 
 
-def _build_prompt(names: list) -> str:
+MAX_CUSTOM_PROMPT_LEN = 200  # una instrucción de dirección de arte no necesita más que esto
+
+
+def _build_prompt(names: list, custom_prompt: str = None) -> str:
+    custom_prompt = (custom_prompt or "").strip()[:MAX_CUSTOM_PROMPT_LEN] or None
+    custom_section = ""
+    custom_schema_entry = ""
+    if custom_prompt:
+        custom_section = f"""
+CUARTA COMPOSICIÓN — A MEDIDA (además de las tres anteriores, no en reemplazo): el usuario
+pidió específicamente esto para una composición extra: "{custom_prompt}". Generá una cuarta
+entrada en "free_layout_options" que priorice cumplir ESA instrucción por sobre los criterios
+de Dinámica/Elegante/Editorial — si el pedido choca con alguno de esos tres estilos, gana el
+pedido del usuario. Ponele un "label" corto (2-4 palabras) que describa esta composición
+específica (no reutilices "Dinámica"/"Elegante"/"Editorial"). Misma estructura que las otras
+tres (cx, cy, rotation por producto, mismos límites 0.12-0.88 y -35 a 35)."""
+        custom_schema_entry = (
+            '\n    {"label": "según lo que pidió el usuario", "layout": {...} '
+            f"para los {len(names)} productos}},"
+        )
+
     return f"""Eres un experto en diseño visual de bodegones comerciales y fotografía de producto.
 
 Analiza los {len(names)} productos mostrados y determina el orden óptimo para componer un bodegón visualmente atractivo.
@@ -113,6 +141,7 @@ eje (0,0 = arriba-izquierda, 1,1 = abajo-derecha), dame:
   - rotation: inclinación en grados, de -35 a 35 (en "Elegante" pueden ser todos cercanos a 0).
 Las tres deben poder distinguirse a simple vista entre sí — si dos quedan parecidas, no cumpliste
 la consigna.
+{custom_section}
 
 Nombres exactos de los productos: {json.dumps(names)}
 
@@ -125,7 +154,7 @@ Responde ÚNICAMENTE con este JSON (sin texto adicional, sin markdown):
   "free_layout_options": [
     {{"label": "Dinámica", "layout": {{"NOMBRE_EXACTO": {{"cx":0.0_a_1.0,"cy":0.0_a_1.0,"rotation":-35_a_35}}, ...}} para los {len(names)} productos}},
     {{"label": "Elegante", "layout": {{...}} para los {len(names)} productos}},
-    {{"label": "Editorial", "layout": {{...}} para los {len(names)} productos}}
+    {{"label": "Editorial", "layout": {{...}} para los {len(names)} productos}}{custom_schema_entry}
   ],
   "reasoning": "explicación de 1-2 oraciones en español que mencione el orden y los tamaños"
 }}"""
@@ -161,11 +190,14 @@ def _normalize_free_layout_options(options, names):
     """Valida la lista de composiciones libres (cada una con su 'label' y su
     'layout' posición/rotación por producto). Si la IA no devolvió nada
     usable, la lista queda vacía y 'IA · Libre' simplemente no aparece —
-    mejor eso que forzar 3 composiciones inventadas sin criterio real."""
+    mejor eso que forzar composiciones inventadas sin criterio real."""
     if not isinstance(options, list):
         return []
     out = []
-    for i, opt in enumerate(options[:3]):   # tope de 3, por costo/tamaño de UI
+    # Tope de 4: las 3 fijas (Dinámica/Elegante/Editorial) + la extra "a
+    # medida" cuando el usuario dio su propia instrucción (ver custom_prompt
+    # en _build_prompt) — ninguna otra vía pide más de 4.
+    for i, opt in enumerate(options[:4]):
         if not isinstance(opt, dict):
             continue
         label = str(opt.get("label") or f"Libre {i + 1}").strip()[:40] or f"Libre {i + 1}"
@@ -247,7 +279,7 @@ def _available_images(images: list) -> list:
 
 
 # ─── Backend: Gemini ──────────────────────────────────────────────────────────
-def _analyze_gemini(images: list, api_key: str) -> dict:
+def _analyze_gemini(images: list, api_key: str, custom_prompt: str = None) -> dict:
     try:
         from google import genai
         from google.genai import types
@@ -269,7 +301,7 @@ def _analyze_gemini(images: list, api_key: str) -> dict:
                     data=_to_jpeg_bytes(fp), mime_type="image/jpeg"
                 )
             )
-    contents.append(_build_prompt(names))
+    contents.append(_build_prompt(names, custom_prompt))
 
     response = client.models.generate_content(
         model="gemini-2.5-flash",
@@ -277,14 +309,14 @@ def _analyze_gemini(images: list, api_key: str) -> dict:
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
             temperature=0.4,
-            max_output_tokens=_dynamic_max_tokens(len(names)),
+            max_output_tokens=_dynamic_max_tokens(len(names), has_custom=bool(custom_prompt)),
         ),
     )
     return _parse_result(response.text, names)
 
 
 # ─── Backend: Claude ──────────────────────────────────────────────────────────
-def _analyze_claude(images: list, api_key: str) -> dict:
+def _analyze_claude(images: list, api_key: str, custom_prompt: str = None) -> dict:
     import anthropic
 
     names = [img["name"] for img in images]
@@ -300,11 +332,11 @@ def _analyze_claude(images: list, api_key: str) -> dict:
                 "type": "image",
                 "source": {"type": "base64", "media_type": "image/jpeg", "data": b64},
             })
-    content.append({"type": "text", "text": _build_prompt(names)})
+    content.append({"type": "text", "text": _build_prompt(names, custom_prompt)})
 
     response = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=_dynamic_max_tokens(len(names)),
+        max_tokens=_dynamic_max_tokens(len(names), has_custom=bool(custom_prompt)),
         messages=[{"role": "user", "content": content}],
     )
     return _parse_result(response.content[0].text, names)
@@ -316,7 +348,7 @@ def _analyze_claude(images: list, api_key: str) -> dict:
 GROQ_MAX_IMAGES = 5
 
 
-def _analyze_groq(images: list, api_key: str) -> dict:
+def _analyze_groq(images: list, api_key: str, custom_prompt: str = None) -> dict:
     try:
         from groq import Groq
     except ImportError as e:
@@ -338,7 +370,7 @@ def _analyze_groq(images: list, api_key: str) -> dict:
                 "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
             })
             sent += 1
-    content.append({"type": "text", "text": _build_prompt(names)})
+    content.append({"type": "text", "text": _build_prompt(names, custom_prompt)})
 
     response = client.chat.completions.create(
         model="qwen/qwen3.6-27b",
@@ -350,7 +382,7 @@ def _analyze_groq(images: list, api_key: str) -> dict:
         # "Request too large" en vez de arreglar el truncado. Con grupos
         # grandes, Groq va a quedar corto de por sí (limitación de su tier
         # gratuito, no de este código); para eso conviene otro proveedor.
-        max_completion_tokens=_dynamic_max_tokens(len(names), base=300, per_item=90, cap=2500),
+        max_completion_tokens=_dynamic_max_tokens(len(names), base=300, per_item=90, cap=2500, has_custom=bool(custom_prompt)),
         reasoning_effort="none",  # sin esto, el modo "thinking" agota el budget de tokens
         response_format={"type": "json_object"},
     )
@@ -358,7 +390,7 @@ def _analyze_groq(images: list, api_key: str) -> dict:
 
 
 # ─── Backend: OpenAI (GPT-5.1, visión) ─────────────────────────────────────────
-def _analyze_openai(images: list, api_key: str) -> dict:
+def _analyze_openai(images: list, api_key: str, custom_prompt: str = None) -> dict:
     try:
         from openai import OpenAI
     except ImportError as e:
@@ -377,13 +409,13 @@ def _analyze_openai(images: list, api_key: str) -> dict:
                 "type": "image_url",
                 "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
             })
-    content.append({"type": "text", "text": _build_prompt(names)})
+    content.append({"type": "text", "text": _build_prompt(names, custom_prompt)})
 
     response = client.chat.completions.create(
         model="gpt-5.1",
         messages=[{"role": "user", "content": content}],
         temperature=0.4,
-        max_completion_tokens=_dynamic_max_tokens(len(names)),
+        max_completion_tokens=_dynamic_max_tokens(len(names), has_custom=bool(custom_prompt)),
         response_format={"type": "json_object"},
     )
     return _parse_result(response.choices[0].message.content, names)
@@ -397,12 +429,16 @@ def analyze_products(
     anthropic_key: str = None,
     openai_key: str = None,
     provider: str = None,
+    custom_prompt: str = None,
 ) -> dict:
     """
     Envía los thumbnails de los productos a la IA y obtiene el orden óptimo.
 
     provider: "groq" | "gemini" | "claude" | "openai" | None
               (auto: groq → gemini → claude → openai, según la primera key disponible).
+    custom_prompt: instrucción libre opcional del usuario (ver _build_prompt) —
+        agrega una 4ª composición en 'free_layout_options' dirigida por ese
+        pedido, además de Dinámica/Elegante/Editorial.
     Returns: {order: [nombres], hero: nombre, reasoning: str}
     """
     if not PIL_AVAILABLE:
@@ -421,21 +457,21 @@ def analyze_products(
     if provider == "groq":
         if not groq_key:
             raise RuntimeError("GROQ_API_KEY no configurada")
-        return _analyze_groq(images, groq_key)
+        return _analyze_groq(images, groq_key, custom_prompt)
 
     if provider == "gemini":
         if not gemini_key:
             raise RuntimeError("GEMINI_API_KEY no configurada")
-        return _analyze_gemini(images, gemini_key)
+        return _analyze_gemini(images, gemini_key, custom_prompt)
 
     if provider == "claude":
         if not anthropic_key:
             raise RuntimeError("ANTHROPIC_API_KEY no configurada")
-        return _analyze_claude(images, anthropic_key)
+        return _analyze_claude(images, anthropic_key, custom_prompt)
 
     if provider == "openai":
         if not openai_key:
             raise RuntimeError("OPENAI_API_KEY no configurada")
-        return _analyze_openai(images, openai_key)
+        return _analyze_openai(images, openai_key, custom_prompt)
 
     raise RuntimeError(f"Proveedor de IA desconocido: {provider}")
