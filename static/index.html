@@ -210,19 +210,6 @@
   <p class="absolute bottom-5 text-[11px] text-slate-500">StillAI · Still perfect. Every time.</p>
 </div>
 
-<!-- Mis bodegones (galería de sesiones guardadas) -->
-<div id="mine-modal" class="hidden fixed inset-0 z-[90] items-center justify-center px-4 bg-black/50"
-     onclick="if(event.target===this) closeMineModal()">
-  <div class="bg-white rounded-2xl w-full max-w-3xl max-h-[80vh] flex flex-col shadow-2xl">
-    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
-      <h3 class="font-bold text-gray-900">🗂️ Mis bodegones</h3>
-      <button onclick="closeMineModal()" class="text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100">✕</button>
-    </div>
-    <div id="mine-modal-body" class="p-5 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-4">
-    </div>
-  </div>
-</div>
-
 <div class="flex min-h-screen">
 
   <!-- ═══════════ SIDEBAR ═══════════ -->
@@ -251,9 +238,9 @@
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 6.878V6a2.25 2.25 0 012.25-2.25h7.5A2.25 2.25 0 0118 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 004.5 9v.878m13.5-3A2.25 2.25 0 0119.5 9v.878m0 0a2.246 2.246 0 00-.75-.128H5.25c-.263 0-.515.045-.75.128m15 0A2.25 2.25 0 0121 12v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6c0-.98.626-1.813 1.5-2.122"/></svg>
         <span>Por lotes</span>
       </button>
-      <button onclick="toast('Próximamente','warn')" class="nav-item">
+      <button id="nav-projects" onclick="switchTab('projects')" class="nav-item">
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"/></svg>
-        <span>Proyectos</span> <span class="soon">Pronto</span>
+        <span>Proyectos</span>
       </button>
       <button onclick="toast('Próximamente','warn')" class="nav-item">
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
@@ -296,7 +283,7 @@
               class="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full cursor-default select-none">
           ⭐ Pro
         </span>
-        <button onclick="openMineModal()"
+        <button onclick="switchTab('projects')"
                 class="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-800 px-2.5 py-1.5 rounded-lg hover:bg-gray-100 transition-colors">
           🗂️ Mis proyectos
         </button>
@@ -841,6 +828,19 @@
 
 </div><!-- /panel-batch -->
 
+<!-- ═══════════════════════════════════════════════════════
+     TAB 4 — MIS PROYECTOS (bodegones guardados)
+═══════════════════════════════════════════════════════ -->
+<div id="panel-projects" class="hidden">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Mis proyectos</h1>
+    <p class="text-gray-500 text-sm mt-1 max-w-xl">Tus bodegones guardados. Reabrí cualquiera para seguir editándolo o descargarlo de nuevo.</p>
+  </div>
+  <div id="projects-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+    <p class="col-span-full text-sm text-gray-400 text-center py-12">Cargando...</p>
+  </div>
+</div><!-- /panel-projects -->
+
     </main>
   </div><!-- /área principal -->
 </div><!-- /shell -->
@@ -855,15 +855,16 @@
 // TABS
 // ═══════════════════════════════════════════════════════
 function switchTab(name) {
-  ['so', 'bodegon', 'batch', 'home'].forEach(p => {
+  ['so', 'bodegon', 'batch', 'home', 'projects'].forEach(p => {
     const el = document.getElementById('panel-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
   });
   // Estado activo del menú lateral
-  [['nav-home', 'home'], ['nav-bodegon', 'bodegon'], ['nav-batch', 'batch']].forEach(([id, n]) => {
+  [['nav-home', 'home'], ['nav-bodegon', 'bodegon'], ['nav-batch', 'batch'], ['nav-projects', 'projects']].forEach(([id, n]) => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('nav-item-active', name === n);
   });
+  if (name === 'projects') loadProjectsGrid();
   // Tabs legacy (ocultos) para compatibilidad
   document.getElementById('tab-so').classList.toggle('active', name === 'so');
   document.getElementById('tab-bodegon').classList.toggle('active', name === 'bodegon');
@@ -934,8 +935,7 @@ let BOD_AI_VARIANTS  = [];   // [{id,label,desc,layout}] devueltas por la IA
 let BOD_AI_REASONING = '';   // razonamiento (compartido por las variantes)
 let BOD_BACKGROUND_STYLE = null;  // id del fondo de estudio elegido (null = sin fondo)
 let BOD_ZOOM_DETAIL = false;      // burbuja de zoom sobre el héroe
-let BOD_REOPENED = false;    // true = bod-preview viene de "Mis bodegones" (reusar el layout guardado tal cual, no recomputar por STRATEGIES[BOD_SELECTED_IDX])
-let BOD_MINE = null;         // cache de /api/bodegon/mine (evita refetch al abrir el modal)
+let BOD_REOPENED = false;    // true = bod-preview viene de "Proyectos" (reusar el layout guardado tal cual, no recomputar por STRATEGIES[BOD_SELECTED_IDX])
 let BOD_SHADOW = true;            // sombra de contacto (activada por defecto, como siempre)
 let BG_STYLES = null;             // caché de /api/bodegon/background-styles
 const BG_IMG_CACHE = {};          // caché de <img> ya cargadas, por style id
@@ -1968,7 +1968,6 @@ async function bodRender() {
     const link=document.createElement('a');
     link.href=`/api/bodegon/download/${BOD_SESSION}`; link.download='bodegon.png';
     document.body.appendChild(link); link.click(); link.remove();
-    BOD_MINE = null;   // el render de recién ya es "la más reciente" — refrescar en el próximo open
   } catch(e) { toast(e.message); }
   finally {
     btn.disabled=false;
@@ -1992,13 +1991,17 @@ function bodReset() {
   showBOD('bod-upload');
 }
 
-// ── Mis bodegones (galería + precarga automática) ────────────────────────────
+// ── Mis proyectos (panel de la barra lateral, ver panel-projects) ────────────
 // Reabre una sesión propia ya subida: trae sus fotos originales del servidor
 // (no hace falta volver a subirlas) y, si ya tenía una propuesta renderizada,
 // la muestra directo. BOD_SESSION queda apuntando a esa misma sesión — "Generar
 // y descargar PNG" reusa el layout guardado tal cual (ver BOD_REOPENED en
 // bodRender); solo "Generar propuestas" (bodShowProposals) vuelve a subir,
 // como con cualquier otro grupo de fotos.
+// Nota: esto SOLO se dispara al hacer clic en una tarjeta de "Proyectos" —
+// nunca automáticamente al iniciar sesión ni al entrar a "Bodegón" (antes sí
+// pasaba y confundía: aparecía una propuesta vieja arriba de la pantalla de
+// trabajo sin que el usuario la pidiera).
 async function bodOpenSession(id) {
   showBOD('bod-loading');
   document.getElementById('bod-loading-msg').textContent = 'Cargando tu sesión...';
@@ -2046,25 +2049,9 @@ async function bodOpenSession(id) {
   }
 }
 
-async function bodOpenSessionFromModal(id) {
-  closeMineModal();
+async function bodOpenSessionFromProjects(id) {
   switchTab('bodegon');
   await bodOpenSession(id);
-}
-
-// Al entrar (login o sesión ya activa): trae la lista de sesiones propias y,
-// si hay al menos una y todavía no se subió/cargó nada en esta pestaña,
-// precarga en silencio los productos de la más reciente.
-async function bodLoadMineAndPreload() {
-  try {
-    const res = await fetch('/api/bodegon/mine');
-    if (!res.ok) return;
-    const data = await res.json();
-    BOD_MINE = data.sessions || [];
-    if (BOD_MINE.length && !BOD_SESSION && !BOD_FILES.length) {
-      await bodOpenSession(BOD_MINE[0].session_id);
-    }
-  } catch (e) { /* silencioso — no debe bloquear el resto de la app */ }
 }
 
 function relDate(ts) {
@@ -2076,15 +2063,26 @@ function relDate(ts) {
   return d.toLocaleDateString('es', {day:'numeric', month:'short'});
 }
 
-function renderMineGrid() {
-  const body = document.getElementById('mine-modal-body');
-  if (!BOD_MINE || !BOD_MINE.length) {
-    body.innerHTML = `<p class="col-span-full text-sm text-gray-400 text-center py-10">Todavía no tienes bodegones guardados. Sube productos para empezar.</p>`;
+// Se llama al entrar a la pestaña "Proyectos" (switchTab) — siempre trae la
+// lista fresca del servidor, nunca toca el estado de "Bodegón".
+function loadProjectsGrid() {
+  const grid = document.getElementById('projects-grid');
+  grid.innerHTML = `<p class="col-span-full text-sm text-gray-400 text-center py-12">Cargando...</p>`;
+  fetch('/api/bodegon/mine')
+    .then(r => r.json())
+    .then(d => renderProjectsGrid(d.sessions || []))
+    .catch(() => { grid.innerHTML = `<p class="col-span-full text-sm text-gray-400 text-center py-12">No se pudo cargar.</p>`; });
+}
+
+function renderProjectsGrid(sessions) {
+  const grid = document.getElementById('projects-grid');
+  if (!sessions.length) {
+    grid.innerHTML = `<p class="col-span-full text-sm text-gray-400 text-center py-12">Todavía no tienes bodegones guardados. Sube productos en "Bodegón" para empezar.</p>`;
     return;
   }
-  body.innerHTML = BOD_MINE.map(s => `
-    <button onclick="bodOpenSessionFromModal('${s.session_id}')"
-            class="text-left rounded-xl border border-gray-200 hover:border-indigo-300 overflow-hidden card bg-gray-50">
+  grid.innerHTML = sessions.map(s => `
+    <button onclick="bodOpenSessionFromProjects('${s.session_id}')"
+            class="text-left rounded-xl border border-gray-200 hover:border-indigo-300 overflow-hidden card bg-white">
       <div class="checker-bg aspect-square flex items-center justify-center">
         ${s.has_render
           ? `<img src="/api/bodegon/download/${s.session_id}" class="w-full h-full object-contain" loading="lazy">`
@@ -2096,23 +2094,6 @@ function renderMineGrid() {
       </div>
     </button>
   `).join('');
-}
-
-function openMineModal() {
-  const modal = document.getElementById('mine-modal');
-  modal.classList.remove('hidden'); modal.classList.add('flex');
-  if (BOD_MINE) {
-    renderMineGrid();
-  } else {
-    document.getElementById('mine-modal-body').innerHTML =
-      `<p class="col-span-full text-sm text-gray-400 text-center py-10">Cargando...</p>`;
-    fetch('/api/bodegon/mine').then(r => r.json()).then(d => { BOD_MINE = d.sessions || []; renderMineGrid(); })
-      .catch(() => { document.getElementById('mine-modal-body').innerHTML = `<p class="col-span-full text-sm text-gray-400 text-center py-10">No se pudo cargar.</p>`; });
-  }
-}
-function closeMineModal() {
-  document.getElementById('mine-modal').classList.add('hidden');
-  document.getElementById('mine-modal').classList.remove('flex');
 }
 
 // ═══════════════════════════════════════════════════════
@@ -2311,7 +2292,6 @@ function hideLogin(username) {
   if (username) {
     document.getElementById('topbar-username').textContent = username;
     document.getElementById('user-avatar').textContent = username.slice(0, 2).toUpperCase();
-    bodLoadMineAndPreload();
   }
 }
 async function authSubmit(ev) {
@@ -2338,7 +2318,6 @@ async function authLogout() {
   try { await fetch('/api/auth/logout', { method: 'POST' }); } catch (e) {}
   document.getElementById('login-user').value = '';
   document.getElementById('login-pass').value = '';
-  BOD_MINE = null;
   showLogin();
 }
 async function checkAuth() {
