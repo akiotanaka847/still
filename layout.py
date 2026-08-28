@@ -356,25 +356,50 @@ def compute_layout(
     doc_h = math.ceil(cy - item_gap)
 
     # La inclinación hace que las esquinas del producto sobresalgan de su caja
-    # original. Se calcula cuánto crece cada caja al rotar (bbox real, no una
-    # estimación) y se usa el máximo como margen, para que ningún ángulo —ni
-    # los cercanos al tope de 30°— recorte el producto contra el borde.
+    # original. Antes se armaba un solo margen "peor caso" (el mayor
+    # crecimiento de un producto cualquiera) y se aplicaba IGUAL a los
+    # cuatro lados de TODOS los productos — si el que más rotaba quedaba
+    # cerca del centro, el canvas igual reservaba ese margen completo en
+    # los bordes, dejando franjas de transparencia vacías donde no hacía
+    # falta. Ahora se calcula el bounding box REAL combinado (cada
+    # producto con su propia rotación, respetando el mismo anclaje que usa
+    # el renderer: por el borde inferior si anchor="bottom", si no por el
+    # centro) y el canvas se ajusta exacto a eso — mismo criterio que ya
+    # usan Cascada/Radial/Flotante/IA Libre más abajo en este archivo.
     if tilt:
-        margin_x = margin_y = 0.0
+        min_left = min_top = 0.0
+        max_right = max_bottom = 0.0
         for it in out:
             rot = it.get("rotation", 0.0)
-            if not rot:
-                continue
-            new_w, new_h = _rotated_bbox(it["sw"], it["sh"], rot)
-            margin_x = max(margin_x, (new_w - it["sw"]) / 2)
-            margin_y = max(margin_y, (new_h - it["sh"]) / 2)
-        margin_x = math.ceil(margin_x) + 4
-        margin_y = math.ceil(margin_y) + 4
+            cx = it["x"] + it["sw"] / 2
+            if rot:
+                rw, rh = _rotated_bbox(it["sw"], it["sh"], rot)
+            else:
+                rw, rh = it["sw"], it["sh"]
+            left, right = cx - rw / 2, cx + rw / 2
+            if it.get("anchor") == "bottom":
+                bottom = it["y"] + it["sh"]
+                top = bottom - rh
+            else:
+                cy_it = it["y"] + it["sh"] / 2
+                top, bottom = cy_it - rh / 2, cy_it + rh / 2
+            min_left = min(min_left, left)
+            max_right = max(max_right, right)
+            min_top = min(min_top, top)
+            max_bottom = max(max_bottom, bottom)
+
+        pad = 4
+        # La sombra de contacto se dibuja DEBAJO de cada producto (nunca
+        # arriba ni a los costados) — sin este espacio extra en la base,
+        # el difuminado queda cortado contra el borde del canvas.
+        bottom_pad = pad + shadow_margin
+        shift_x = pad - min_left
+        shift_y = pad - min_top
         for it in out:
-            it["x"] += margin_x
-            it["y"] += margin_y
-        doc_w += margin_x * 2
-        doc_h += margin_y * 2
+            it["x"] += shift_x
+            it["y"] += shift_y
+        doc_w = math.ceil(max_right - min_left) + pad * 2
+        doc_h = math.ceil(max_bottom - min_top) + pad + bottom_pad
 
     doc_w = min(doc_w, 30000)
     doc_h = min(doc_h, 30000)
