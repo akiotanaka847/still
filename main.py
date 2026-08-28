@@ -384,16 +384,37 @@ async def bodegon_upload(
             continue
 
         provided = product_names[i] if product_names and i < len(product_names) else None
-        raw_base = provided or Path(_safe_name(f.filename or f"product_{i}{ext}")).stem
-        base_name = re.sub(r"[^\w]", "_", raw_base.upper()).strip("_") or f"PRODUCT_{i}"
+        if provided:
+            # El cliente ya calculó este nombre (stemUp() en el navegador) y
+            # lo usa como clave para pintar los previews (BOD_FILES.find por
+            # name) — hay que devolvérselo EXACTO, sin volver a normalizarlo,
+            # o el nombre que ve el cliente y el que trae el layout del
+            # servidor divergen apenas el nombre trae un carácter que
+            # stemUp() no toca pero este regex sí (apóstrofes, paréntesis,
+            # "&", "#"...). Ahí es donde antes se rompía el preview (quedaba
+            # en blanco): BOD_FILES.find() nunca encontraba la imagen.
+            base_name = provided.strip() or f"PRODUCT_{i}"
+        else:
+            raw_base = Path(_safe_name(f.filename or f"product_{i}{ext}")).stem
+            base_name = re.sub(r"[^\w]", "_", raw_base.upper()).strip("_") or f"PRODUCT_{i}"
         count = seen_names.get(base_name, 0) + 1
         seen_names[base_name] = count
         # 1ª vez: nombre tal cual. 2ª+: sufijo _2, _3... — así dos fotos con
         # el mismo nombre (o la misma foto subida dos veces) no se pisan
         # entre sí en disco ni colapsan en un solo producto.
         name = base_name if count == 1 else f"{base_name}_{count}"
-        safe = f"{name}{ext}"
+        # El nombre "lógico" (name, arriba) puede traer caracteres que no
+        # sirven como nombre de archivo — para el disco se sanea aparte,
+        # sin tocar el que se guarda en images[]/se manda a la IA/se
+        # compara en el preview.
+        disk_stem = re.sub(r"[^\w]", "_", name.upper()).strip("_") or f"PRODUCT_{i}"
+        safe = f"{disk_stem}{ext}"
         dest = products_dir / safe
+        dup = 1
+        while dest.exists():
+            dup += 1
+            dest = products_dir / f"{disk_stem}__{dup}{ext}"
+            safe = dest.name
         dest.write_bytes(data)
 
         try:
