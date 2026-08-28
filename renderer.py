@@ -472,14 +472,9 @@ def render_png(layout: dict, output_path: str, background_path: str = None,
     # se ve, sin importar la estrategia ni los efectos activados. Si hay un
     # fondo propio o de estudio, el canvas queda opaco de punta a punta y
     # esto no recorta nada (correcto: ese fondo es intencional).
-    l, t, r, b = _content_bbox(canvas)
-    if (l, t, r, b) != (0, 0, cw, ch):
-        pad = 4
-        l = max(0, l - pad)
-        t = max(0, t - pad)
-        r = min(cw, r + pad)
-        b = min(ch, b + pad)
-        canvas = canvas.crop((l, t, r, b))
+    bbox = _content_bbox(canvas)
+    if bbox != (0, 0, cw, ch):
+        canvas = canvas.crop(bbox)
 
     canvas.save(output_path, "PNG", optimize=True)
 
