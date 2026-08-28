@@ -638,31 +638,46 @@ def compute_layout_flotante(
     }
 
 
-MIN_SEPARATION_FRAC = 0.42  # fracción del ancho combinado que debe haber, como mínimo, entre centros
+MIN_SEPARATION_FRAC = 0.42  # fracción del "radio" combinado que debe haber, como mínimo, entre centros
 
 
-def _enforce_min_separation(placed, min_frac: float = MIN_SEPARATION_FRAC):
-    """Si dos productos quedan con los centros demasiado juntos (uno tapando
-    casi por completo al otro), los separa horizontalmente lo mínimo
-    necesario. Solo toca X — Y y rotación quedan exactamente como los
-    propuso la IA, así no se pierde el ritmo/ángulos de la composición,
-    solo se corrige el caso patológico de superposición casi total.
+def _enforce_min_separation(placed, min_frac: float = MIN_SEPARATION_FRAC, iterations: int = 6):
+    """Si dos productos quedan con las cajas demasiado superpuestas, los
+    separa a lo largo de la línea que une sus centros (no solo en X): con
+    6-7 productos es común que dos queden encimados en diagonal o a
+    distinta altura, y revisar solo pares vecinos en X (versión anterior)
+    no atrapaba esos casos — se veían tapados igual aunque sus cx ya
+    estuvieran "separados" en la fracción 0-1 que mandó la IA.
 
     placed: [(item, cx, cy, rotation), ...] en píxeles del lienzo de
-    referencia. Recorre los pares ORDENADOS por cx de izquierda a derecha
-    (no todos-contra-todos) — alcanza para el caso típico de una fila con
-    solapamiento, y evita que separar un par vuelva a juntar otro."""
+    referencia. Todos-contra-todos (n es como mucho ~15) y varias pasadas,
+    porque separar un par puede volver a acercar otro que ya estaba bien."""
     placed = list(placed)
-    order = sorted(range(len(placed)), key=lambda i: placed[i][1])
-    for a, b in zip(order, order[1:]):
-        it_a, cx_a, cy_a, rot_a = placed[a]
-        it_b, cx_b, cy_b, rot_b = placed[b]
-        min_gap = min_frac * (it_a.sw + it_b.sw) / 2
-        gap = cx_b - cx_a
-        if gap < min_gap:
-            push = (min_gap - gap) / 2
-            placed[a] = (it_a, cx_a - push, cy_a, rot_a)
-            placed[b] = (it_b, cx_b + push, cy_b, rot_b)
+    n = len(placed)
+    for _ in range(iterations):
+        moved = False
+        for i in range(n):
+            for j in range(i + 1, n):
+                it_a, cx_a, cy_a, rot_a = placed[i]
+                it_b, cx_b, cy_b, rot_b = placed[j]
+                # Radio "efectivo" de cada item — promedio de medio-ancho y
+                # medio-alto (no la caja rotada exacta): alcanza para atrapar
+                # superposición grosera sin complicar con geometría rotada.
+                ra = (it_a.sw + it_a.sh) / 4
+                rb = (it_b.sw + it_b.sh) / 4
+                min_dist = min_frac * 2 * (ra + rb)
+                dx, dy = cx_b - cx_a, cy_b - cy_a
+                dist = math.hypot(dx, dy)
+                if dist < min_dist:
+                    moved = True
+                    if dist < 1e-6:
+                        dx, dy, dist = 1.0, 0.0, 1.0  # centros idénticos: empuja horizontal
+                    push = (min_dist - dist) / 2
+                    ux, uy = dx / dist, dy / dist
+                    placed[i] = (it_a, cx_a - ux * push, cy_a - uy * push, rot_a)
+                    placed[j] = (it_b, cx_b + ux * push, cy_b + uy * push, rot_b)
+        if not moved:
+            break
     return placed
 
 
@@ -696,9 +711,20 @@ def compute_layout_ai_freeform(
     # altos el cuadrado de referencia queda enorme comparado con ellos y las
     # posiciones 0-1 de la IA terminan dispersas, con huecos vacíos entre
     # medio en vez de la superposición/profundidad que pide el prompt.
+    #
+    # spread_factor crece con la cantidad de productos: con 2-3 el lienzo
+    # queda chico a propósito (fuerza el solapamiento/profundidad que pide
+    # el prompt), pero ese mismo 0.6 fijo con 6-7 productos no alcanza —
+    # aunque la IA separe bien sus cx/cy en la fracción 0-1, el lienzo de
+    # referencia es tan chico que esa separación se traduce en apenas unos
+    # px reales y los productos quedan pisándose de nuevo. Con más
+    # productos hace falta más lienzo para que el mismo 0-1 signifique más
+    # espacio real entre ellos.
+    n_items = len(items)
+    spread_factor = min(1.0, 0.6 + 0.06 * max(0, n_items - 3))
     total_w = sum(it.sw for it in items)
     max_h = max(it.sh for it in items)
-    ref_side = max(max_h, total_w * 0.6) * 1.15
+    ref_side = max(max_h, total_w * spread_factor) * 1.15
 
     placed = []
     for it in items:
@@ -710,9 +736,9 @@ def compute_layout_ai_freeform(
 
     # Red de seguridad: la IA propone coordenadas "a ciegas" (sin ver un
     # render real), y a veces dos productos quedan con los centros demasiado
-    # juntos — uno tapando casi por completo al otro. Se separan lo mínimo
-    # necesario en X, sin tocar Y ni rotación (no se pierde el ritmo/ángulos
-    # que sí propuso la IA, solo se corrige el caso patológico).
+    # juntos — uno tapando casi por completo al otro, en cualquier
+    # dirección (no solo lado a lado). Se separan lo mínimo necesario;
+    # rotación queda igual a lo que propuso la IA.
     placed = _enforce_min_separation(placed)
 
     min_left = min_top = 0.0
