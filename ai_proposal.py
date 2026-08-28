@@ -26,14 +26,23 @@ except ImportError:
 
 
 # ─── Helpers compartidos ──────────────────────────────────────────────────────
-def _dynamic_max_tokens(n: int, base: int = 500, per_item: int = 140, cap: int = 8000) -> int:
+def _dynamic_max_tokens(n: int, base: int = 800, per_item: int = 220, cap: int = 16000) -> int:
     """El JSON de respuesta escala con la cantidad de productos — sobre todo
     por 'free_layout_options' (3 composiciones libres, cada una con
     cx/cy/rotation POR PRODUCTO). Con un límite fijo, un grupo grande corta
     la respuesta a la mitad de una entrada y json.loads() falla con
     'Expecting X delimiter' — no es que la IA "se equivoque", es que no la
     dejamos terminar de escribir. Se calcula un presupuesto proporcional a
-    la cantidad de productos en vez de un número fijo pensado para pocos."""
+    la cantidad de productos en vez de un número fijo pensado para pocos.
+
+    Los defaults tienen que alcanzar sin problema hasta MAX_FILES (60,
+    ver main.py) — el techo real de productos por grupo que permite la
+    app. per_item=220 (antes 140) porque el nombre de cada producto se
+    repite hasta 5 veces en el JSON (en 'order', 'sizes' y las 3 de
+    'free_layout_options'), y con nombres largos tipo código de barras
+    ('7501000111602_F_1675808320287') eso pesa bastante más de lo que
+    parece a simple vista — se confirmó truncando en la práctica con un
+    grupo de 60 productos reales antes de subir este ajuste."""
     return min(cap, base + per_item * max(1, n))
 
 
