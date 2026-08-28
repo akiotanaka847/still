@@ -865,9 +865,6 @@ function switchTab(name) {
     if (el) el.classList.toggle('nav-item-active', name === n);
   });
   if (name === 'projects') loadProjectsGrid();
-  // Tabs legacy (ocultos) para compatibilidad
-  document.getElementById('tab-so').classList.toggle('active', name === 'so');
-  document.getElementById('tab-bodegon').classList.toggle('active', name === 'bodegon');
   window.scrollTo({ top: 0 });
 }
 
