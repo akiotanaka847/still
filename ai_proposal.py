@@ -439,3 +439,237 @@ def analyze_products(
         return _analyze_openai(images, openai_key)
 
     raise RuntimeError(f"Proveedor de IA desconocido: {provider}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# COMPOSICIÓN "A MEDIDA" — instrucción libre del usuario, llamada AISLADA
+# ═══════════════════════════════════════════════════════════════════════════
+# Primer intento (revertido, ver commit d612c49): meter la instrucción del
+# usuario como una 4ª entrada dentro del MISMO prompt de analyze_products —
+# junto a los 5 criterios de evaluación, tamaño real, zoom y las 3
+# composiciones fijas. La IA la seguía mal: entre tantas otras consignas
+# compitiendo por atención, la del usuario se diluía. Acá va SOLA, sin
+# ningún otro criterio estético de por medio — es la ÚNICA instrucción que
+# recibe la IA en esta llamada.
+MAX_CUSTOM_PROMPT_LEN = 200  # una instrucción de dirección de arte no necesita más que esto
+
+
+def _build_custom_layout_prompt(names: list, custom_prompt: str) -> str:
+    return f"""Sos un director de arte de fotografía de producto. Te muestro {len(names)} productos
+(fotos reales) y el pedido de un cliente sobre cómo componerlos.
+
+ESTE ES EL ÚNICO CRITERIO DE TODA LA TAREA — no hay otra consigna estética, no hay estilos
+predefinidos que seguir, no evalúes "equilibrio" ni "ritmo visual" por tu cuenta. Cumplí el
+pedido con la mayor fidelidad literal posible. El único límite es que ningún producto quede
+totalmente tapado por otro o cortado fuera del lienzo — más allá de eso, priorizá el pedido
+por sobre cualquier otro criterio de composición que se te ocurra.
+
+PEDIDO DEL CLIENTE: "{custom_prompt}"
+
+Además, para que los productos se vean en proporción entre sí como en un bodegón real, estimá
+el tamaño físico real de cada uno (no el tamaño del recorte de la foto) — un valor entre 0.3 y
+1.0, donde 1.0 es el producto más grande del conjunto.
+
+Para cada producto, sobre un lienzo cuadrado imaginario de 0.0 a 1.0 en cada eje (0,0 =
+arriba-izquierda, 1,1 = abajo-derecha), dame el CENTRO (cx, cy — entre 0.12 y 0.88 en ambos
+ejes) y la rotación en grados (-35 a 35; usá 0 salvo que el pedido mencione ángulos o
+inclinación).
+
+Nombres exactos de los productos: {json.dumps(names)}
+
+Responde ÚNICAMENTE con este JSON (sin texto adicional, sin markdown):
+{{
+  "label": "nombre corto (2-4 palabras) que resuma esta composición",
+  "sizes": {{"NOMBRE_EXACTO": tamaño_relativo_0.3_a_1.0, ...}} para los {len(names)} productos,
+  "layout": {{"NOMBRE_EXACTO": {{"cx":0.0_a_1.0,"cy":0.0_a_1.0,"rotation":-35_a_35}}, ...}} para los {len(names)} productos
+}}"""
+
+
+def _parse_custom_result(raw: str, names: list) -> dict:
+    """Igual que _parse_result pero para el contrato más chico de la
+    composición a medida — sin order/hero/detail_crop/free_layout_options.
+    Reusa _normalize_sizes/_normalize_free_layout: mismo criterio de
+    clamping que ya usa el resto de la app."""
+    raw = (raw or "").strip()
+    raw = re.sub(r"^```(?:json)?", "", raw).strip()
+    raw = re.sub(r"```$", "", raw).strip()
+    m = re.search(r"\{[\s\S]*\}", raw)
+    if not m:
+        raise ValueError(
+            "La IA devolvió una respuesta incompleta o vacía "
+            "(probable límite de tokens). Probá con una descripción más corta."
+        )
+    result = json.loads(m.group(0))
+    label = str(result.get("label") or "A medida").strip()[:40] or "A medida"
+    return {
+        "label": label,
+        "sizes": _normalize_sizes(result.get("sizes", {}), names),
+        "layout": _normalize_free_layout(result.get("layout"), names),
+    }
+
+
+def _analyze_custom_gemini(images: list, api_key: str, custom_prompt: str) -> dict:
+    try:
+        from google import genai
+        from google.genai import types
+    except ImportError as e:
+        raise RuntimeError("Falta el SDK de Gemini. Ejecuta: pip install google-genai") from e
+
+    names = [img["name"] for img in images]
+    client = genai.Client(api_key=api_key)
+    contents = []
+    for item in images:
+        contents.append(f"[{item['name']}]")
+        fp = item.get("filepath", "")
+        if fp and Path(fp).exists():
+            contents.append(types.Part.from_bytes(data=_to_jpeg_bytes(fp), mime_type="image/jpeg"))
+    contents.append(_build_custom_layout_prompt(names, custom_prompt))
+
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=contents,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            temperature=0.5,
+            max_output_tokens=_dynamic_max_tokens(len(names), base=400, per_item=90, cap=4000),
+        ),
+    )
+    return _parse_custom_result(response.text, names)
+
+
+def _analyze_custom_claude(images: list, api_key: str, custom_prompt: str) -> dict:
+    import anthropic
+
+    names = [img["name"] for img in images]
+    client = anthropic.Anthropic(api_key=api_key)
+    content = []
+    for item in images:
+        content.append({"type": "text", "text": f"[{item['name']}]"})
+        fp = item.get("filepath", "")
+        if fp and Path(fp).exists():
+            b64 = base64.standard_b64encode(_to_jpeg_bytes(fp)).decode()
+            content.append({
+                "type": "image",
+                "source": {"type": "base64", "media_type": "image/jpeg", "data": b64},
+            })
+    content.append({"type": "text", "text": _build_custom_layout_prompt(names, custom_prompt)})
+
+    response = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=_dynamic_max_tokens(len(names), base=400, per_item=90, cap=4000),
+        messages=[{"role": "user", "content": content}],
+    )
+    return _parse_custom_result(response.content[0].text, names)
+
+
+def _analyze_custom_groq(images: list, api_key: str, custom_prompt: str) -> dict:
+    try:
+        from groq import Groq
+    except ImportError as e:
+        raise RuntimeError("Falta el SDK de Groq. Ejecuta: pip install groq") from e
+
+    names = [img["name"] for img in images]
+    client = Groq(api_key=api_key)
+    content = []
+    sent = 0
+    for item in images:
+        content.append({"type": "text", "text": f"[{item['name']}]"})
+        fp = item.get("filepath", "")
+        if fp and Path(fp).exists() and sent < GROQ_MAX_IMAGES:
+            b64 = base64.standard_b64encode(_to_jpeg_bytes(fp)).decode()
+            content.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
+            })
+            sent += 1
+    content.append({"type": "text", "text": _build_custom_layout_prompt(names, custom_prompt)})
+
+    response = client.chat.completions.create(
+        model="qwen/qwen3.6-27b",
+        messages=[{"role": "user", "content": content}],
+        temperature=0.5,
+        max_completion_tokens=_dynamic_max_tokens(len(names), base=200, per_item=50, cap=1200),
+        reasoning_effort="none",
+        response_format={"type": "json_object"},
+    )
+    return _parse_custom_result(response.choices[0].message.content, names)
+
+
+def _analyze_custom_openai(images: list, api_key: str, custom_prompt: str) -> dict:
+    try:
+        from openai import OpenAI
+    except ImportError as e:
+        raise RuntimeError("Falta el SDK de OpenAI. Ejecuta: pip install openai") from e
+
+    names = [img["name"] for img in images]
+    client = OpenAI(api_key=api_key)
+    content = []
+    for item in images:
+        content.append({"type": "text", "text": f"[{item['name']}]"})
+        fp = item.get("filepath", "")
+        if fp and Path(fp).exists():
+            b64 = base64.standard_b64encode(_to_jpeg_bytes(fp)).decode()
+            content.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
+            })
+    content.append({"type": "text", "text": _build_custom_layout_prompt(names, custom_prompt)})
+
+    response = client.chat.completions.create(
+        model="gpt-5.1",
+        messages=[{"role": "user", "content": content}],
+        temperature=0.5,
+        max_completion_tokens=_dynamic_max_tokens(len(names), base=400, per_item=90, cap=4000),
+        response_format={"type": "json_object"},
+    )
+    return _parse_custom_result(response.choices[0].message.content, names)
+
+
+def analyze_custom_layout(
+    images: list,
+    custom_prompt: str,
+    groq_key: str = None,
+    gemini_key: str = None,
+    anthropic_key: str = None,
+    openai_key: str = None,
+    provider: str = None,
+) -> dict:
+    """Composición dirigida ÚNICA Y EXCLUSIVAMENTE por custom_prompt — llamada
+    aislada, no reutiliza ni compite con el análisis de analyze_products()
+    (order/hero/sizes/detail_crop/3 estilos fijos). Returns: {label, sizes, layout}."""
+    if not PIL_AVAILABLE:
+        raise RuntimeError("Pillow no instalado")
+    custom_prompt = (custom_prompt or "").strip()[:MAX_CUSTOM_PROMPT_LEN]
+    if not custom_prompt:
+        raise RuntimeError("Escribí una descripción antes de generar")
+
+    images = _available_images(images)
+    if not images:
+        raise RuntimeError("No hay imágenes de productos accesibles para analizar")
+
+    if not provider:
+        provider = ("groq" if groq_key else
+                    "gemini" if gemini_key else
+                    "claude" if anthropic_key else "openai")
+
+    if provider == "groq":
+        if not groq_key:
+            raise RuntimeError("GROQ_API_KEY no configurada")
+        return _analyze_custom_groq(images, groq_key, custom_prompt)
+
+    if provider == "gemini":
+        if not gemini_key:
+            raise RuntimeError("GEMINI_API_KEY no configurada")
+        return _analyze_custom_gemini(images, gemini_key, custom_prompt)
+
+    if provider == "claude":
+        if not anthropic_key:
+            raise RuntimeError("ANTHROPIC_API_KEY no configurada")
+        return _analyze_custom_claude(images, anthropic_key, custom_prompt)
+
+    if provider == "openai":
+        if not openai_key:
+            raise RuntimeError("OPENAI_API_KEY no configurada")
+        return _analyze_custom_openai(images, openai_key, custom_prompt)
+
+    raise RuntimeError(f"Proveedor de IA desconocido: {provider}")

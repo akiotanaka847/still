@@ -527,7 +527,20 @@ async def bodegon_render(body: dict):
             render_images = info["ai_images"]
         else:
             render_images = info["images"]
-        if strategy_id.startswith("ai_libre_"):
+        if strategy_id == "ai_custom":
+            # Composición generada por /api/bodegon/ai-custom-layout — trae
+            # su propio set de imágenes con scale (la IA de esa llamada
+            # aislada estima sus propios tamaños, no reusa los de /ai-proposal).
+            custom = info.get("ai_custom_layout") or {}
+            if not custom.get("layout"):
+                raise HTTPException(400, "No hay una composición a medida generada todavía")
+            layout = compute_layout_ai_freeform(
+                images=custom["images"],
+                free_layout=custom["layout"],
+                base_height=int(cfg.get("base_height", 760)),
+                max_vertical_boost=float(cfg.get("max_vertical_boost", 1.20)),
+            )
+        elif strategy_id.startswith("ai_libre_"):
             options = info.get("ai_free_layout_options") or []
             idx = int(strategy_id.rsplit("_", 1)[-1]) - 1
             free_layout = options[idx]["layout"] if 0 <= idx < len(options) else None
@@ -792,6 +805,87 @@ async def bodegon_ai_proposal(body: dict):
         "variants": variants,
         "layout": variants[0]["layout"],   # compat
         "suggestion": suggestion,
+    }
+
+
+@app.post("/api/bodegon/ai-custom-layout")
+async def bodegon_ai_custom_layout(body: dict):
+    """Composición dirigida por una instrucción libre del usuario ('quiero
+    algo minimalista, fondo oscuro...') — llamada de IA AISLADA, separada de
+    /ai-proposal: la instrucción del usuario es el único criterio que recibe
+    esa llamada, sin competir con order/hero/sizes/los 3 estilos fijos (ver
+    ai_proposal.analyze_custom_layout). Se suma como una tarjeta extra en
+    'Propuestas IA'; no reemplaza nada de lo que ya devolvió /ai-proposal."""
+    session_id = body.get("session_id", "")
+    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
+        raise HTTPException(400, "Session ID inválido")
+    custom_prompt = (body.get("custom_prompt") or "").strip()
+    if not custom_prompt:
+        raise HTTPException(400, "Escribí una descripción antes de generar")
+
+    session_dir = SESSIONS_DIR / session_id
+    info_file = session_dir / "bodegon.json"
+    if not info_file.exists():
+        raise HTTPException(404, "Sesión no encontrada")
+
+    groq_key = os.environ.get("GROQ_API_KEY", "").strip()
+    gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    provider = os.environ.get("AI_PROVIDER", "").strip().lower() or None
+    if not (groq_key or gemini_key or anthropic_key or openai_key):
+        raise HTTPException(503, "Configura GROQ_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY u OPENAI_API_KEY en .env")
+
+    info = json.loads(info_file.read_text(encoding="utf-8"))
+
+    try:
+        from ai_proposal import analyze_custom_layout
+        result = analyze_custom_layout(
+            info["images"],
+            custom_prompt,
+            groq_key=groq_key or None,
+            gemini_key=gemini_key or None,
+            anthropic_key=anthropic_key or None,
+            openai_key=openai_key or None,
+            provider=provider,
+        )
+    except Exception as e:
+        raise HTTPException(500, f"Error en análisis IA: {e}")
+
+    # Igual que /ai-proposal: cada producto lleva su propio scale (acá, el
+    # que estimó ESTA llamada aislada — no el de /ai-proposal, puede no
+    # haberse ejecutado todavía).
+    name_to_img = {img["name"]: img for img in info["images"]}
+    sizes = result["sizes"]
+    images_with_scale = []
+    for n, img in name_to_img.items():
+        img2 = dict(img)
+        img2["scale"] = float(sizes.get(n, 1.0))
+        images_with_scale.append(img2)
+
+    cfg = body.get("config", {})
+    layout = compute_layout_ai_freeform(
+        images=images_with_scale,
+        free_layout=result["layout"],
+        base_height=int(cfg.get("base_height", 760)),
+        max_vertical_boost=float(cfg.get("max_vertical_boost", 1.20)),
+    )
+
+    # Se guarda aparte de ai_free_layout_options — un solo "a medida" activo
+    # a la vez (cada click en "Generar con mi idea" reemplaza al anterior,
+    # no se acumulan tarjetas infinitas).
+    info["ai_custom_layout"] = {
+        "label": result["label"],
+        "layout": result["layout"],
+        "images": images_with_scale,
+    }
+    info_file.write_text(json.dumps(info, indent=2), encoding="utf-8")
+
+    return {
+        "id": "ai_custom",
+        "label": f"IA · Libre — {result['label']}",
+        "desc": "Composición 100% según tu descripción",
+        "layout": layout,
     }
 
 
