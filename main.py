@@ -27,6 +27,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.sessions import SessionMiddleware
 
 from layout import compute_layout_any, compute_layout_ai_freeform
@@ -607,6 +608,66 @@ async def bodegon_render(body: dict):
         raise HTTPException(500, f"Error renderizando PNG: {e}")
 
     return {"session_id": session_id, "filename": "bodegon.png"}
+
+
+@app.post("/api/bodegon/ai-generate-image")
+async def bodegon_ai_generate_image(body: dict):
+    """Genera el bodegón COMPLETO con IA generativa (gpt-image-2, images.edit)
+    — modo alternativo y experimental al pipeline determinista: acá la IA
+    redibuja la imagen final directamente a partir de las fotos de referencia
+    (no un layout que después renderiza Pillow, sin tocar píxeles). Solo
+    requiere OPENAI_API_KEY (es el único proveedor con este modelo). Ver
+    image_gen.py."""
+    session_id = body.get("session_id", "")
+    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
+        raise HTTPException(400, "Session ID inválido")
+
+    session_dir = SESSIONS_DIR / session_id
+    info_file = session_dir / "bodegon.json"
+    if not info_file.exists():
+        raise HTTPException(404, "Sesión no encontrada")
+
+    openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if not openai_key:
+        raise HTTPException(503, "Configura OPENAI_API_KEY en .env para usar este modo")
+
+    info = json.loads(info_file.read_text(encoding="utf-8"))
+    custom_prompt = (body.get("custom_prompt") or "").strip()
+
+    try:
+        from image_gen import generate_bodegon_image
+        # La llamada a OpenAI tarda 1-3 min y es síncrona (bloqueante) — sin
+        # threadpool, congela el único event loop de uvicorn (un worker) y
+        # ningún otro request (de este u otro usuario) se sirve mientras tanto.
+        png_bytes = await run_in_threadpool(
+            generate_bodegon_image, info["images"], openai_key, custom_prompt
+        )
+    except Exception as e:
+        raise HTTPException(500, f"Error generando imagen con IA: {e}")
+
+    output_dir = session_dir / "output"
+    output_dir.mkdir(exist_ok=True)
+    out_path = output_dir / "bodegon_ai.png"
+    out_path.write_bytes(png_bytes)
+
+    return {"session_id": session_id, "filename": "bodegon_ai.png"}
+
+
+@app.get("/api/bodegon/ai-generated-file/{session_id}")
+async def bodegon_ai_generated_file(session_id: str, request: Request):
+    """Descarga/muestra el PNG generado por /ai-generate-image."""
+    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
+        raise HTTPException(400, "Session ID inválido")
+    session_dir = SESSIONS_DIR / session_id
+    info_file = session_dir / "bodegon.json"
+    if info_file.exists():
+        info = json.loads(info_file.read_text(encoding="utf-8"))
+        if not _owned_by(info, request):
+            raise HTTPException(404, "PNG no encontrado. Generalo primero.")
+    out = session_dir / "output" / "bodegon_ai.png"
+    if not out.exists():
+        raise HTTPException(404, "PNG no encontrado. Generalo primero.")
+    return FileResponse(str(out), filename="bodegon_ai.png", media_type="image/png")
 
 
 @app.get("/api/bodegon/background-styles")

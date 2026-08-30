@@ -526,6 +526,44 @@
           <div id="ai-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-5xl"></div>
         </div>
 
+        <!-- Generación IA experimental: la IA redibuja la imagen completa
+             (gpt-image-2, images.edit) en vez de proponer un layout para que
+             Pillow lo componga — ver image_gen.py. No es una tarjeta más del
+             grid de arriba porque no produce un 'layout', produce un PNG
+             final directo. -->
+        <div id="ai-gen-block" class="mb-5 border border-purple-100 bg-purple-50/40 rounded-2xl p-4 max-w-3xl">
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="text-purple-600 text-sm">🧪</span>
+            <p class="text-sm font-bold text-purple-800">Generación IA (experimental)</p>
+          </div>
+          <p class="text-[11px] text-gray-500 mb-2.5 leading-relaxed">
+            La IA redibuja la imagen completa desde cero — no compone tus fotos originales.
+            Es más lento (1-3 min) y no tenés control fino de posiciones, pero preserva el
+            texto de tus etiquetas con muy buena fidelidad.
+          </p>
+          <div class="flex items-center gap-2 mb-3">
+            <input id="ai-gen-input" type="text" maxlength="300"
+                   style="color-scheme: light; -webkit-appearance: none; appearance: none; color: #111827; background-color: #fff;"
+                   placeholder="Estilo opcional — ej: fondo oscuro dramático, gotas de agua, minimalista..."
+                   class="flex-1 text-xs text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault(); bodGenerateAIImage();}">
+            <button id="ai-gen-btn" onclick="bodGenerateAIImage()"
+                    class="flex-shrink-0 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-2 rounded-lg transition-all whitespace-nowrap">
+              🧪 Generar imagen con IA
+            </button>
+          </div>
+          <div id="ai-gen-result" class="hidden">
+            <img id="ai-gen-img" alt="Bodegón generado por IA"
+                 class="max-w-full rounded-xl border border-gray-200 shadow-sm mb-2"
+                 style="background-image: repeating-conic-gradient(#e5e7eb 0% 25%, #fff 0% 50%); background-size: 16px 16px;">
+            <br>
+            <a id="ai-gen-download" href="#" download="bodegon_ai.png"
+               class="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700">
+              ⬇ Descargar esta versión
+            </a>
+          </div>
+        </div>
+
         <!-- Estilos geométricos -->
         <p class="text-xs font-semibold text-gray-500 mb-2">Estilos de layout</p>
         <div id="proposals-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-4"></div>
@@ -1658,6 +1696,8 @@ function bodShowProposals() {
   aiGrid.innerHTML = '';
   document.getElementById('ai-reasoning').textContent = '';
   document.getElementById('ai-custom-input').value = '';
+  document.getElementById('ai-gen-input').value = '';
+  document.getElementById('ai-gen-result').classList.add('hidden');
   const st = document.getElementById('ai-status');
   st.textContent = 'Analizando con IA…'; st.classList.remove('hidden');
   AI_VARIANT_LABELS.forEach((lab, k) => {
@@ -1763,6 +1803,36 @@ async function bodGenerateCustomAI() {
       if (v.layout) renderMiniCanvas(cv, v.layout);
     });
     toast('Propuesta generada con tu idea', 'warn');
+  } catch (e) {
+    toast(e.message);
+  } finally {
+    btn.disabled = false; input.disabled = false;
+    btn.innerHTML = oldLabel;
+  }
+}
+
+async function bodGenerateAIImage() {
+  if (!BOD_SESSION) { toast('Esperá a que termine el análisis inicial', 'warn'); return; }
+
+  const input = document.getElementById('ai-gen-input');
+  const btn = document.getElementById('ai-gen-btn');
+  const oldLabel = btn.innerHTML;
+  btn.disabled = true; input.disabled = true;
+  btn.innerHTML = `<div class="w-3.5 h-3.5 border-2 border-purple-300 border-t-purple-600 rounded-full spin inline-block align-middle"></div> generando (1-3 min)…`;
+
+  try {
+    const res = await fetch('/api/bodegon/ai-generate-image', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({session_id: BOD_SESSION, custom_prompt: input.value.trim()}),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Error generando la imagen');
+
+    const url = `/api/bodegon/ai-generated-file/${BOD_SESSION}?t=${Date.now()}`;
+    document.getElementById('ai-gen-img').src = url;
+    document.getElementById('ai-gen-download').href = url;
+    document.getElementById('ai-gen-result').classList.remove('hidden');
+    toast('Imagen generada con IA', 'warn');
   } catch (e) {
     toast(e.message);
   } finally {
@@ -2050,6 +2120,8 @@ function bodReset() {
   document.getElementById('bod-prod-input').value='';
   document.getElementById('bod-bg-input').value='';
   { const ci=document.getElementById('ai-custom-input'); if (ci) ci.value=''; }
+  { const gi=document.getElementById('ai-gen-input'); if (gi) gi.value=''; }
+  { const gr=document.getElementById('ai-gen-result'); if (gr) gr.classList.add('hidden'); }
   showBOD('bod-upload');
 }
 
