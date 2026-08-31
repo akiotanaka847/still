@@ -947,7 +947,11 @@ async def bodegon_ai_custom_layout(body: dict):
         raise HTTPException(400, "Session ID inválido")
     custom_prompt = (body.get("custom_prompt") or "").strip()
     if not custom_prompt:
-        raise HTTPException(400, "Escribí una descripción antes de generar")
+        # Sin texto -> "generá una propuesta más, a tu criterio" (mismo botón
+        # sirve para pedir algo puntual O simplemente para variedad extra
+        # además de las 3 composiciones libres de /ai-proposal).
+        custom_prompt = ("Proponé una composición distinta a las que ya darías por defecto, "
+                          "con tu propio criterio artístico de director de arte.")
 
     session_dir = SESSIONS_DIR / session_id
     info_file = session_dir / "bodegon.json"

@@ -283,10 +283,6 @@
               class="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full cursor-default select-none">
           ⭐ Pro
         </span>
-        <button onclick="switchTab('projects')"
-                class="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-800 px-2.5 py-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-          🗂️ Mis proyectos
-        </button>
         <span id="topbar-username" class="hidden sm:block text-xs font-medium text-gray-300"></span>
         <div id="user-avatar"
              class="w-8 h-8 rounded-full brand-gradient flex items-center justify-center text-white text-[11px] font-bold ring-2 ring-white/10 select-none">·</div>
@@ -536,12 +532,12 @@
           <div class="flex items-center gap-2 mb-3 max-w-3xl">
             <input id="ai-custom-input" type="text" maxlength="200"
                    style="color-scheme: light; -webkit-appearance: none; appearance: none; color: #111827; background-color: #fff;"
-                   placeholder="Describí una composición a tu manera (opcional) — ej: minimalista, fondo oscuro, producto al frente..."
+                   placeholder="Describí una composición a tu manera (opcional) — dejalo vacío para pedir una propuesta más"
                    class="flex-1 text-xs text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
                    onkeydown="if(event.key==='Enter'){event.preventDefault(); bodGenerateCustomAI();}">
-            <button id="ai-custom-btn" onclick="bodGenerateCustomAI()"
+            <button id="ai-custom-btn" onclick="bodGenerateCustomAI()" title="Con texto: sigue tu idea. Vacío: la IA propone otra composición distinta a las de arriba"
                     class="flex-shrink-0 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-2 rounded-lg transition-all whitespace-nowrap">
-              ✦ Generar con mi idea
+              ✦ Generar propuesta
             </button>
           </div>
 
@@ -593,6 +589,11 @@
             <p class="text-sm font-bold text-gray-700">Estilos de layout</p>
           </div>
           <div id="proposals-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"></div>
+          <div id="proposals-grid-more" class="hidden grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mt-3"></div>
+          <button id="proposals-more-btn" onclick="bodToggleMoreStyles()"
+                  class="mt-3 text-xs font-medium text-gray-500 hover:text-indigo-600 transition-colors">
+            Ver todos los estilos
+          </button>
         </div>
 
         <button id="bod-use-btn" onclick="bodUseProposal()"
@@ -1229,6 +1230,33 @@ const STRATEGIES = [
   },
 ];
 
+// 3 estilos curados para mostrar de entrada en "Estilos de layout" (de los
+// ~18 totales) — elegidos por variedad de carácter visual: Auto (equilibrado,
+// el más seguro como default), Profundidad (solapamiento, look premium) e
+// Impacto (abanico dinámico, tipo anuncio). El resto queda detrás de
+// "Ver todos los estilos" — ver bodShowProposals/bodToggleMoreStyles.
+const CURATED_STRATEGY_IDS = ['auto', 'profundidad', 'impacto'];
+
+// "Propuestas IA" muestra por defecto solo las 3 composiciones "IA · Libre"
+// (criterio 100% propio de la IA) — las 3 "ai"/"ai_depth"/"ai_impacto" son
+// los mismos estilos geométricos de arriba pero reordenados por IA, quedan
+// redundantes con "Estilos de layout" y se ocultan de esta sección. Filtrar
+// por id (no por posición en el array) porque BOD_AI_VARIANTS se reconstruye
+// también al usar "Generar con mi idea" — filtrar por índice ahí haría
+// reaparecer las ocultas.
+const HIDDEN_AI_IDS = new Set(['ai', 'ai_depth', 'ai_impacto']);
+// Mismo criterio que HIDDEN_AI_IDS pero por label — para el placeholder de
+// carga, que todavía no tiene ids reales (solo AI_VARIANT_LABELS genéricos).
+const HIDDEN_AI_LABELS = new Set(['IA · Equilibrado', 'IA · Profundidad', 'IA · Impacto']);
+
+function bodToggleMoreStyles() {
+  const more = document.getElementById('proposals-grid-more');
+  const btn = document.getElementById('proposals-more-btn');
+  const opening = more.classList.contains('hidden');
+  more.classList.toggle('hidden');
+  btn.textContent = opening ? 'Ver menos estilos' : `Ver todos los estilos (${STRATEGIES.length})`;
+}
+
 // Las propuestas IA ocupan índices a partir de AI_BASE
 const AI_BASE = STRATEGIES.length;
 // Placeholders mientras carga (los 3 últimos son genéricos: el label real de
@@ -1719,13 +1747,31 @@ function bodShowProposals() {
   document.getElementById('prop-count').textContent =
     `${BOD_FILES.length} producto${BOD_FILES.length!==1?'s':''}`;
 
-  // Estrategias geométricas (cálculo client-side instantáneo)
+  // Estrategias geométricas (cálculo client-side instantáneo). Se muestran
+  // solo 3 curadas por defecto (variedad de estilo, no las "primeras 3" del
+  // array) — el resto queda oculto detrás de "Ver todos los estilos", para
+  // no abrumar con ~18 tarjetas de entrada. Ver bodToggleMoreStyles().
   const layouts = STRATEGIES.map(s => s.standalone ? s.standalone(BOD_FILES, baseCfg) : computeLayoutJS(BOD_FILES, baseCfg, s));
   const grid = document.getElementById('proposals-grid');
-  grid.innerHTML = '';
-  STRATEGIES.forEach((s, i) => {
+  const gridMore = document.getElementById('proposals-grid-more');
+  const moreBtn = document.getElementById('proposals-more-btn');
+  grid.innerHTML = ''; gridMore.innerHTML = '';
+  gridMore.classList.add('hidden');
+  moreBtn.textContent = `Ver todos los estilos (${STRATEGIES.length})`;
+
+  const curatedIdx = new Set(CURATED_STRATEGY_IDS.map(id => STRATEGIES.findIndex(s => s.id === id)));
+  CURATED_STRATEGY_IDS.forEach(id => {
+    const i = STRATEGIES.findIndex(s => s.id === id);
+    if (i < 0) return;
+    const s = STRATEGIES[i];
     const { card, cv } = _makeProposalCard(i, s.label, s.desc, 'text-gray-800', idx => _propCardClass(idx, s.color));
     grid.appendChild(card);
+    if (layouts[i]) renderMiniCanvas(cv, layouts[i]);
+  });
+  STRATEGIES.forEach((s, i) => {
+    if (curatedIdx.has(i)) return;
+    const { card, cv } = _makeProposalCard(i, s.label, s.desc, 'text-gray-800', idx => _propCardClass(idx, s.color));
+    gridMore.appendChild(card);
     if (layouts[i]) renderMiniCanvas(cv, layouts[i]);
   });
 
@@ -1738,7 +1784,7 @@ function bodShowProposals() {
   document.getElementById('ai-gen-result').classList.add('hidden');
   const st = document.getElementById('ai-status');
   st.textContent = 'Analizando con IA…'; st.classList.remove('hidden');
-  AI_VARIANT_LABELS.forEach((lab, k) => {
+  AI_VARIANT_LABELS.filter(lab => !HIDDEN_AI_LABELS.has(lab)).forEach((lab, k) => {
     const d = document.createElement('div');
     d.id = `prop-card-${AI_BASE + k}`;
     d.className = 'rounded-2xl border-2 border-dashed border-purple-200 bg-purple-50/40 p-3 flex flex-col items-center justify-center min-h-[110px] gap-2';
@@ -1781,6 +1827,7 @@ async function bodUploadAndAnalyzeAI(cfg) {
     aiGrid.innerHTML = '';
     BOD_AI_VARIANTS.forEach((v, k) => {
       const idx = AI_BASE + k;
+      if (HIDDEN_AI_IDS.has(v.id)) return;   // redundante con "Estilos de layout" — ver HIDDEN_AI_IDS
       const { card, cv } = _makeProposalCard(idx, v.label, v.desc || '', 'text-purple-800', _aiCardClass);
       aiGrid.appendChild(card);
       if (v.layout) renderMiniCanvas(cv, v.layout);
@@ -1810,7 +1857,8 @@ async function bodUploadAndAnalyzeAI(cfg) {
 async function bodGenerateCustomAI() {
   const input = document.getElementById('ai-custom-input');
   const text = input.value.trim();
-  if (!text) { toast('Escribí una idea primero', 'warn'); return; }
+  // Vacío es válido: el backend lo toma como "generá una propuesta más a tu
+  // criterio" — mismo botón sirve para pedir algo puntual o solo variedad.
   if (!BOD_SESSION) { toast('Esperá a que termine el análisis inicial', 'warn'); return; }
 
   const btn = document.getElementById('ai-custom-btn');
@@ -1836,11 +1884,12 @@ async function bodGenerateCustomAI() {
     aiGrid.innerHTML = '';
     BOD_AI_VARIANTS.forEach((v, k) => {
       const idx = AI_BASE + k;
+      if (HIDDEN_AI_IDS.has(v.id)) return;   // redundante con "Estilos de layout" — ver HIDDEN_AI_IDS
       const { card, cv } = _makeProposalCard(idx, v.label, v.desc || '', 'text-purple-800', _aiCardClass);
       aiGrid.appendChild(card);
       if (v.layout) renderMiniCanvas(cv, v.layout);
     });
-    toast('Propuesta generada con tu idea', 'warn');
+    toast('Nueva propuesta generada', 'warn');
   } catch (e) {
     toast(e.message);
   } finally {
