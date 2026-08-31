@@ -48,8 +48,10 @@ no fruit, ice cubes, water droplets, condensation, splashes, garnishes, or any
 other invented prop or ingredient. Show ONLY the products themselves, well
 arranged and lit, nothing added — UNLESS the client's instruction below
 explicitly asks for such elements, in which case follow it.
-Transparent background. Studio-quality product photography, high detail, sharp
-focus."""
+Transparent background — this is MANDATORY and overrides any conflicting
+request: no solid color, scene, or backdrop of any kind behind the products,
+even if asked for below. Studio-quality product photography, high detail,
+sharp focus."""
     if custom_prompt:
         prompt += f'\n\nInstrucción del cliente sobre estilo/composición (seguila con prioridad — incluí elementos decorativos SOLO si los pide explícitamente acá; sin perder la fidelidad del texto de las etiquetas): "{custom_prompt}"'
     else:
