@@ -73,6 +73,36 @@ def _center_in_rows(rows: List[_Row]) -> List[_Row]:
     return rows
 
 
+def _center_named_hero(rows: List[_Row], hero_name: str) -> List[_Row]:
+    """Centra el héroe indicado sin descartar el orden de dirección de arte.
+
+    Los acompañantes se ubican por prioridad alrededor del centro: primero a
+    la derecha, luego a la izquierda y después hacia los extremos.
+    """
+    if not hero_name:
+        return rows
+    for row in rows:
+        hero = next((item for item in row.items if item.name == hero_name), None)
+        if hero is None or len(row.items) < 2:
+            continue
+        supports = [item for item in row.items if item is not hero]
+        result: list = [None] * len(row.items)
+        mid = (len(result) - 1) // 2
+        result[mid] = hero
+        slots = []
+        for distance in range(1, len(result) + 1):
+            right = mid + distance
+            left = mid - distance
+            if right < len(result):
+                slots.append(right)
+            if left >= 0:
+                slots.append(left)
+        for slot, item in zip(slots, supports):
+            result[slot] = item
+        row.items = [item for item in result if item is not None]
+    return rows
+
+
 SORT_STRATEGIES = {
     'auto':             _sort_auto,
     'area':             _sort_area,
@@ -84,6 +114,7 @@ SORT_STRATEGIES = {
     'profundidad':      _sort_auto,   # héroe al centro, solapamiento y sombra
     'profundidad_xl':   _sort_auto,   # héroe dominante (XL), más solapamiento
     'profundidad_grad': _sort_auto,   # escalonada: tamaño decrece del centro a los lados
+    'ai_profundidad_grad': list,
     'ai':               list,         # IA: preserva el orden, plano
     'ai_depth':         list,         # IA + profundidad (preserva orden, centra héroe)
     'ai_shadow':        list,         # IA + sombra de contacto (preserva orden)
@@ -118,13 +149,14 @@ DEPTH_PARAMS = {
     'profundidad':      {'overlap': 0.16, 'hero_scale': 1.32, 'falloff': 0.93},
     'profundidad_xl':   {'overlap': 0.24, 'hero_scale': 1.50, 'falloff': 1.00},
     'profundidad_grad': {'overlap': 0.20, 'hero_scale': 1.18, 'falloff': 0.84},
-    'ai_depth':         {'overlap': 0.16, 'hero_scale': 1.32, 'falloff': 0.93},
+    'ai_depth':         {'overlap': 0.14, 'hero_scale': 1.16, 'falloff': 0.97},
+    'ai_profundidad_grad': {'overlap': 0.18, 'hero_scale': 1.14, 'falloff': 0.90},
     'impacto':          {'overlap': 0.22, 'hero_scale': 1.50, 'falloff': 0.88, 'tilt': True, 'tilt_mode': 'fan'},
-    'ai_impacto':       {'overlap': 0.22, 'hero_scale': 1.50, 'falloff': 0.88, 'tilt': True, 'tilt_mode': 'fan'},
+    'ai_impacto':       {'overlap': 0.18, 'hero_scale': 1.24, 'falloff': 0.95, 'tilt': True, 'tilt_mode': 'fan'},
     'fila_recta':       {'overlap': 0.16, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False},
     'ai_fila_recta':    {'overlap': 0.16, 'hero_scale': 1.00, 'falloff': 1.00, 'center_hero': False},
     'cruce':            {'overlap': 0.32, 'hero_scale': 1.15, 'falloff': 1.00, 'tilt': True, 'tilt_mode': 'converge'},
-    'ai_cruce':         {'overlap': 0.32, 'hero_scale': 1.15, 'falloff': 1.00, 'tilt': True, 'tilt_mode': 'converge'},
+    'ai_cruce':         {'overlap': 0.24, 'hero_scale': 1.10, 'falloff': 0.98, 'tilt': True, 'tilt_mode': 'converge'},
     # tilt_angle acá es el DEFAULT si no viene 'tilt_angle' en compute_layout()
     # (el usuario lo elige con un slider en la UI) — el signo define la
     # dirección (derecha/izquierda), la magnitud la pisa lo que mande el usuario.
@@ -185,6 +217,7 @@ def compute_layout(
     max_vertical_boost: float = 1.20,
     aspect_w: int = 0,
     aspect_h: int = 0,
+    hero_name: str = None,
     tilt_angle: float = None,  # solo tilt_mode='uniform' (Inclinado ★): magnitud en grados
                                 # elegida por el usuario; el signo lo define la estrategia
                                 # (derecha/izquierda). None = usa el default de DEPTH_PARAMS.
@@ -251,7 +284,9 @@ def compute_layout(
     # 'fila_recta' desactiva esto con center_hero=False: deja el orden natural,
     # sin pirámide (así se ven "en línea", como una foto de producto convencional).
     center_hero = dp.get('center_hero', True)
-    if sort_strategy in ('centrado', 'auto', 'area') or (depth and center_hero):
+    if depth and hero_name:
+        rows = _center_named_hero(rows, hero_name)
+    elif sort_strategy in ('centrado', 'auto', 'area') or (depth and center_hero):
         rows = _center_in_rows(rows)
 
     # Profundidad: escalar según la posición ya centrada
@@ -262,7 +297,10 @@ def compute_layout(
         for ri, row in enumerate(rows):
             if not row.items:
                 continue
-            hero_idx = max(range(len(row.items)), key=lambda i: row.items[i].sh)
+            hero_idx = next(
+                (i for i, item in enumerate(row.items) if item.name == hero_name),
+                max(range(len(row.items)), key=lambda i: row.items[i].sh),
+            )
             row_hero[ri] = hero_idx
             for idx, item in enumerate(row.items):
                 d = abs(idx - hero_idx)
@@ -431,6 +469,8 @@ def compute_layout_cascada(
     overlap: float = 0.28,
     tilt_deg: float = -14.0,
     step_up: float = 0.32,
+    hero_name: str = None,
+    preserve_order: bool = False,
     **_ignored,
 ) -> dict:
     """Cascada diagonal: todos los productos inclinados en la MISMA dirección
@@ -441,8 +481,21 @@ def compute_layout_cascada(
     if n == 0:
         raise ValueError("No se proporcionaron imágenes")
 
+    if preserve_order:
+        growth = min(growth, 1.12)
+        overlap = max(overlap, 0.22)
+        tilt_deg = max(-12.0, min(12.0, tilt_deg))
+        step_up = min(step_up, 0.22)
+
     base_items = _scale_items(images, base_height, max_vertical_boost)
-    order = sorted(range(n), key=lambda i: base_items[i].sh)  # menor a mayor
+    if preserve_order:
+        order = list(range(n))
+        if hero_name:
+            order = [i for i in order if base_items[i].name != hero_name] + [
+                i for i in order if base_items[i].name == hero_name
+            ]
+    else:
+        order = sorted(range(n), key=lambda i: base_items[i].sh)  # menor a mayor
 
     prepared = []
     g = 1.0
@@ -505,6 +558,8 @@ def compute_layout_radial(
     overlap: float = -0.06,   # negativo = separación en vez de solapamiento
     max_tilt: float = 22.0,
     height_jitter: float = 0.12,
+    hero_name: str = None,
+    preserve_order: bool = False,
     **_ignored,
 ) -> dict:
     """Radial/Explosión: alturas y ángulos variados por posición — ninguno
@@ -514,8 +569,31 @@ def compute_layout_radial(
     if n == 0:
         raise ValueError("No se proporcionaron imágenes")
 
+    if preserve_order:
+        overlap = max(overlap, 0.10)
+        max_tilt = min(max_tilt, 16.0)
+        height_jitter = min(height_jitter, 0.08)
+
     items = _scale_items(images, base_height, max_vertical_boost)
-    order = sorted(range(n), key=lambda i: items[i].sh, reverse=True)
+    order = list(range(n)) if preserve_order else sorted(range(n), key=lambda i: items[i].sh, reverse=True)
+    if hero_name and preserve_order:
+        hero_idx = next((i for i in order if items[i].name == hero_name), None)
+        if hero_idx is not None:
+            supports = [i for i in order if i != hero_idx]
+            mid_slot = (n - 1) // 2
+            arranged = [None] * n
+            arranged[mid_slot] = hero_idx
+            slots = []
+            for distance in range(1, n + 1):
+                right = mid_slot + distance
+                left = mid_slot - distance
+                if right < n:
+                    slots.append(right)
+                if left >= 0:
+                    slots.append(left)
+            for slot, item_idx in zip(slots, supports):
+                arranged[slot] = item_idx
+            order = [i for i in arranged if i is not None]
     mid = (n - 1) / 2.0
 
     prepared = []
@@ -589,6 +667,8 @@ def compute_layout_flotante(
     base_height: int = 760,
     max_vertical_boost: float = 1.20,
     overlap: float = -0.04,
+    hero_name: str = None,
+    preserve_order: bool = False,
     **_ignored,
 ) -> dict:
     """Flotante: cada producto a su propia altura (sin línea de base
@@ -599,8 +679,29 @@ def compute_layout_flotante(
     if n == 0:
         raise ValueError("No se proporcionaron imágenes")
 
+    if preserve_order:
+        overlap = max(overlap, 0.06)
+
     items = _scale_items(images, base_height, max_vertical_boost)
-    order = sorted(range(n), key=lambda i: items[i].sh, reverse=True)
+    order = list(range(n)) if preserve_order else sorted(range(n), key=lambda i: items[i].sh, reverse=True)
+    if hero_name and preserve_order:
+        hero_idx = next((i for i in order if items[i].name == hero_name), None)
+        if hero_idx is not None:
+            supports = [i for i in order if i != hero_idx]
+            mid_slot = (n - 1) // 2
+            arranged = [None] * n
+            arranged[mid_slot] = hero_idx
+            slots = []
+            for distance in range(1, n + 1):
+                right = mid_slot + distance
+                left = mid_slot - distance
+                if right < n:
+                    slots.append(right)
+                if left >= 0:
+                    slots.append(left)
+            for slot, item_idx in zip(slots, supports):
+                arranged[slot] = item_idx
+            order = [i for i in arranged if i is not None]
 
     prepared = []
     for rank, i in enumerate(order):
@@ -910,8 +1011,11 @@ def compute_layout_ai_freeform(
 
 STANDALONE_STRATEGIES = {
     'cascada':  compute_layout_cascada,
+    'ai_cascada': compute_layout_cascada,
     'radial':   compute_layout_radial,
+    'ai_radial': compute_layout_radial,
     'flotante': compute_layout_flotante,
+    'ai_flotante': compute_layout_flotante,
 }
 
 
@@ -920,6 +1024,10 @@ def compute_layout_any(images: List[dict], sort_strategy: str = 'auto', **kwargs
     un layout standalone (cascada/radial) según la estrategia pedida."""
     fn = STANDALONE_STRATEGIES.get(sort_strategy)
     if fn:
-        return fn(images, base_height=kwargs.get('base_height', 760),
-                   max_vertical_boost=kwargs.get('max_vertical_boost', 1.20))
+        standalone_kwargs = dict(kwargs)
+        standalone_kwargs.setdefault('base_height', 760)
+        standalone_kwargs.setdefault('max_vertical_boost', 1.20)
+        if sort_strategy.startswith('ai_'):
+            standalone_kwargs['preserve_order'] = True
+        return fn(images, **standalone_kwargs)
     return compute_layout(images, sort_strategy=sort_strategy, **kwargs)

@@ -359,16 +359,32 @@ async def auth_me(request: Request):
 
 VALID_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp", ".gif"}
 
-# Propuestas IA visora: la IA decide orden/tamaño/héroe, y el layout final lo
-# arma Pillow con estrategias que ya se ven bien visualmente. Así evitamos que
-# el modelo invente coordenadas libres inconsistentes.
+# Propuestas IA visora: la IA decide orden, héroe, énfasis y plantilla; Pillow
+# resuelve la geometría final para mantener todos los productos legibles.
 AI_VARIANT_DEFS = [
-    ("ai_dinamica",  "IA visora — Dinámica",  "Impacto con orden y tamaños IA", "impacto"),
-    ("ai_elegante",  "IA visora — Elegante",  "Profundidad limpia con héroe IA", "profundidad"),
-    ("ai_editorial", "IA visora — Editorial", "Radial editorial con criterio IA", "radial"),
+    ("ai_dinamica",  "IA visora — Dinámica",  "Energía y jerarquía publicitaria", "dynamic"),
+    ("ai_elegante",  "IA visora — Elegante",  "Orden premium y lectura limpia", "elegant"),
+    ("ai_editorial", "IA visora — Editorial", "Ritmo asimétrico con aire visual", "editorial"),
 ]
 AI_STRATEGY_IDS = {vid for vid, _, _, _ in AI_VARIANT_DEFS}
-AI_STRATEGY_TO_LAYOUT = {vid: sid for vid, _, _, sid in AI_VARIANT_DEFS}
+AI_VARIANT_STYLES = {vid: style for vid, _, _, style in AI_VARIANT_DEFS}
+AI_STYLE_DEFAULT_LAYOUT = {
+    "dynamic": "impacto",
+    "elegant": "profundidad",
+    "editorial": "radial",
+}
+AI_LAYOUT_ALIASES = {
+    "impacto": "ai_impacto",
+    "profundidad": "ai_depth",
+    "profundidad_grad": "ai_profundidad_grad",
+    "fila_recta": "ai_fila_recta",
+    "cruce": "ai_cruce",
+    "cascada": "ai_cascada",
+    "radial": "ai_radial",
+    "flotante": "ai_flotante",
+    "inclinado_derecha": "ai_inclinado_derecha",
+    "inclinado_izquierda": "ai_inclinado_izquierda",
+}
 
 
 def _is_ai_strategy(sort_strategy: str) -> bool:
@@ -377,8 +393,38 @@ def _is_ai_strategy(sort_strategy: str) -> bool:
     return sort_strategy in AI_STRATEGY_IDS or sort_strategy.startswith("ai_libre_")
 
 
-def _layout_strategy_for_ai(sort_strategy: str) -> str:
-    return AI_STRATEGY_TO_LAYOUT.get(sort_strategy, sort_strategy)
+def _layout_strategy_for_ai(sort_strategy: str, layout_choices: dict = None) -> str:
+    style = AI_VARIANT_STYLES.get(sort_strategy)
+    if not style:
+        return sort_strategy
+    choices = layout_choices if isinstance(layout_choices, dict) else {}
+    selected = choices.get(style) or AI_STYLE_DEFAULT_LAYOUT[style]
+    return AI_LAYOUT_ALIASES.get(selected, AI_LAYOUT_ALIASES[AI_STYLE_DEFAULT_LAYOUT[style]])
+
+
+def _visual_ai_images(images: list, order: list, sizes: dict) -> list:
+    """Aplica dirección IA sin permitir escalas que vuelvan ilegible un SKU."""
+    by_name = {img["name"]: img for img in images}
+    names = [name for name in order if name in by_name]
+    names.extend(name for name in by_name if name not in names)
+    result = []
+    for name in names:
+        img = dict(by_name[name])
+        try:
+            scale = float(sizes.get(name, 1.0))
+        except (TypeError, ValueError):
+            scale = 1.0
+        ratio = max(1, float(img.get("width", 1))) / max(1, float(img.get("height", 1)))
+        min_scale = 0.62 if ratio > 1.35 else 0.78
+        scale = max(min_scale, min(1.0, scale))
+        if ratio > 1.35:
+            # Una bolsa horizontal puede ocupar tres veces el ancho de una
+            # botella aun con la misma altura. Limitamos su masa visual, no su
+            # legibilidad, para que no desplace al héroe fuera del conjunto.
+            scale = min(scale, max(min_scale, 1.12 / ratio))
+        img["scale"] = round(scale, 3)
+        result.append(img)
+    return result
 
 
 def _owned_by(info: dict, request: Request) -> bool:
@@ -569,7 +615,7 @@ def _resolve_render_params(body: dict, info: dict, info_file: Path):
         # Para las estrategias de IA usamos las imágenes ordenadas + escaladas
         # que persistió /ai-proposal
         strategy_id = cfg.get("sort_strategy", "auto")
-        layout_strategy_id = _layout_strategy_for_ai(strategy_id)
+        layout_strategy_id = _layout_strategy_for_ai(strategy_id, info.get("ai_layout_choices"))
         if _is_ai_strategy(strategy_id) and info.get("ai_images"):
             render_images = info["ai_images"]
         else:
@@ -581,12 +627,29 @@ def _resolve_render_params(body: dict, info: dict, info_file: Path):
             custom = info.get("ai_custom_layout") or {}
             if not custom.get("layout"):
                 raise HTTPException(400, "No hay una composición a medida generada todavía")
-            layout = compute_layout_ai_freeform(
-                images=custom["images"],
-                free_layout=custom["layout"],
-                base_height=int(cfg.get("base_height", 760)),
-                max_vertical_boost=float(cfg.get("max_vertical_boost", 1.20)),
-            )
+            if custom.get("strategy"):
+                layout = compute_layout_any(
+                    images=custom["images"],
+                    sort_strategy=AI_LAYOUT_ALIASES.get(custom["strategy"], custom["strategy"]),
+                    hero_name=custom.get("hero"),
+                    rows_count=int(cfg.get("rows_count", 0)),
+                    base_height=int(cfg.get("base_height", 760)),
+                    item_gap=int(cfg.get("item_gap", 40)),
+                    internal_padding=int(cfg.get("internal_padding", 120)),
+                    max_vertical_boost=1.0,
+                    aspect_w=int(cfg.get("aspect_w", 0)),
+                    aspect_h=int(cfg.get("aspect_h", 0)),
+                    tilt_angle=_tilt_angle_from_cfg(cfg),
+                )
+            else:
+                # Compatibilidad con composiciones libres guardadas antes del
+                # cambio a plantillas dirigidas.
+                layout = compute_layout_ai_freeform(
+                    images=custom["images"],
+                    free_layout=custom["layout"],
+                    base_height=int(cfg.get("base_height", 760)),
+                    max_vertical_boost=float(cfg.get("max_vertical_boost", 1.20)),
+                )
         elif strategy_id.startswith("ai_libre_"):
             options = info.get("ai_free_layout_options") or []
             idx = int(strategy_id.rsplit("_", 1)[-1]) - 1
@@ -595,7 +658,10 @@ def _resolve_render_params(body: dict, info: dict, info_file: Path):
                 images=render_images,
                 free_layout=free_layout,
                 base_height=int(cfg.get("base_height", 760)),
-                max_vertical_boost=float(cfg.get("max_vertical_boost", 1.20)),
+                max_vertical_boost=(
+                    1.0 if _is_ai_strategy(strategy_id)
+                    else float(cfg.get("max_vertical_boost", 1.20))
+                ),
             )
         else:
             layout = compute_layout_any(
@@ -605,10 +671,14 @@ def _resolve_render_params(body: dict, info: dict, info_file: Path):
                 base_height=int(cfg.get("base_height", 760)),
                 item_gap=int(cfg.get("item_gap", 40)),
                 internal_padding=int(cfg.get("internal_padding", 120)),
-                max_vertical_boost=float(cfg.get("max_vertical_boost", 1.20)),
+                max_vertical_boost=(
+                    1.0 if _is_ai_strategy(strategy_id)
+                    else float(cfg.get("max_vertical_boost", 1.20))
+                ),
                 aspect_w=int(cfg.get("aspect_w", 0)),
                 aspect_h=int(cfg.get("aspect_h", 0)),
                 tilt_angle=_tilt_angle_from_cfg(cfg),
+                hero_name=info.get("ai_hero") if _is_ai_strategy(strategy_id) else None,
             )
         background_style = cfg.get("background_style") or None
         zoom_detail = None
@@ -861,22 +931,26 @@ async def bodegon_ai_proposal(body: dict, request: Request):
     _session_dir, info_file, info = _load_session_info(session_id, request)
     cfg = body.get("config", {})
 
-    cached = bool(info.get("ai_images")) and bool(info.get("ai_free_layout_options"))
+    cached = bool(info.get("ai_images"))
     if cached and not body.get("force"):
-        ordered = info["ai_images"]
-        from ai_proposal import build_directed_free_layout_options
-        free_layout_options = build_directed_free_layout_options(
-            [img["name"] for img in ordered],
-            info.get("ai_hero", ""),
+        ordered = _visual_ai_images(
+            info["ai_images"],
+            [img["name"] for img in info["ai_images"]],
+            {img["name"]: img.get("scale", 1.0) for img in info["ai_images"]},
         )
-        info["ai_free_layout_options"] = free_layout_options
+        cached_names = [img["name"] for img in ordered]
+        cached_hero = info.get("ai_hero", "")
+        if cached_hero not in cached_names:
+            cached_hero = cached_names[0] if cached_names else ""
+        info["ai_images"] = ordered
+        info["ai_hero"] = cached_hero
         info_file.write_text(json.dumps(info, indent=2), encoding="utf-8")
         suggestion = {
-            "order": [img["name"] for img in ordered],
-            "hero": info.get("ai_hero", ""),
+            "order": cached_names,
+            "hero": cached_hero,
             "sizes": {img["name"]: img.get("scale", 1.0) for img in ordered},
+            "layouts": info.get("ai_layout_choices", {}),
             "detail_crop": info.get("ai_detail_crop"),
-            "free_layout_options": free_layout_options,
             "reasoning": info.get("ai_reasoning", ""),
         }
     else:
@@ -904,23 +978,16 @@ async def bodegon_ai_proposal(body: dict, request: Request):
         except Exception as e:
             raise _public_error("Error en análisis IA", e)
 
-        # Reordenar según la sugerencia de la IA y adjuntar el tamaño real relativo
-        name_to_img = {img["name"]: img for img in info["images"]}
-        sizes = suggestion.get("sizes", {})
-        ordered = []
-        for n in suggestion["order"]:
-            if n in name_to_img:
-                img = dict(name_to_img[n])
-                img["scale"] = float(sizes.get(n, 1.0))
-                ordered.append(img)
+        ordered = _visual_ai_images(
+            info["images"], suggestion["order"], suggestion.get("sizes", {})
+        )
 
-        # Persistir el orden + tamaños para que el render del PNG los respete,
-        # + la región de zoom y la composición libre sugeridas (si el usuario
-        # activa "Zoom de detalle" / elige la propuesta "IA · Libre")
+        # Persistir la dirección de arte para que miniatura, PNG y PSD usen la
+        # misma jerarquía y plantilla.
         info["ai_images"] = ordered
         info["ai_hero"] = suggestion.get("hero", "")
+        info["ai_layout_choices"] = suggestion.get("layouts", {})
         info["ai_detail_crop"] = suggestion.get("detail_crop")
-        info["ai_free_layout_options"] = suggestion.get("free_layout_options", [])
         info["ai_reasoning"] = suggestion.get("reasoning", "")
         info_file.write_text(json.dumps(info, indent=2), encoding="utf-8")
 
@@ -928,12 +995,13 @@ async def bodegon_ai_proposal(body: dict, request: Request):
     def _ai_layout(strategy_id: str):
         return compute_layout_any(
             images=ordered,
-            sort_strategy=_layout_strategy_for_ai(strategy_id),
+            sort_strategy=_layout_strategy_for_ai(strategy_id, suggestion.get("layouts")),
+            hero_name=suggestion.get("hero"),
             rows_count=int(cfg.get("rows_count", 0)),
             base_height=int(cfg.get("base_height", 760)),
             item_gap=int(cfg.get("item_gap", 40)),
             internal_padding=int(cfg.get("internal_padding", 120)),
-            max_vertical_boost=float(cfg.get("max_vertical_boost", 1.20)),
+            max_vertical_boost=1.0,
             aspect_w=int(cfg.get("aspect_w", 0)),
             aspect_h=int(cfg.get("aspect_h", 0)),
             tilt_angle=_tilt_angle_from_cfg(cfg),
@@ -941,7 +1009,7 @@ async def bodegon_ai_proposal(body: dict, request: Request):
 
     variants = [
         {"id": vid, "label": label, "desc": desc, "layout": _ai_layout(vid)}
-        for vid, label, desc, _layout_strategy in AI_VARIANT_DEFS
+        for vid, label, desc, _style in AI_VARIANT_DEFS
     ]
 
     return {
@@ -993,23 +1061,23 @@ async def bodegon_ai_custom_layout(body: dict, request: Request):
     except Exception as e:
         raise _public_error("Error en análisis IA", e)
 
-    # Igual que /ai-proposal: cada producto lleva su propio scale (acá, el
-    # que estimó ESTA llamada aislada — no el de /ai-proposal, puede no
-    # haberse ejecutado todavía).
-    name_to_img = {img["name"]: img for img in info["images"]}
-    sizes = result["sizes"]
-    images_with_scale = []
-    for n, img in name_to_img.items():
-        img2 = dict(img)
-        img2["scale"] = float(sizes.get(n, 1.0))
-        images_with_scale.append(img2)
+    images_with_scale = _visual_ai_images(
+        info["images"], result["order"], result["sizes"]
+    )
 
     cfg = body.get("config", {})
-    layout = compute_layout_ai_freeform(
+    layout = compute_layout_any(
         images=images_with_scale,
-        free_layout=result["layout"],
+        sort_strategy=AI_LAYOUT_ALIASES.get(result["strategy"], result["strategy"]),
+        hero_name=result["hero"],
+        rows_count=int(cfg.get("rows_count", 0)),
         base_height=int(cfg.get("base_height", 760)),
-        max_vertical_boost=float(cfg.get("max_vertical_boost", 1.20)),
+        item_gap=int(cfg.get("item_gap", 40)),
+        internal_padding=int(cfg.get("internal_padding", 120)),
+        max_vertical_boost=1.0,
+        aspect_w=int(cfg.get("aspect_w", 0)),
+        aspect_h=int(cfg.get("aspect_h", 0)),
+        tilt_angle=_tilt_angle_from_cfg(cfg),
     )
 
     # Se guarda aparte de ai_free_layout_options — un solo "a medida" activo
@@ -1017,15 +1085,17 @@ async def bodegon_ai_custom_layout(body: dict, request: Request):
     # no se acumulan tarjetas infinitas).
     info["ai_custom_layout"] = {
         "label": result["label"],
-        "layout": result["layout"],
+        "layout": layout,
+        "strategy": result["strategy"],
+        "hero": result["hero"],
         "images": images_with_scale,
     }
     info_file.write_text(json.dumps(info, indent=2), encoding="utf-8")
 
     return {
         "id": "ai_custom",
-        "label": f"IA · Libre — {result['label']}",
-        "desc": "Composición 100% según tu descripción",
+        "label": f"IA · A medida — {result['label']}",
+        "desc": "Dirección visual basada en tu descripción",
         "layout": layout,
     }
 

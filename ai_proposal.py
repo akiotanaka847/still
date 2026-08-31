@@ -8,9 +8,9 @@ Proveedores soportados:
   - Claude  (anthropic)      → modelo claude-sonnet-4-6
   - OpenAI  (openai)         → modelo gpt-5.1
 
-Los cuatro devuelven el MISMO contrato: {order, hero, sizes, detail_crop, reasoning}.
-El fondo sigue siendo transparente: la IA solo decide el ORDEN/TAMAÑO/zoom, el
-motor geométrico (layout.py) compone igual que siempre.
+Los cuatro devuelven el MISMO contrato: {order, hero, sizes, layouts,
+detail_crop, reasoning}. El fondo sigue siendo transparente: la IA dirige la
+jerarquía y el motor geométrico (layout.py) compone con plantillas seguras.
 """
 import base64
 import io
@@ -26,24 +26,25 @@ except ImportError:
     PIL_AVAILABLE = False
 
 
+LAYOUT_STYLE_POOLS = {
+    "dynamic": ("impacto", "cruce", "cascada"),
+    "elegant": ("profundidad", "profundidad_grad", "fila_recta"),
+    "editorial": ("radial", "flotante", "cascada"),
+}
+LAYOUT_STYLE_DEFAULTS = {
+    "dynamic": "impacto",
+    "elegant": "profundidad",
+    "editorial": "radial",
+}
+CUSTOM_LAYOUTS = {
+    "impacto", "profundidad", "profundidad_grad", "fila_recta", "cruce",
+    "cascada", "radial", "flotante", "inclinado_derecha", "inclinado_izquierda",
+}
+
+
 # ─── Helpers compartidos ──────────────────────────────────────────────────────
 def _dynamic_max_tokens(n: int, base: int = 800, per_item: int = 220, cap: int = 16000) -> int:
-    """El JSON de respuesta escala con la cantidad de productos — sobre todo
-    por 'free_layout_options' (3 composiciones libres, cada una con
-    cx/cy/rotation POR PRODUCTO). Con un límite fijo, un grupo grande corta
-    la respuesta a la mitad de una entrada y json.loads() falla con
-    'Expecting X delimiter' — no es que la IA "se equivoque", es que no la
-    dejamos terminar de escribir. Se calcula un presupuesto proporcional a
-    la cantidad de productos en vez de un número fijo pensado para pocos.
-
-    Los defaults tienen que alcanzar sin problema hasta MAX_FILES (60,
-    ver main.py) — el techo real de productos por grupo que permite la
-    app. per_item=220 (antes 140) porque el nombre de cada producto se
-    repite hasta 5 veces en el JSON (en 'order', 'sizes' y las 3 de
-    'free_layout_options'), y con nombres largos tipo código de barras
-    ('7501000111602_F_1675808320287') eso pesa bastante más de lo que
-    parece a simple vista — se confirmó truncando en la práctica con un
-    grupo de 60 productos reales antes de subir este ajuste."""
+    """Escala el presupuesto para listas grandes y nombres de SKU largos."""
     return min(cap, base + per_item * max(1, n))
 
 
@@ -109,11 +110,9 @@ Criterios de evaluación:
 Productos y siluetas aproximadas:
 {product_brief}
 
-TAMAÑO REAL (muy importante): estima el tamaño físico real de cada producto según lo que ES
-(p. ej. una botella de 1L es mucho más grande que un serum de 30ml o una barra de labial).
-NO te bases en el tamaño del recorte de la imagen, sino en el tamaño real del producto en la vida real.
-Asigna a cada producto un valor de tamaño relativo entre 0.3 y 1.0, donde 1.0 = el producto más
-grande del conjunto y los demás en proporción (un producto que mide la mitad de alto ≈ 0.5).
+ESCALA DE PRESENTACIÓN (muy importante): asigna a cada producto una escala visual entre 0.75
+y 1.0. No intentes reproducir su tamaño físico real: esto es una pieza publicitaria y todos
+deben ser reconocibles. Usa 1.0 para el héroe y diferencias moderadas para los acompañantes.
 
 ZOOM DE DETALLE: además, mirando específicamente el producto "héroe", identifica una zona
 pequeña con contenido interesante para un close-up ampliado (un logo, un sello, texto
@@ -122,10 +121,12 @@ un recuadro en fracciones de 0.0 a 1.0 relativas SOLO al recuadro del héroe (x,
 superior izquierda del recuadro; w,h = ancho/alto), pensado para una burbuja circular de
 zoom de ~30% de ancho x 20% de alto del producto.
 
-COMPOSICIÓN VISUAL: no inventes coordenadas ni posiciones exactas. El sistema generará tres
-composiciones coherentes (Dinámica, Elegante y Editorial) usando reglas deterministas a partir
-de tu análisis. Tu tarea es entregar una buena dirección visual: orden, héroe y tamaños reales.
-Eso es lo que más impacta la composición final.
+COMPOSICIÓN VISUAL: no inventes coordenadas. Elige una plantilla para cada intención usando
+solo estas opciones:
+- dynamic: impacto, cruce o cascada
+- elegant: profundidad, profundidad_grad o fila_recta
+- editorial: radial, flotante o cascada
+Elige según la cantidad, siluetas y contraste del grupo; evita repetir la misma plantilla.
 
 Reglas para tu análisis:
 - Si hay 2 productos, elige un héroe claro y un acompañante visible.
@@ -140,7 +141,8 @@ Responde ÚNICAMENTE con este JSON (sin texto adicional, sin markdown):
 {{
   "order": [lista con los {len(names)} nombres exactos en el orden sugerido],
   "hero": "nombre del producto más prominente",
-  "sizes": {{"NOMBRE_EXACTO": tamaño_relativo_0.3_a_1.0, ...}} para los {len(names)} productos,
+  "sizes": {{"NOMBRE_EXACTO": escala_visual_0.75_a_1.0, ...}} para los {len(names)} productos,
+  "layouts": {{"dynamic":"impacto", "elegant":"profundidad", "editorial":"radial"}},
   "detail_crop": {{"x": 0.0_a_1.0, "y": 0.0_a_1.0, "w": 0.0_a_1.0, "h": 0.0_a_1.0}},
   "reasoning": "explicación de 1-2 oraciones en español que mencione el orden y los tamaños"
 }}"""
@@ -161,7 +163,9 @@ def _parse_result(raw: str, names: list) -> dict:
     result = json.loads(m.group(0))
 
     valid = set(names)
-    result["order"] = [n for n in result.get("order", []) if n in valid]
+    raw_order = result.get("order")
+    raw_order = raw_order if isinstance(raw_order, list) else []
+    result["order"] = [n for n in raw_order if n in valid]
     missing = [n for n in names if n not in set(result["order"])]
     result["order"].extend(missing)
     result.setdefault("hero", result["order"][0] if result["order"] else "")
@@ -169,8 +173,8 @@ def _parse_result(raw: str, names: list) -> dict:
         result["hero"] = result["order"][0] if result["order"] else ""
     result.setdefault("reasoning", "")
     result["sizes"] = _normalize_sizes(result.get("sizes", {}), names)
+    result["layouts"] = _normalize_layout_choices(result.get("layouts"))
     result["detail_crop"] = _normalize_detail_crop(result.get("detail_crop"))
-    result["free_layout_options"] = build_directed_free_layout_options(names, result.get("hero"))
     return result
 
 
@@ -393,8 +397,8 @@ def _normalize_detail_crop(crop):
 
 
 def _normalize_sizes(sizes: dict, names: list) -> dict:
-    """Normaliza los tamaños de la IA: el mayor = 1.0, resto en proporción, mín 0.3."""
-    sizes = sizes or {}
+    """Convierte escalas de IA en jerarquía publicitaria moderada y legible."""
+    sizes = sizes if isinstance(sizes, dict) else {}
     raw = {}
     for n in names:
         v = sizes.get(n)
@@ -413,9 +417,26 @@ def _normalize_sizes(sizes: dict, names: list) -> dict:
     mx = max(present) if present else 1.0
     out = {}
     for n in names:
-        v = raw[n] if raw[n] else 0.7 * mx   # neutro si la IA no lo dio
-        out[n] = round(max(0.3, min(1.0, v / mx)), 3)
+        v = raw[n] if raw[n] else 0.88 * mx
+        normalized = max(0.0, min(1.0, v / mx))
+        out[n] = round(0.78 + 0.22 * normalized, 3)
     return out
+
+
+def _normalize_layout_choices(layouts) -> dict:
+    layouts = layouts if isinstance(layouts, dict) else {}
+    selected = {}
+    used = set()
+    for style, allowed in LAYOUT_STYLE_POOLS.items():
+        choice = str(layouts.get(style) or "").strip().lower()
+        if choice not in allowed or choice in used:
+            choice = next(
+                (candidate for candidate in allowed if candidate not in used),
+                LAYOUT_STYLE_DEFAULTS[style],
+            )
+        selected[style] = choice
+        used.add(choice)
+    return selected
 
 
 def _available_images(images: list) -> list:
@@ -585,7 +606,7 @@ def analyze_products(
 
     provider: "groq" | "gemini" | "claude" | "openai" | None
               (auto: groq → gemini → claude → openai, según la primera key disponible).
-    Returns: {order: [nombres], hero: nombre, reasoning: str}
+    Returns: {order, hero, sizes, layouts, detail_crop, reasoning}
     """
     if not PIL_AVAILABLE:
         raise RuntimeError("Pillow no instalado")
@@ -641,44 +662,41 @@ def _build_custom_layout_prompt(images_or_names: list, custom_prompt: str) -> st
     return f"""Eres un director de arte de fotografía de producto. Te muestro {len(names)} productos
 (fotos reales) y el pedido de un cliente sobre cómo componerlos.
 
-ESTE ES EL ÚNICO CRITERIO DE TODA LA TAREA — no hay otra consigna estética, no hay estilos
-predefinidos que seguir. Cumple el pedido con la mayor fidelidad literal posible. El límite
-obligatorio es que, si hay más de un producto, deben verse como una composición coherente:
-jerarquía clara, centros separados, productos reconocibles y una relación visual entre ellos.
-Ningún producto puede quedar totalmente tapado por otro o cortado fuera del lienzo. Más allá
-de eso, prioriza el pedido
-por sobre cualquier otro criterio de composición que se te ocurra.
+ESTE ES EL CRITERIO PRINCIPAL DE LA TAREA. Interprétalo como dirección de arte y elige la
+plantilla geométrica que mejor lo representa. Las plantillas disponibles son:
+- impacto: abanico publicitario con héroe
+- profundidad: grupo premium recto y solapado
+- profundidad_grad: pirámide escalonada
+- fila_recta: limpia, ordenada y sin inclinación
+- cruce: productos inclinados hacia el centro
+- cascada: diagonal con movimiento
+- radial: composición abierta que irradia desde el centro
+- flotante: alturas distintas y aire editorial
+- inclinado_derecha o inclinado_izquierda: inclinación uniforme
+Todos los productos deben seguir visibles y reconocibles.
 
 PEDIDO DEL CLIENTE: "{custom_prompt}"
 
 Productos:
 {product_brief}
 
-Además, para que los productos se vean en proporción entre sí como en un bodegón real, estima
-el tamaño físico real de cada uno (no el tamaño del recorte de la foto) — un valor entre 0.3 y
-1.0, donde 1.0 es el producto más grande del conjunto.
-
-Para cada producto, sobre un lienzo cuadrado imaginario de 0.0 a 1.0 en cada eje (0,0 =
-arriba-izquierda, 1,1 = abajo-derecha), dame el CENTRO (cx, cy — entre 0.12 y 0.88 en ambos
-ejes) y la rotación en grados (-35 a 35; usa 0 salvo que el pedido mencione ángulos o
-inclinación). Si hay 2 o 3 productos, separa sus centros al menos 0.20; si hay más, al menos
-0.14 salvo solapamientos leves e intencionales.
+Asigna escalas de presentación entre 0.75 y 1.0. El héroe usa 1.0 y los demás mantienen
+diferencias moderadas: la prioridad es que la pieza se vea atractiva, no reproducir tamaño físico.
 
 Nombres exactos de los productos: {json.dumps(names)}
 
 Responde ÚNICAMENTE con este JSON (sin texto adicional, sin markdown):
 {{
   "label": "nombre corto (2-4 palabras) que resuma esta composición",
-  "sizes": {{"NOMBRE_EXACTO": tamaño_relativo_0.3_a_1.0, ...}} para los {len(names)} productos,
-  "layout": {{"NOMBRE_EXACTO": {{"cx":0.0_a_1.0,"cy":0.0_a_1.0,"rotation":-35_a_35}}, ...}} para los {len(names)} productos
+  "strategy": "impacto",
+  "order": [lista con los {len(names)} nombres exactos en orden visual],
+  "hero": "nombre exacto del producto protagonista",
+  "sizes": {{"NOMBRE_EXACTO": escala_visual_0.75_a_1.0, ...}} para los {len(names)} productos
 }}"""
 
 
 def _parse_custom_result(raw: str, names: list) -> dict:
-    """Igual que _parse_result pero para el contrato más chico de la
-    composición a medida — sin order/hero/detail_crop/free_layout_options.
-    Reusa _normalize_sizes/_normalize_free_layout: mismo criterio de
-    clamping que ya usa el resto de la app."""
+    """Valida la dirección personalizada y la limita a plantillas seguras."""
     raw = (raw or "").strip()
     raw = re.sub(r"^```(?:json)?", "", raw).strip()
     raw = re.sub(r"```$", "", raw).strip()
@@ -690,10 +708,22 @@ def _parse_custom_result(raw: str, names: list) -> dict:
         )
     result = json.loads(m.group(0))
     label = str(result.get("label") or "A medida").strip()[:40] or "A medida"
+    raw_order = result.get("order")
+    raw_order = raw_order if isinstance(raw_order, list) else []
+    order = [name for name in raw_order if name in set(names)]
+    order.extend(name for name in names if name not in order)
+    hero = result.get("hero")
+    if hero not in names:
+        hero = order[0] if order else ""
+    strategy = str(result.get("strategy") or "profundidad").strip().lower()
+    if strategy not in CUSTOM_LAYOUTS:
+        strategy = "profundidad"
     return {
         "label": label,
+        "strategy": strategy,
+        "order": order,
+        "hero": hero,
         "sizes": _normalize_sizes(result.get("sizes", {}), names),
-        "layout": _normalize_free_layout(result.get("layout"), names),
     }
 
 
@@ -824,8 +854,8 @@ def analyze_custom_layout(
     provider: str = None,
 ) -> dict:
     """Composición dirigida ÚNICA Y EXCLUSIVAMENTE por custom_prompt — llamada
-    aislada, no reutiliza ni compite con el análisis de analyze_products()
-    (order/hero/sizes/detail_crop/3 estilos fijos). Returns: {label, sizes, layout}."""
+    aislada, no reutiliza ni compite con el análisis de analyze_products().
+    Returns: {label, strategy, order, hero, sizes}."""
     if not PIL_AVAILABLE:
         raise RuntimeError("Pillow no instalado")
     custom_prompt = (custom_prompt or "").strip()[:MAX_CUSTOM_PROMPT_LEN]
