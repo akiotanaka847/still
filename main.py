@@ -54,6 +54,11 @@ ALLOWED_ORIGINS = [
 MAX_FILE_MB = int(os.environ.get("MAX_FILE_MB", "25"))
 MAX_FILES = int(os.environ.get("MAX_FILES", "60"))
 MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024
+SESSION_TTL_HOURS = int(os.environ.get("SESSION_TTL_HOURS", "24"))
+BATCH_TTL_HOURS = int(os.environ.get("BATCH_TTL_HOURS", "24"))
+RENDER_RATE_LIMIT = int(os.environ.get("RENDER_RATE_LIMIT", "30"))
+AI_RATE_LIMIT = int(os.environ.get("AI_RATE_LIMIT", "12"))
+AI_IMAGE_RATE_LIMIT = int(os.environ.get("AI_IMAGE_RATE_LIMIT", "4"))
 
 
 # ─── Rate limiting (ventana deslizante en memoria, sin dependencias) ──────────
@@ -80,6 +85,15 @@ def _client_ip(request: Request) -> str:
     if fwd:
         return fwd.split(",")[0].strip()
     return request.client.host if request.client else "unknown"
+
+
+def _rate_identity(request: Request) -> str:
+    return request.session.get("user") or _client_ip(request)
+
+
+def _require_rate_limit(request: Request, bucket: str, limit: int, window_s: int) -> None:
+    if not _rate_limit(f"{bucket}:{_rate_identity(request)}", limit=limit, window_s=window_s):
+        raise HTTPException(429, "Demasiadas solicitudes. Espera un momento.")
 
 
 # ─── Directorios ─────────────────────────────────────────────────────────────
@@ -140,9 +154,25 @@ def _verify_pw(pw: str, stored: str) -> bool:
 
 # ─── Helpers internos ─────────────────────────────────────────────────────────
 def _cleanup_old_sessions() -> None:
-    cutoff = time.time() - 86_400  # 24 horas
+    session_cutoff = time.time() - SESSION_TTL_HOURS * 3600
+    batch_cutoff = time.time() - BATCH_TTL_HOURS * 3600
     for d in SESSIONS_DIR.iterdir():
-        if d.is_dir() and d.stat().st_mtime < cutoff:
+        if not d.is_dir():
+            continue
+        if d.name == "_batch":
+            for bd in d.iterdir():
+                if bd.is_dir() and bd.stat().st_mtime < batch_cutoff:
+                    shutil.rmtree(bd, ignore_errors=True)
+            continue
+        info_file = d / "bodegon.json"
+        if info_file.exists():
+            try:
+                info = json.loads(info_file.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                info = {}
+            if info.get("owner"):
+                continue
+        if d.stat().st_mtime < session_cutoff:
             shutil.rmtree(d, ignore_errors=True)
 
 
@@ -150,6 +180,34 @@ def _safe_name(name: str) -> str:
     name = Path(name).name
     name = re.sub(r"[^\w\-_. ]", "_", name)
     return (name[:255] or "file")
+
+
+def _valid_uuid(value: str) -> bool:
+    return bool(re.match(r"^[0-9a-f\-]{36}$", value or ""))
+
+
+def _load_session_info(session_id: str, request: Request) -> tuple[Path, Path, dict]:
+    """Carga una sesión y verifica que sea del usuario actual."""
+    if not _valid_uuid(session_id):
+        raise HTTPException(400, "Session ID inválido")
+    session_dir = SESSIONS_DIR / session_id
+    info_file = session_dir / "bodegon.json"
+    if not info_file.exists():
+        raise HTTPException(404, "Sesión no encontrada")
+    try:
+        info = json.loads(info_file.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        raise HTTPException(404, "Sesión no encontrada")
+    if not _owned_by(info, request):
+        raise HTTPException(404, "Sesión no encontrada")
+    return session_dir, info_file, info
+
+
+def _public_error(message: str, exc: Exception) -> HTTPException:
+    """Evita filtrar paths o detalles de SDKs cuando DEBUG está apagado."""
+    _logger.exception("%s: %s", message, exc)
+    detail = f"{message}: {exc}" if DEBUG else message
+    return HTTPException(500, detail)
 
 
 # ─── Lifespan ─────────────────────────────────────────────────────────────────
@@ -476,18 +534,10 @@ async def bodegon_upload(
 
 
 @app.post("/api/bodegon/compute")
-async def bodegon_compute(body: dict):
+async def bodegon_compute(body: dict, request: Request):
     """Calcula el layout y retorna las posiciones de cada producto."""
     session_id = body.get("session_id", "")
-    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
-        raise HTTPException(400, "Session ID inválido")
-
-    session_dir = SESSIONS_DIR / session_id
-    info_file = session_dir / "bodegon.json"
-    if not info_file.exists():
-        raise HTTPException(404, "Sesión no encontrada")
-
-    info = json.loads(info_file.read_text(encoding="utf-8"))
+    _session_dir, info_file, info = _load_session_info(session_id, request)
 
     cfg = body.get("config", {})
     layout = compute_layout_any(
@@ -592,18 +642,11 @@ def _resolve_render_params(body: dict, info: dict, info_file: Path):
 
 
 @app.post("/api/bodegon/render")
-async def bodegon_render(body: dict):
+async def bodegon_render(body: dict, request: Request):
     """Renderiza el bodegón como PNG y lo guarda en la sesión."""
+    _require_rate_limit(request, "render", RENDER_RATE_LIMIT, 3600)
     session_id = body.get("session_id", "")
-    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
-        raise HTTPException(400, "Session ID inválido")
-
-    session_dir = SESSIONS_DIR / session_id
-    info_file = session_dir / "bodegon.json"
-    if not info_file.exists():
-        raise HTTPException(404, "Sesión no encontrada")
-
-    info = json.loads(info_file.read_text(encoding="utf-8"))
+    session_dir, info_file, info = _load_session_info(session_id, request)
     layout, background_style, zoom_detail, shadow_enabled = _resolve_render_params(body, info, info_file)
 
     output_dir = session_dir / "output"
@@ -611,34 +654,29 @@ async def bodegon_render(body: dict):
     out_path = output_dir / "bodegon.png"
 
     try:
-        render_png(
+        await run_in_threadpool(
+            render_png,
             layout, str(out_path),
-            background_path=info.get("background_path"),
-            background_style=(background_style if background_style != "none" else None),
-            zoom_detail=zoom_detail,
-            shadow=shadow_enabled,
+            info.get("background_path"),
+            background_style if background_style != "none" else None,
+            zoom_detail,
+            True,
+            shadow_enabled,
         )
     except Exception as e:
-        raise HTTPException(500, f"Error renderizando PNG: {e}")
+        raise _public_error("Error renderizando PNG", e)
 
     return {"session_id": session_id, "filename": "bodegon.png"}
 
 
 @app.post("/api/bodegon/render-psd")
-async def bodegon_render_psd(body: dict):
+async def bodegon_render_psd(body: dict, request: Request):
     """Renderiza el bodegón como PSD con cada producto en su propia capa
     editable (ver renderer.render_psd) y lo guarda en la sesión. No soporta
     zoom de detalle (se ignora si está activo — queda fuera del PSD)."""
+    _require_rate_limit(request, "render_psd", RENDER_RATE_LIMIT, 3600)
     session_id = body.get("session_id", "")
-    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
-        raise HTTPException(400, "Session ID inválido")
-
-    session_dir = SESSIONS_DIR / session_id
-    info_file = session_dir / "bodegon.json"
-    if not info_file.exists():
-        raise HTTPException(404, "Sesión no encontrada")
-
-    info = json.loads(info_file.read_text(encoding="utf-8"))
+    session_dir, info_file, info = _load_session_info(session_id, request)
     layout, background_style, _zoom_detail, shadow_enabled = _resolve_render_params(body, info, info_file)
 
     output_dir = session_dir / "output"
@@ -646,40 +684,36 @@ async def bodegon_render_psd(body: dict):
     out_path = output_dir / "bodegon.psd"
 
     try:
-        render_psd(
+        await run_in_threadpool(
+            render_psd,
             layout, str(out_path),
-            background_path=info.get("background_path"),
-            background_style=(background_style if background_style != "none" else None),
-            shadow=shadow_enabled,
+            info.get("background_path"),
+            background_style if background_style != "none" else None,
+            True,
+            shadow_enabled,
         )
     except Exception as e:
-        raise HTTPException(500, f"Error renderizando PSD: {e}")
+        raise _public_error("Error renderizando PSD", e)
 
     return {"session_id": session_id, "filename": "bodegon.psd"}
 
 
 @app.post("/api/bodegon/ai-generate-image")
-async def bodegon_ai_generate_image(body: dict):
+async def bodegon_ai_generate_image(body: dict, request: Request):
     """Genera el bodegón COMPLETO con IA generativa (gpt-image-2, images.edit)
     — modo alternativo y experimental al pipeline determinista: acá la IA
     redibuja la imagen final directamente a partir de las fotos de referencia
     (no un layout que después renderiza Pillow, sin tocar píxeles). Solo
     requiere OPENAI_API_KEY (es el único proveedor con este modelo). Ver
     image_gen.py."""
+    _require_rate_limit(request, "ai_image", AI_IMAGE_RATE_LIMIT, 3600)
     session_id = body.get("session_id", "")
-    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
-        raise HTTPException(400, "Session ID inválido")
-
-    session_dir = SESSIONS_DIR / session_id
-    info_file = session_dir / "bodegon.json"
-    if not info_file.exists():
-        raise HTTPException(404, "Sesión no encontrada")
+    session_dir, _info_file, info = _load_session_info(session_id, request)
 
     openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
     if not openai_key:
         raise HTTPException(503, "Configura OPENAI_API_KEY en .env para usar este modo")
 
-    info = json.loads(info_file.read_text(encoding="utf-8"))
     custom_prompt = (body.get("custom_prompt") or "").strip()
 
     try:
@@ -691,7 +725,7 @@ async def bodegon_ai_generate_image(body: dict):
             generate_bodegon_image, info["images"], openai_key, custom_prompt
         )
     except Exception as e:
-        raise HTTPException(500, f"Error generando imagen con IA: {e}")
+        raise _public_error("Error generando imagen con IA", e)
 
     output_dir = session_dir / "output"
     output_dir.mkdir(exist_ok=True)
@@ -704,14 +738,7 @@ async def bodegon_ai_generate_image(body: dict):
 @app.get("/api/bodegon/ai-generated-file/{session_id}")
 async def bodegon_ai_generated_file(session_id: str, request: Request):
     """Descarga/muestra el PNG generado por /ai-generate-image."""
-    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
-        raise HTTPException(400, "Session ID inválido")
-    session_dir = SESSIONS_DIR / session_id
-    info_file = session_dir / "bodegon.json"
-    if info_file.exists():
-        info = json.loads(info_file.read_text(encoding="utf-8"))
-        if not _owned_by(info, request):
-            raise HTTPException(404, "PNG no encontrado. Generalo primero.")
+    session_dir, _info_file, _info = _load_session_info(session_id, request)
     out = session_dir / "output" / "bodegon_ai.png"
     if not out.exists():
         raise HTTPException(404, "PNG no encontrado. Generalo primero.")
@@ -724,14 +751,7 @@ async def bodegon_ai_generated_psd(session_id: str, request: Request):
     (no hay productos separados que envolver en capas — ver
     image_gen.wrap_as_psd). Convierte al vuelo el PNG ya generado por
     /ai-generate-image, no dispara una nueva llamada a la IA."""
-    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
-        raise HTTPException(400, "Session ID inválido")
-    session_dir = SESSIONS_DIR / session_id
-    info_file = session_dir / "bodegon.json"
-    if info_file.exists():
-        info = json.loads(info_file.read_text(encoding="utf-8"))
-        if not _owned_by(info, request):
-            raise HTTPException(404, "PNG no encontrado. Generalo primero.")
+    session_dir, _info_file, _info = _load_session_info(session_id, request)
     src = session_dir / "output" / "bodegon_ai.png"
     if not src.exists():
         raise HTTPException(404, "PNG no encontrado. Generalo primero.")
@@ -739,7 +759,7 @@ async def bodegon_ai_generated_psd(session_id: str, request: Request):
         from image_gen import wrap_as_psd
         psd_bytes = wrap_as_psd(src.read_bytes())
     except Exception as e:
-        raise HTTPException(500, f"Error generando PSD: {e}")
+        raise _public_error("Error generando PSD", e)
     return Response(
         content=psd_bytes,
         media_type="image/vnd.adobe.photoshop",
@@ -761,14 +781,7 @@ async def bodegon_background_styles():
 @app.get("/api/bodegon/download/{session_id}")
 async def bodegon_download(session_id: str, request: Request):
     """Descarga el PNG generado."""
-    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
-        raise HTTPException(400, "Session ID inválido")
-    session_dir = SESSIONS_DIR / session_id
-    info_file = session_dir / "bodegon.json"
-    if info_file.exists():
-        info = json.loads(info_file.read_text(encoding="utf-8"))
-        if not _owned_by(info, request):
-            raise HTTPException(404, "PNG no encontrado. Ejecuta el render primero.")
+    session_dir, _info_file, _info = _load_session_info(session_id, request)
     out = session_dir / "output" / "bodegon.png"
     if not out.exists():
         raise HTTPException(404, "PNG no encontrado. Ejecuta el render primero.")
@@ -778,14 +791,7 @@ async def bodegon_download(session_id: str, request: Request):
 @app.get("/api/bodegon/download-psd/{session_id}")
 async def bodegon_download_psd(session_id: str, request: Request):
     """Descarga el PSD generado (capas editables por producto)."""
-    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
-        raise HTTPException(400, "Session ID inválido")
-    session_dir = SESSIONS_DIR / session_id
-    info_file = session_dir / "bodegon.json"
-    if info_file.exists():
-        info = json.loads(info_file.read_text(encoding="utf-8"))
-        if not _owned_by(info, request):
-            raise HTTPException(404, "PSD no encontrado. Ejecuta el render primero.")
+    session_dir, _info_file, _info = _load_session_info(session_id, request)
     out = session_dir / "output" / "bodegon.psd"
     if not out.exists():
         raise HTTPException(404, "PSD no encontrado. Ejecuta el render primero.")
@@ -828,15 +834,7 @@ async def bodegon_session_get(session_id: str, request: Request):
     """Devuelve el estado completo de una sesión propia para reabrirla (Mis
     bodegones / precarga automática): productos + la última propuesta
     guardada, si hay una."""
-    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
-        raise HTTPException(400, "Session ID inválido")
-    session_dir = SESSIONS_DIR / session_id
-    info_file = session_dir / "bodegon.json"
-    if not info_file.exists():
-        raise HTTPException(404, "Sesión no encontrada")
-    info = json.loads(info_file.read_text(encoding="utf-8"))
-    if info.get("owner") != request.session.get("user"):
-        raise HTTPException(404, "Sesión no encontrada")
+    _session_dir, _info_file, info = _load_session_info(session_id, request)
     return {
         "session_id": session_id,
         "images": [{"name": i["name"], "filename": i["filename"]} for i in info.get("images", [])],
@@ -849,15 +847,7 @@ async def bodegon_product_file(session_id: str, filename: str, request: Request)
     """Sirve la foto original de un producto ya subido (para repintar el
     preview en el navegador al reabrir una sesión propia — no requiere volver
     a subir nada)."""
-    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
-        raise HTTPException(400, "Session ID inválido")
-    session_dir = SESSIONS_DIR / session_id
-    info_file = session_dir / "bodegon.json"
-    if not info_file.exists():
-        raise HTTPException(404, "Sesión no encontrada")
-    info = json.loads(info_file.read_text(encoding="utf-8"))
-    if info.get("owner") != request.session.get("user"):
-        raise HTTPException(404, "Sesión no encontrada")
+    session_dir, _info_file, _info = _load_session_info(session_id, request)
     fp = session_dir / "products" / Path(filename).name   # .name neutraliza / y ..
     if not fp.exists():
         raise HTTPException(404, "Archivo no encontrado")
@@ -865,62 +855,69 @@ async def bodegon_product_file(session_id: str, filename: str, request: Request)
 
 
 @app.post("/api/bodegon/ai-proposal")
-async def bodegon_ai_proposal(body: dict):
+async def bodegon_ai_proposal(body: dict, request: Request):
     """Analiza los productos con Claude Vision y devuelve el orden óptimo + layout."""
     session_id = body.get("session_id", "")
-    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
-        raise HTTPException(400, "Session ID inválido")
-
-    session_dir = SESSIONS_DIR / session_id
-    info_file = session_dir / "bodegon.json"
-    if not info_file.exists():
-        raise HTTPException(404, "Sesión no encontrada")
-
-    groq_key = os.environ.get("GROQ_API_KEY", "").strip()
-    gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-    openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
-    provider = os.environ.get("AI_PROVIDER", "").strip().lower() or None
-    if not (groq_key or gemini_key or anthropic_key or openai_key):
-        raise HTTPException(503, "Configura GROQ_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY u OPENAI_API_KEY en .env")
-
-    info = json.loads(info_file.read_text(encoding="utf-8"))
-
-    try:
-        from ai_proposal import analyze_products
-        suggestion = analyze_products(
-            info["images"],
-            groq_key=groq_key or None,
-            gemini_key=gemini_key or None,
-            anthropic_key=anthropic_key or None,
-            openai_key=openai_key or None,
-            provider=provider,
-        )
-    except Exception as e:
-        raise HTTPException(500, f"Error en análisis IA: {e}")
-
-    # Reordenar según la sugerencia de la IA y adjuntar el tamaño real relativo
-    name_to_img = {img["name"]: img for img in info["images"]}
-    sizes = suggestion.get("sizes", {})
-    ordered = []
-    for n in suggestion["order"]:
-        if n in name_to_img:
-            img = dict(name_to_img[n])
-            img["scale"] = float(sizes.get(n, 1.0))
-            ordered.append(img)
-
-    # Persistir el orden + tamaños para que el render del PNG los respete,
-    # + la región de zoom y la composición libre sugeridas (si el usuario
-    # activa "Zoom de detalle" / elige la propuesta "IA · Libre")
-    info["ai_images"] = ordered
-    info["ai_hero"] = suggestion.get("hero", "")
-    info["ai_detail_crop"] = suggestion.get("detail_crop")
-    info["ai_free_layout_options"] = suggestion.get("free_layout_options", [])
-    info_file.write_text(json.dumps(info, indent=2), encoding="utf-8")
-
-    # Varias propuestas IA desde el MISMO análisis (orden + tamaños), distinto layout
+    _session_dir, info_file, info = _load_session_info(session_id, request)
     cfg = body.get("config", {})
 
+    cached = bool(info.get("ai_images")) and bool(info.get("ai_free_layout_options"))
+    if cached and not body.get("force"):
+        ordered = info["ai_images"]
+        suggestion = {
+            "order": [img["name"] for img in ordered],
+            "hero": info.get("ai_hero", ""),
+            "sizes": {img["name"]: img.get("scale", 1.0) for img in ordered},
+            "detail_crop": info.get("ai_detail_crop"),
+            "free_layout_options": info.get("ai_free_layout_options", []),
+            "reasoning": info.get("ai_reasoning", ""),
+        }
+    else:
+        _require_rate_limit(request, "ai_proposal", AI_RATE_LIMIT, 3600)
+
+        groq_key = os.environ.get("GROQ_API_KEY", "").strip()
+        gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
+        anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+        openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
+        provider = os.environ.get("AI_PROVIDER", "").strip().lower() or None
+        if not (groq_key or gemini_key or anthropic_key or openai_key):
+            raise HTTPException(503, "Configura GROQ_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY u OPENAI_API_KEY en .env")
+
+        try:
+            from ai_proposal import analyze_products
+            suggestion = await run_in_threadpool(
+                analyze_products,
+                info["images"],
+                groq_key or None,
+                gemini_key or None,
+                anthropic_key or None,
+                openai_key or None,
+                provider,
+            )
+        except Exception as e:
+            raise _public_error("Error en análisis IA", e)
+
+        # Reordenar según la sugerencia de la IA y adjuntar el tamaño real relativo
+        name_to_img = {img["name"]: img for img in info["images"]}
+        sizes = suggestion.get("sizes", {})
+        ordered = []
+        for n in suggestion["order"]:
+            if n in name_to_img:
+                img = dict(name_to_img[n])
+                img["scale"] = float(sizes.get(n, 1.0))
+                ordered.append(img)
+
+        # Persistir el orden + tamaños para que el render del PNG los respete,
+        # + la región de zoom y la composición libre sugeridas (si el usuario
+        # activa "Zoom de detalle" / elige la propuesta "IA · Libre")
+        info["ai_images"] = ordered
+        info["ai_hero"] = suggestion.get("hero", "")
+        info["ai_detail_crop"] = suggestion.get("detail_crop")
+        info["ai_free_layout_options"] = suggestion.get("free_layout_options", [])
+        info["ai_reasoning"] = suggestion.get("reasoning", "")
+        info_file.write_text(json.dumps(info, indent=2), encoding="utf-8")
+
+    # Varias propuestas IA desde el MISMO análisis (orden + tamaños), distinto layout
     def _ai_layout(strategy_id: str):
         return compute_layout_any(
             images=ordered,
@@ -964,16 +961,16 @@ async def bodegon_ai_proposal(body: dict):
 
 
 @app.post("/api/bodegon/ai-custom-layout")
-async def bodegon_ai_custom_layout(body: dict):
+async def bodegon_ai_custom_layout(body: dict, request: Request):
     """Composición dirigida por una instrucción libre del usuario ('quiero
     algo minimalista, fondo oscuro...') — llamada de IA AISLADA, separada de
     /ai-proposal: la instrucción del usuario es el único criterio que recibe
     esa llamada, sin competir con order/hero/sizes/los 3 estilos fijos (ver
     ai_proposal.analyze_custom_layout). Se suma como una tarjeta extra en
     'Propuestas IA'; no reemplaza nada de lo que ya devolvió /ai-proposal."""
+    _require_rate_limit(request, "ai_custom", AI_RATE_LIMIT, 3600)
     session_id = body.get("session_id", "")
-    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
-        raise HTTPException(400, "Session ID inválido")
+    _session_dir, info_file, info = _load_session_info(session_id, request)
     custom_prompt = (body.get("custom_prompt") or "").strip()
     if not custom_prompt:
         # Sin texto -> "generá una propuesta más, a tu criterio" (mismo botón
@@ -981,11 +978,6 @@ async def bodegon_ai_custom_layout(body: dict):
         # además de las 3 composiciones libres de /ai-proposal).
         custom_prompt = ("Proponé una composición distinta a las que ya darías por defecto, "
                           "con tu propio criterio artístico de director de arte.")
-
-    session_dir = SESSIONS_DIR / session_id
-    info_file = session_dir / "bodegon.json"
-    if not info_file.exists():
-        raise HTTPException(404, "Sesión no encontrada")
 
     groq_key = os.environ.get("GROQ_API_KEY", "").strip()
     gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
@@ -995,21 +987,20 @@ async def bodegon_ai_custom_layout(body: dict):
     if not (groq_key or gemini_key or anthropic_key or openai_key):
         raise HTTPException(503, "Configura GROQ_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY u OPENAI_API_KEY en .env")
 
-    info = json.loads(info_file.read_text(encoding="utf-8"))
-
     try:
         from ai_proposal import analyze_custom_layout
-        result = analyze_custom_layout(
+        result = await run_in_threadpool(
+            analyze_custom_layout,
             info["images"],
             custom_prompt,
-            groq_key=groq_key or None,
-            gemini_key=gemini_key or None,
-            anthropic_key=anthropic_key or None,
-            openai_key=openai_key or None,
-            provider=provider,
+            groq_key or None,
+            gemini_key or None,
+            anthropic_key or None,
+            openai_key or None,
+            provider,
         )
     except Exception as e:
-        raise HTTPException(500, f"Error en análisis IA: {e}")
+        raise _public_error("Error en análisis IA", e)
 
     # Igual que /ai-proposal: cada producto lleva su propio scale (acá, el
     # que estimó ESTA llamada aislada — no el de /ai-proposal, puede no
@@ -1052,7 +1043,7 @@ async def bodegon_ai_custom_layout(body: dict):
 # MÓDULO 3: GENERACIÓN POR LOTES (varias carpetas → varios bodegones)
 # ══════════════════════════════════════════════════════════════════════════════
 @app.post("/api/batch/zip")
-async def batch_zip(body: dict):
+async def batch_zip(body: dict, request: Request):
     """Empaqueta en un ZIP los PNG ya renderizados de varias sesiones (grupos)."""
     items = body.get("items", [])
     if not items:
@@ -1067,9 +1058,11 @@ async def batch_zip(body: dict):
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for it in items:
             sid = it.get("session_id", "")
-            if not re.match(r"^[0-9a-f\-]{36}$", sid):
+            try:
+                session_dir, _info_file, _info = _load_session_info(sid, request)
+            except HTTPException:
                 continue
-            png = SESSIONS_DIR / sid / "output" / "bodegon.png"
+            png = session_dir / "output" / "bodegon.png"
             if not png.exists():
                 continue
             base = _safe_name(it.get("name") or sid).rsplit(".", 1)[0]
@@ -1085,14 +1078,28 @@ async def batch_zip(body: dict):
         shutil.rmtree(batch_dir, ignore_errors=True)
         raise HTTPException(404, "No hay bodegones renderizados para empaquetar")
 
+    (batch_dir / "batch.json").write_text(
+        json.dumps({"owner": request.session.get("user"), "created": time.time()}, indent=2),
+        encoding="utf-8",
+    )
     return {"batch_id": batch_id, "count": len(used)}
 
 
 @app.get("/api/batch/download/{batch_id}")
-async def batch_download(batch_id: str):
+async def batch_download(batch_id: str, request: Request):
     if not re.match(r"^[0-9a-f\-]{36}$", batch_id):
         raise HTTPException(400, "Batch ID inválido")
-    z = SESSIONS_DIR / "_batch" / batch_id / "bodegones.zip"
+    batch_dir = SESSIONS_DIR / "_batch" / batch_id
+    meta_file = batch_dir / "batch.json"
+    if not meta_file.exists():
+        raise HTTPException(404, "ZIP no encontrado")
+    try:
+        meta = json.loads(meta_file.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        raise HTTPException(404, "ZIP no encontrado")
+    if meta.get("owner") != request.session.get("user"):
+        raise HTTPException(404, "ZIP no encontrado")
+    z = batch_dir / "bodegones.zip"
     if not z.exists():
         raise HTTPException(404, "ZIP no encontrado")
     return FileResponse(str(z), filename="bodegones.zip", media_type="application/zip")

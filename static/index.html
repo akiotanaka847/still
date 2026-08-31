@@ -683,9 +683,13 @@
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-purple-600 text-sm">✦</span>
             <p class="text-sm font-bold text-purple-800">Propuestas IA</p>
-            <span id="ai-status" class="text-[11px] text-purple-400">Analizando con IA…</span>
+            <span id="ai-status" class="text-[11px] text-purple-400">Opcional</span>
           </div>
           <p id="ai-reasoning" class="text-[11px] text-gray-500 mb-2.5 leading-relaxed max-w-3xl"></p>
+          <button id="ai-analyze-btn" onclick="bodAnalyzeAI()"
+                  class="mb-3 inline-flex items-center gap-2 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-2 rounded-lg transition-all">
+            ✦ Analizar productos con IA
+          </button>
 
           <div class="flex items-center gap-2 mb-3 max-w-3xl">
             <input id="ai-custom-input" type="text" maxlength="200"
@@ -1186,6 +1190,8 @@ let BOD_LAYOUT       = null;
 let BOD_SELECTED_IDX = 0;   // 0..N-1 = geométricas; >= AI_BASE = variantes IA
 let BOD_AI_VARIANTS  = [];   // [{id,label,desc,layout}] devueltas por la IA
 let BOD_AI_REASONING = '';   // razonamiento (compartido por las variantes)
+let BOD_UPLOAD_PROMISE = null;
+let BOD_AI_DONE = false;
 let BOD_BACKGROUND_STYLE = null;  // id del fondo de estudio elegido (null = sin fondo)
 let BOD_ZOOM_DETAIL = false;      // burbuja de zoom sobre el héroe
 let BOD_REOPENED = false;    // true = bod-preview viene de "Proyectos" (reusar el layout guardado tal cual, no recomputar por STRATEGIES[BOD_SELECTED_IDX])
@@ -1292,7 +1298,7 @@ const STRATEGIES = [
     // Profundidad: héroe al centro más grande, solapamiento y sombra
     id: 'profundidad', label: 'Profundidad', desc: 'Héroe al frente + solapamiento',
     color: 'teal',
-    shadow: true, depth: true, overlap: 0.16, heroScale: 1.22, falloff: 1.0,
+    shadow: true, depth: true, overlap: 0.16, heroScale: 1.32, falloff: 0.93,
     prepareItems: items => [...items].sort((a,b) => b.sh - a.sh),
     modifyCfg:   cfg => ({...cfg, rows_count:1}),
     postProcess: centerHeroRows,
@@ -1321,7 +1327,7 @@ const STRATEGIES = [
     id: 'impacto', label: 'Impacto', desc: 'Abanico dinámico tipo anuncio',
     color: 'orange',
     shadow: true, depth: true, tilt: true, tiltMode: 'fan',
-    overlap: 0.22, heroScale: 1.35, falloff: 0.92,
+    overlap: 0.22, heroScale: 1.50, falloff: 0.88,
     prepareItems: items => [...items].sort((a,b) => b.sh - a.sh),
     modifyCfg:   cfg => ({...cfg, rows_count:1}),
     postProcess: centerHeroRows,
@@ -1904,7 +1910,7 @@ function _makeProposalCard(idx, label, desc, labelColor, clsFn) {
 function bodShowProposals() {
   if (!BOD_FILES.length) { toast('Agrega al menos una imagen de producto'); return; }
 
-  BOD_SESSION = null; BOD_AI_VARIANTS = []; BOD_AI_REASONING = '';
+  BOD_SESSION = null; BOD_UPLOAD_PROMISE = null; BOD_AI_VARIANTS = []; BOD_AI_REASONING = ''; BOD_AI_DONE = false;
   BOD_SELECTED_IDX = 0; BOD_REOPENED = false;
 
   const baseCfg = buildConfig();
@@ -1939,7 +1945,7 @@ function bodShowProposals() {
     if (layouts[i]) renderMiniCanvas(cv, layouts[i]);
   });
 
-  // Bloque IA — placeholders de carga
+  // Bloque IA — no se dispara automáticamente: el usuario decide cuándo gastar IA.
   const aiGrid = document.getElementById('ai-grid');
   aiGrid.innerHTML = '';
   document.getElementById('ai-reasoning').textContent = '';
@@ -1947,22 +1953,21 @@ function bodShowProposals() {
   document.getElementById('ai-gen-input').value = '';
   document.getElementById('ai-gen-result').classList.add('hidden');
   const st = document.getElementById('ai-status');
-  st.textContent = 'Analizando con IA…'; st.classList.remove('hidden');
-  AI_VARIANT_LABELS.filter(lab => !HIDDEN_AI_LABELS.has(lab)).forEach((lab, k) => {
-    const d = document.createElement('div');
-    d.id = `prop-card-${AI_BASE + k}`;
-    d.className = 'rounded-2xl border-2 border-dashed border-purple-200 glass p-3 flex flex-col items-center justify-center min-h-[110px] gap-2';
-    d.innerHTML = `<div class="w-5 h-5 border-2 border-purple-300 border-t-purple-600 rounded-full spin"></div>
-                   <p class="text-[10px] text-purple-400">${esc(lab)}</p>`;
-    aiGrid.appendChild(d);
-  });
+  st.textContent = 'Opcional'; st.classList.remove('hidden');
+  document.getElementById('ai-analyze-btn').disabled = false;
+  aiGrid.innerHTML = `
+    <div class="col-span-1 sm:col-span-3 rounded-2xl border-2 border-dashed border-purple-200 bg-purple-50/40 p-3 text-xs text-purple-600">
+      Haz clic en "Analizar productos con IA" si quieres propuestas inteligentes. Los estilos de layout de arriba no consumen IA.
+    </div>`;
 
   showBOD('bod-proposals');
-  bodUploadAndAnalyzeAI(baseCfg);
+  bodEnsureUploaded().catch(() => {});
 }
 
-async function bodUploadAndAnalyzeAI(cfg) {
-  try {
+async function bodEnsureUploaded() {
+  if (BOD_SESSION) return BOD_SESSION;
+  if (BOD_UPLOAD_PROMISE) return BOD_UPLOAD_PROMISE;
+  BOD_UPLOAD_PROMISE = (async () => {
     const fd = new FormData();
     BOD_FILES.forEach(item => fd.append('products', item.file, item.file.name));
     BOD_FILES.forEach(item => fd.append('product_names', item.name));
@@ -1973,6 +1978,30 @@ async function bodUploadAndAnalyzeAI(cfg) {
     if (!upRes.ok) throw new Error(upData.detail||'Error subiendo');
     BOD_SESSION = upData.session_id;
     _warnSkipped(upData);
+    return BOD_SESSION;
+  })();
+  try { return await BOD_UPLOAD_PROMISE; }
+  finally { BOD_UPLOAD_PROMISE = null; }
+}
+
+async function bodAnalyzeAI() {
+  const cfg = buildConfig();
+  if (BOD_AI_DONE && BOD_AI_VARIANTS.length) { toast('El análisis IA ya está listo', 'warn'); return; }
+  const btn = document.getElementById('ai-analyze-btn');
+  const oldLabel = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<div class="w-3.5 h-3.5 border-2 border-purple-300 border-t-purple-600 rounded-full spin inline-block align-middle"></div> Analizando...`;
+  try {
+    await bodUploadAndAnalyzeAI(cfg);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = oldLabel;
+  }
+}
+
+async function bodUploadAndAnalyzeAI(cfg) {
+  try {
+    await bodEnsureUploaded();
 
     const aiRes = await fetch('/api/bodegon/ai-proposal', {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -1986,6 +2015,7 @@ async function bodUploadAndAnalyzeAI(cfg) {
 
     document.getElementById('ai-status').classList.add('hidden');
     document.getElementById('ai-reasoning').textContent = BOD_AI_REASONING;
+    BOD_AI_DONE = true;
 
     const aiGrid = document.getElementById('ai-grid');
     aiGrid.innerHTML = '';
@@ -2023,14 +2053,13 @@ async function bodGenerateCustomAI() {
   const text = input.value.trim();
   // Vacío es válido: el backend lo toma como "genera una propuesta más a tu
   // criterio" — mismo botón sirve para pedir algo puntual o solo variedad.
-  if (!BOD_SESSION) { toast('Espera a que termine el análisis inicial', 'warn'); return; }
-
   const btn = document.getElementById('ai-custom-btn');
   const oldLabel = btn.innerHTML;
   btn.disabled = true; input.disabled = true;
   btn.innerHTML = `<div class="w-3.5 h-3.5 border-2 border-purple-300 border-t-purple-600 rounded-full spin inline-block align-middle"></div>`;
 
   try {
+    await bodEnsureUploaded();
     const cfg = buildConfig();
     const res = await fetch('/api/bodegon/ai-custom-layout', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -2063,8 +2092,6 @@ async function bodGenerateCustomAI() {
 }
 
 async function bodGenerateAIImage() {
-  if (!BOD_SESSION) { toast('Espera a que termine el análisis inicial', 'warn'); return; }
-
   const input = document.getElementById('ai-gen-input');
   const btn = document.getElementById('ai-gen-btn');
   const oldLabel = btn.innerHTML;
@@ -2072,6 +2099,7 @@ async function bodGenerateAIImage() {
   btn.innerHTML = `<div class="w-3.5 h-3.5 border-2 border-purple-300 border-t-purple-600 rounded-full spin inline-block align-middle"></div> generando (1-3 min)…`;
 
   try {
+    await bodEnsureUploaded();
     const res = await fetch('/api/bodegon/ai-generate-image', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({session_id: BOD_SESSION, custom_prompt: input.value.trim()}),
@@ -2130,26 +2158,14 @@ async function bodUseProposal() {
       return;
     }
 
-    // Estrategia clásica — sesión ya existe si el upload de IA completó
+    // Estrategia clásica — reusa la subida única que puede estar corriendo en
+    // segundo plano desde bodShowProposals().
     const strategy = STRATEGIES[BOD_SELECTED_IDX];
-
-    if (!BOD_SESSION) {
-      // Upload de seguridad (si el background upload falló)
-      showBOD('bod-loading');
-      document.getElementById('bod-loading-msg').textContent = 'Subiendo imágenes...';
-      const fd = new FormData();
-      BOD_FILES.forEach(item => fd.append('products', item.file, item.file.name));
-      BOD_FILES.forEach(item => fd.append('product_names', item.name));
-      if (BOD_BG_FILE) fd.append('background', BOD_BG_FILE, BOD_BG_FILE.name);
-      const upRes = await fetch('/api/bodegon/upload', {method:'POST', body:fd});
-      const upData = await upRes.json();
-      if (!upRes.ok) throw new Error(upData.detail);
-      BOD_SESSION = upData.session_id;
-      _warnSkipped(upData);
-    }
+    showBOD('bod-loading');
+    document.getElementById('bod-loading-msg').textContent = 'Subiendo imágenes...';
+    await bodEnsureUploaded();
 
     document.getElementById('bod-loading-msg').textContent = 'Calculando layout final...';
-    showBOD('bod-loading');
     const cfg = buildConfig(strategy.id);
     const compRes = await fetch('/api/bodegon/compute', {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -2355,12 +2371,13 @@ const BOD_RENDER_LABELS = {
 
 async function bodRender(format) {
   format = format || 'png';
-  if (!BOD_SESSION) { toast('Elige una propuesta primero'); return; }
+  if (!BOD_FILES.length && !BOD_SESSION) { toast('Elige una propuesta primero'); return; }
   const meta = BOD_RENDER_LABELS[format];
   const btn=document.getElementById(meta.btn);
   btn.disabled=true;
   btn.innerHTML=`<div class="w-4 h-4 border-2 ${meta.spin} rounded-full spin"></div> Renderizando...`;
   try {
+    await bodEnsureUploaded();
     // Reabierta desde "Mis bodegones": el layout guardado se reusa tal cual
     // (misma composición, sin recalcular por STRATEGIES[BOD_SELECTED_IDX],
     // que acá no corresponde a ninguna tarjeta realmente elegida ahora).
@@ -2386,7 +2403,7 @@ async function bodRender(format) {
 // ── Reset ───────────────────────────────────────────────────────────────────
 function bodReset() {
   BOD_SESSION=null; BOD_LAYOUT=null; BOD_SELECTED_IDX=0; BOD_REOPENED=false;
-  BOD_AI_VARIANTS=[]; BOD_AI_REASONING=''; BOD_BACKGROUND_STYLE=null; BOD_ZOOM_DETAIL=false; BOD_SHADOW=true;
+  BOD_UPLOAD_PROMISE=null; BOD_AI_VARIANTS=[]; BOD_AI_REASONING=''; BOD_AI_DONE=false; BOD_BACKGROUND_STYLE=null; BOD_ZOOM_DETAIL=false; BOD_SHADOW=true;
   { const cb=document.getElementById('zoom-detail-toggle'); if (cb) cb.checked=false; }
   { const cb=document.getElementById('shadow-toggle'); if (cb) cb.checked=true; }
   BOD_FILES.forEach(f=>URL.revokeObjectURL(f.url));
@@ -2423,7 +2440,7 @@ async function bodOpenSession(id) {
 
     bodClearProducts();
     BOD_SESSION = id; BOD_LAYOUT = null; BOD_SELECTED_IDX = 0; BOD_REOPENED = false;
-    BOD_AI_VARIANTS = []; BOD_AI_REASONING = '';
+    BOD_UPLOAD_PROMISE = null; BOD_AI_VARIANTS = []; BOD_AI_REASONING = ''; BOD_AI_DONE = false;
 
     const files = new Array((data.images || []).length).fill(null);
     await Promise.all((data.images || []).map(async (img, i) => {
