@@ -669,16 +669,29 @@ def compute_layout_flotante(
     }
 
 
-MIN_SEPARATION_FRAC = 0.42  # fracción del "radio" combinado que debe haber, como mínimo, entre centros
+ALLOWED_OVERLAP_FRAC = 0.15  # cuánto pueden "meterse" las cajas una en la otra
+                              # a lo sumo, en la dirección que une sus centros
+                              # (0 = bordes apenas se tocan; 1 = se permiten
+                              # cubrir del todo).
 
 
-def _enforce_min_separation(placed, min_frac: float = MIN_SEPARATION_FRAC, iterations: int = 6):
+def _enforce_min_separation(placed, allowed_overlap: float = ALLOWED_OVERLAP_FRAC, iterations: int = 8):
     """Si dos productos quedan con las cajas demasiado superpuestas, los
     separa a lo largo de la línea que une sus centros (no solo en X): con
     6-7 productos es común que dos queden encimados en diagonal o a
     distinta altura, y revisar solo pares vecinos en X (versión anterior)
     no atrapaba esos casos — se veían tapados igual aunque sus cx ya
     estuvieran "separados" en la fracción 0-1 que mandó la IA.
+
+    La distancia mínima requerida entre dos centros se calcula proyectando
+    el semiancho/semialto de la caja YA ROTADA de cada item sobre la
+    dirección que une ambos centros (en vez de promediar ancho y alto en un
+    solo "radio" sin dirección, como antes) — con productos de tamaño/forma
+    parecida daba resultados similares, pero con un producto mucho más
+    grande que otro (p. ej. una caja ancha junto a un frasco chico) esa
+    versión permitía que el chico quedara casi enteramente tapado sin
+    detectarlo como superposición grave, porque el "radio promedio" del
+    grande no reflejaba su verdadero ancho en esa dirección.
 
     placed: [(item, cx, cy, rotation), ...] en píxeles del lienzo de
     referencia. Todos-contra-todos (n es como mucho ~15) y varias pasadas,
@@ -691,20 +704,22 @@ def _enforce_min_separation(placed, min_frac: float = MIN_SEPARATION_FRAC, itera
             for j in range(i + 1, n):
                 it_a, cx_a, cy_a, rot_a = placed[i]
                 it_b, cx_b, cy_b, rot_b = placed[j]
-                # Radio "efectivo" de cada item — promedio de medio-ancho y
-                # medio-alto (no la caja rotada exacta): alcanza para atrapar
-                # superposición grosera sin complicar con geometría rotada.
-                ra = (it_a.sw + it_a.sh) / 4
-                rb = (it_b.sw + it_b.sh) / 4
-                min_dist = min_frac * 2 * (ra + rb)
+                rw_a, rh_a = _rotated_bbox(it_a.sw, it_a.sh, rot_a) if rot_a else (it_a.sw, it_a.sh)
+                rw_b, rh_b = _rotated_bbox(it_b.sw, it_b.sh, rot_b) if rot_b else (it_b.sw, it_b.sh)
                 dx, dy = cx_b - cx_a, cy_b - cy_a
                 dist = math.hypot(dx, dy)
+                if dist < 1e-6:
+                    dx, dy, dist = 1.0, 0.0, 1.0  # centros idénticos: empuja horizontal
+                ux, uy = dx / dist, dy / dist
+                # Semiancho/semialto de cada caja proyectado sobre (ux,uy):
+                # cuánto ocupa CADA item, específicamente en la dirección
+                # hacia el otro — no un promedio ciego a la dirección.
+                extent_a = (rw_a / 2) * abs(ux) + (rh_a / 2) * abs(uy)
+                extent_b = (rw_b / 2) * abs(ux) + (rh_b / 2) * abs(uy)
+                min_dist = (extent_a + extent_b) * (1 - allowed_overlap)
                 if dist < min_dist:
                     moved = True
-                    if dist < 1e-6:
-                        dx, dy, dist = 1.0, 0.0, 1.0  # centros idénticos: empuja horizontal
                     push = (min_dist - dist) / 2
-                    ux, uy = dx / dist, dy / dist
                     placed[i] = (it_a, cx_a - ux * push, cy_a - uy * push, rot_a)
                     placed[j] = (it_b, cx_b + ux * push, cy_b + uy * push, rot_b)
         if not moved:
