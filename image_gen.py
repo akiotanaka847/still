@@ -43,10 +43,17 @@ invent, or omit any text on any label.
 Arrange them together in a coherent, visually balanced composition (not just
 side by side floating disconnected) with professional studio lighting, subtle
 shadows, and a sense of depth between products.
+Do NOT add any decorative elements that are not part of the actual products —
+no fruit, ice cubes, water droplets, condensation, splashes, garnishes, or any
+other invented prop or ingredient. Show ONLY the products themselves, well
+arranged and lit, nothing added — UNLESS the client's instruction below
+explicitly asks for such elements, in which case follow it.
 Transparent background. Studio-quality product photography, high detail, sharp
 focus."""
     if custom_prompt:
-        prompt += f'\n\nInstrucción adicional del cliente sobre estilo/composición (seguila con prioridad, sin perder la fidelidad del texto de las etiquetas): "{custom_prompt}"'
+        prompt += f'\n\nInstrucción del cliente sobre estilo/composición (seguila con prioridad — incluí elementos decorativos SOLO si los pide explícitamente acá; sin perder la fidelidad del texto de las etiquetas): "{custom_prompt}"'
+    else:
+        prompt += "\n\nEl cliente no dio ninguna instrucción de estilo: limitate a organizar los productos de la forma visualmente más atractiva posible, sin agregar nada que no sea parte de los productos reales."
     return prompt
 
 
