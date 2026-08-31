@@ -2064,8 +2064,6 @@ function paintLayout(ctx, layout, scale) {
 }
 
 function renderMiniCanvas(canvas, layout) {
-  // El canvas mantiene la proporción real del bodegón; el contenedor de altura
-  // fija + object-contain lo encaja uniformemente. Fondo lo pone el .checker-bg.
   const MAX = 460;  // resolución máxima del lado mayor
   const scale = Math.min(1, MAX / Math.max(layout.canvas_width, layout.canvas_height, 1));
   canvas.width  = Math.max(1, Math.round(layout.canvas_width  * scale));
@@ -2073,6 +2071,22 @@ function renderMiniCanvas(canvas, layout) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   paintLayout(ctx, layout, scale);
+
+  // object-fit:contain (la clase del <canvas>, ver _makeProposalCard) NO
+  // preserva la proporción real acá — verificado con captura real: el
+  // elemento se estira a ocupar TODO el contenedor (h-32), ignorando el
+  // aspect ratio del bitmap, y el resultado se ve "achicado" con huecos
+  // alrededor aunque el dibujo interno (paintLayout) sea correcto. Se
+  // calcula el tamaño de display a mano en vez de confiar en object-fit
+  // para <canvas> — mismo algoritmo que "contain", pero garantizado.
+  const parent = canvas.parentElement;
+  const boxW = parent.clientWidth || canvas.width;
+  const boxH = parent.clientHeight || canvas.height;
+  const ratio = canvas.width / canvas.height;
+  let dispW = boxW, dispH = boxW / ratio;
+  if (dispH > boxH) { dispH = boxH; dispW = boxH * ratio; }
+  canvas.style.width = dispW + 'px';
+  canvas.style.height = dispH + 'px';
 }
 
 function drawBodCanvas(layout) {
