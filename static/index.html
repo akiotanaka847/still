@@ -651,15 +651,26 @@
           </span>
         </label>
 
-        <button id="bod-render-btn" onclick="bodRender()"
-                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 rounded-2xl
-                       shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-          </svg>
-          Generar y descargar PNG
-        </button>
+        <div class="flex gap-2">
+          <button id="bod-render-btn" onclick="bodRender('png')"
+                  class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 rounded-2xl
+                         shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Descargar PNG
+          </button>
+          <button id="bod-render-psd-btn" onclick="bodRender('psd')" title="Cada producto en su propia capa — abrir/editar en Photoshop sin perder calidad"
+                  class="flex-1 bg-white hover:bg-gray-50 text-gray-700 font-semibold py-3.5 rounded-2xl
+                         border-2 border-gray-200 hover:border-indigo-300 transition-all flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Descargar PSD <span class="text-[10px] font-normal text-gray-400">(capas)</span>
+          </button>
+        </div>
       </section>
     </div>
 
@@ -2104,12 +2115,23 @@ function onShadowToggle() {
   if (BOD_LAYOUT) drawBodCanvas(BOD_LAYOUT);   // la sombra sí se ve en el preview, a diferencia del zoom
 }
 
-// ── Render PNG ──────────────────────────────────────────────────────────────
-async function bodRender() {
+// ── Render PNG / PSD ─────────────────────────────────────────────────────────
+// format: 'png' (aplanado) o 'psd' (cada producto en su propia capa,
+// editable en Photoshop sin perder calidad — ver renderer.render_psd).
+const BOD_RENDER_LABELS = {
+  png: {btn: 'bod-render-btn', label: 'Descargar PNG', endpoint: '/api/bodegon/render', download: '/api/bodegon/download', filename: 'bodegon.png',
+        spin: 'border-white/30 border-t-white'},
+  psd: {btn: 'bod-render-psd-btn', label: 'Descargar PSD <span class="text-[10px] font-normal text-gray-400">(capas)</span>', endpoint: '/api/bodegon/render-psd', download: '/api/bodegon/download-psd', filename: 'bodegon.psd',
+        spin: 'border-gray-300 border-t-gray-600'},
+};
+
+async function bodRender(format) {
+  format = format || 'png';
   if (!BOD_SESSION) { toast('Elige una propuesta primero'); return; }
-  const btn=document.getElementById('bod-render-btn');
+  const meta = BOD_RENDER_LABELS[format];
+  const btn=document.getElementById(meta.btn);
   btn.disabled=true;
-  btn.innerHTML=`<div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full spin"></div> Renderizando...`;
+  btn.innerHTML=`<div class="w-4 h-4 border-2 ${meta.spin} rounded-full spin"></div> Renderizando...`;
   try {
     // Reabierta desde "Mis bodegones": el layout guardado se reusa tal cual
     // (misma composición, sin recalcular por STRATEGIES[BOD_SELECTED_IDX],
@@ -2117,19 +2139,19 @@ async function bodRender() {
     const body = BOD_REOPENED
       ? { session_id: BOD_SESSION }
       : { session_id: BOD_SESSION, config: buildConfig(isAi(BOD_SELECTED_IDX) ? aiVariant(BOD_SELECTED_IDX).id : STRATEGIES[BOD_SELECTED_IDX].id) };
-    const res=await fetch('/api/bodegon/render', {
+    const res=await fetch(meta.endpoint, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(body),
     });
     const data=await res.json();
     if (!res.ok) throw new Error(data.detail||'Error');
     const link=document.createElement('a');
-    link.href=`/api/bodegon/download/${BOD_SESSION}`; link.download='bodegon.png';
+    link.href=`${meta.download}/${BOD_SESSION}`; link.download=meta.filename;
     document.body.appendChild(link); link.click(); link.remove();
   } catch(e) { toast(e.message); }
   finally {
     btn.disabled=false;
-    btn.innerHTML=`<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>Generar y descargar PNG`;
+    btn.innerHTML=`<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>${meta.label}`;
   }
 }
 

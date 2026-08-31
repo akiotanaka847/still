@@ -7,4 +7,8 @@ anthropic>=0.40.0
 google-genai>=0.8.0
 groq>=0.11.0
 openai>=2.0.0
+psd-tools==1.11.0  # pin exacto: render_psd usa atributos internos (_record, _updated) para
+                    # esquivar un bug real de esta librería (ver renderer.render_psd) — una
+                    # versión distinta puede cambiar esos atributos sin aviso y romperlo en
+                    # silencio. No subir de versión sin volver a probar esos workarounds.
 python-dotenv>=1.0.0

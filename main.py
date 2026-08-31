@@ -31,7 +31,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.middleware.sessions import SessionMiddleware
 
 from layout import compute_layout_any, compute_layout_ai_freeform
-from renderer import get_image_dimensions, render_png, STUDIO_BACKGROUND_STYLES
+from renderer import get_image_dimensions, render_png, render_psd, STUDIO_BACKGROUND_STYLES
 
 
 # ─── Configuración de seguridad (por variables de entorno) ────────────────────
@@ -509,20 +509,11 @@ async def bodegon_compute(body: dict):
     return layout
 
 
-@app.post("/api/bodegon/render")
-async def bodegon_render(body: dict):
-    """Renderiza el bodegón como PNG y lo guarda en la sesión."""
-    session_id = body.get("session_id", "")
-    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
-        raise HTTPException(400, "Session ID inválido")
-
-    session_dir = SESSIONS_DIR / session_id
-    info_file = session_dir / "bodegon.json"
-    if not info_file.exists():
-        raise HTTPException(404, "Sesión no encontrada")
-
-    info = json.loads(info_file.read_text(encoding="utf-8"))
-
+def _resolve_render_params(body: dict, info: dict, info_file: Path):
+    """Resuelve (layout, background_style, zoom_detail, shadow_enabled) a
+    partir del body + la sesión — misma lógica para /render (PNG) y
+    /render-psd, extraída para no duplicar el manejo de estrategias
+    (ai_custom, ai_libre_N, geométricas) en los dos endpoints."""
     # Re-computar si hay config nueva en el body
     if "config" in body:
         cfg = body["config"]
@@ -597,6 +588,24 @@ async def bodegon_render(body: dict):
     if background_style not in (None, "none") and background_style not in STUDIO_BACKGROUND_STYLES:
         raise HTTPException(400, "Estilo de fondo inválido")
 
+    return layout, background_style, zoom_detail, shadow_enabled
+
+
+@app.post("/api/bodegon/render")
+async def bodegon_render(body: dict):
+    """Renderiza el bodegón como PNG y lo guarda en la sesión."""
+    session_id = body.get("session_id", "")
+    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
+        raise HTTPException(400, "Session ID inválido")
+
+    session_dir = SESSIONS_DIR / session_id
+    info_file = session_dir / "bodegon.json"
+    if not info_file.exists():
+        raise HTTPException(404, "Sesión no encontrada")
+
+    info = json.loads(info_file.read_text(encoding="utf-8"))
+    layout, background_style, zoom_detail, shadow_enabled = _resolve_render_params(body, info, info_file)
+
     output_dir = session_dir / "output"
     output_dir.mkdir(exist_ok=True)
     out_path = output_dir / "bodegon.png"
@@ -613,6 +622,40 @@ async def bodegon_render(body: dict):
         raise HTTPException(500, f"Error renderizando PNG: {e}")
 
     return {"session_id": session_id, "filename": "bodegon.png"}
+
+
+@app.post("/api/bodegon/render-psd")
+async def bodegon_render_psd(body: dict):
+    """Renderiza el bodegón como PSD con cada producto en su propia capa
+    editable (ver renderer.render_psd) y lo guarda en la sesión. No soporta
+    zoom de detalle (se ignora si está activo — queda fuera del PSD)."""
+    session_id = body.get("session_id", "")
+    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
+        raise HTTPException(400, "Session ID inválido")
+
+    session_dir = SESSIONS_DIR / session_id
+    info_file = session_dir / "bodegon.json"
+    if not info_file.exists():
+        raise HTTPException(404, "Sesión no encontrada")
+
+    info = json.loads(info_file.read_text(encoding="utf-8"))
+    layout, background_style, _zoom_detail, shadow_enabled = _resolve_render_params(body, info, info_file)
+
+    output_dir = session_dir / "output"
+    output_dir.mkdir(exist_ok=True)
+    out_path = output_dir / "bodegon.psd"
+
+    try:
+        render_psd(
+            layout, str(out_path),
+            background_path=info.get("background_path"),
+            background_style=(background_style if background_style != "none" else None),
+            shadow=shadow_enabled,
+        )
+    except Exception as e:
+        raise HTTPException(500, f"Error renderizando PSD: {e}")
+
+    return {"session_id": session_id, "filename": "bodegon.psd"}
 
 
 @app.post("/api/bodegon/ai-generate-image")
@@ -701,6 +744,23 @@ async def bodegon_download(session_id: str, request: Request):
     if not out.exists():
         raise HTTPException(404, "PNG no encontrado. Ejecuta el render primero.")
     return FileResponse(str(out), filename="bodegon.png", media_type="image/png")
+
+
+@app.get("/api/bodegon/download-psd/{session_id}")
+async def bodegon_download_psd(session_id: str, request: Request):
+    """Descarga el PSD generado (capas editables por producto)."""
+    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
+        raise HTTPException(400, "Session ID inválido")
+    session_dir = SESSIONS_DIR / session_id
+    info_file = session_dir / "bodegon.json"
+    if info_file.exists():
+        info = json.loads(info_file.read_text(encoding="utf-8"))
+        if not _owned_by(info, request):
+            raise HTTPException(404, "PSD no encontrado. Ejecuta el render primero.")
+    out = session_dir / "output" / "bodegon.psd"
+    if not out.exists():
+        raise HTTPException(404, "PSD no encontrado. Ejecuta el render primero.")
+    return FileResponse(str(out), filename="bodegon.psd", media_type="image/vnd.adobe.photoshop")
 
 
 @app.get("/api/bodegon/mine")

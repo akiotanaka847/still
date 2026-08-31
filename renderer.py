@@ -321,6 +321,31 @@ def _composite_zoom_detail(canvas, items, rendered, zoom_detail):
     canvas.alpha_composite(bubble, (bx, by))
 
 
+def _process_item_image(item: dict):
+    """Recorte + escala + rotación de UN producto — misma lógica que usa
+    render_png, extraída para que render_psd (capas por producto) componga
+    exactamente igual sin duplicar el criterio de rotación/anclaje.
+    Retorna (img_rgba, px, py) en coordenadas del lienzo de referencia."""
+    fp = item["filepath"]
+    img = _load_trimmed(fp)
+    img = img.resize((item["sw"], item["sh"]), Image.LANCZOS)
+    rotation = item.get("rotation", 0.0)
+    if rotation:
+        cx = item["x"] + item["sw"] / 2
+        img_r = img.rotate(-rotation, expand=True, resample=Image.BICUBIC)
+        px = round(cx - img_r.width / 2)
+        if item.get("anchor") == "bottom":
+            bottom = item["y"] + item["sh"]
+            py = round(bottom - img_r.height)
+        else:
+            cy = item["y"] + item["sh"] / 2
+            py = round(cy - img_r.height / 2)
+        img = img_r
+    else:
+        px, py = item["x"], item["y"]
+    return img, px, py
+
+
 def render_png(layout: dict, output_path: str, background_path: str = None,
                 background_style: str = None, zoom_detail: dict = None,
                 export_quality: bool = True, shadow: bool = True) -> None:
@@ -417,33 +442,11 @@ def render_png(layout: dict, output_path: str, background_path: str = None,
         if not fp or not Path(fp).exists():
             continue
         try:
-            img = _load_trimmed(fp)
-            img = img.resize((item["sw"], item["sh"]), Image.LANCZOS)
-            rotation = item.get("rotation", 0.0)
-            if rotation:
-                # expand agranda el lienzo del recorte para no perder las
-                # esquinas al girar — pero eso corre el centro del recuadro
-                # rotado respecto al original, y por cuánto depende del
-                # ángulo Y del tamaño de CADA producto. Con anchor="bottom"
-                # (las estrategias en fila, donde todos comparten el mismo
-                # borde inferior antes de rotar) hay que conservar ESE borde
-                # tal cual, si no cada producto "flota" un poco distinto y
-                # ya no quedan al ras entre sí. El resto de las estrategias
-                # (Cascada/Radial/Flotante/IA Libre) posicionan por CENTRO,
-                # no por una base compartida, así que ahí sí corresponde
-                # mantener el centro fijo al rotar (comportamiento previo).
-                cx = item["x"] + item["sw"] / 2
-                img_r = img.rotate(-rotation, expand=True, resample=Image.BICUBIC)
-                px = round(cx - img_r.width / 2)
-                if item.get("anchor") == "bottom":
-                    bottom = item["y"] + item["sh"]
-                    py = round(bottom - img_r.height)
-                else:
-                    cy = item["y"] + item["sh"] / 2
-                    py = round(cy - img_r.height / 2)
-                img = img_r
-            else:
-                px, py = item["x"], item["y"]
+            # px/py: coordenadas del recuadro rotado respecto al lienzo. Con
+            # anchor="bottom" (estrategias en fila, mismo borde inferior
+            # compartido) el ancla al rotar es ESE borde; el resto ancla por
+            # centro — ver _process_item_image.
+            img, px, py = _process_item_image(item)
 
             if studio_effects:
                 img = _studio_grade(img)
@@ -477,6 +480,135 @@ def render_png(layout: dict, output_path: str, background_path: str = None,
         canvas = canvas.crop(bbox)
 
     canvas.save(output_path, "PNG", optimize=True)
+
+
+def render_psd(layout: dict, output_path: str, background_path: str = None,
+                background_style: str = None, export_quality: bool = True,
+                shadow: bool = True) -> None:
+    """
+    Genera un PSD con cada producto en su propia capa editable — a
+    diferencia de render_png (todo aplanado en un solo PNG), esto se puede
+    abrir en Photoshop y mover/reemplazar/ajustar cada producto por
+    separado sin perder calidad ("para que la calidad se mantenga").
+
+    Usa _process_item_image (misma función que render_png) para que ambos
+    formatos salgan con la composición idéntica — el PSD no es una segunda
+    implementación del render, es el mismo resultado con las capas sin
+    aplanar.
+
+    No soporta zoom_detail como capa separada (queda fuera del PSD si está
+    activo). Los efectos de estudio (rim glow/reflejo), si están activos,
+    quedan aplanados DENTRO de la capa del producto (no son su propia capa).
+    shadow sí se separa en una capa "Sombras" única debajo de los productos.
+    """
+    if not PIL_AVAILABLE:
+        raise RuntimeError("Pillow no instalado. Ejecuta: pip install Pillow")
+    try:
+        from psd_tools import PSDImage
+    except ImportError as e:
+        raise RuntimeError("Falta psd-tools. Ejecuta: pip install psd-tools") from e
+
+    if export_quality:
+        layout = _scale_layout(layout, _compute_export_scale(layout))
+
+    cw = layout["canvas_width"]
+    ch = layout["canvas_height"]
+
+    canvas = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
+    # [(nombre, imagen_rgba, left, top), ...] de atrás hacia adelante — el
+    # orden de esta lista es el orden en que se agregan al PSD, y la última
+    # agregada queda más arriba (verificado empíricamente, ver memoria).
+    stack = []
+
+    studio_effects = False
+    if background_style:
+        bg_name = STUDIO_BACKGROUND_STYLES.get(background_style)
+        bg_file = (BACKGROUNDS_DIR / bg_name) if bg_name else None
+        if bg_file and bg_file.exists():
+            try:
+                bg = Image.open(bg_file).convert("RGBA").resize((cw, ch), Image.LANCZOS)
+                canvas.paste(bg, (0, 0), bg)
+                stack.append(("Fondo", bg, 0, 0))
+                studio_effects = True
+            except Exception as e:
+                print(f"Advertencia: no se pudo cargar el fondo de estudio: {e}")
+        else:
+            print(f"Advertencia: estilo de fondo desconocido: {background_style}")
+    elif background_path and Path(background_path).exists():
+        try:
+            bg = Image.open(background_path).convert("RGBA").resize((cw, ch), Image.LANCZOS)
+            canvas.paste(bg, (0, 0), bg)
+            stack.append(("Fondo", bg, 0, 0))
+        except Exception as e:
+            print(f"Advertencia: no se pudo cargar el fondo: {e}")
+
+    effects = layout.get("effects", {})
+    shadow = shadow and bool(effects.get("shadow"))
+    shadow_opacity = float(effects.get("shadow_opacity", 0.30))
+    shadow_blur = int(effects.get("shadow_blur", 12))
+    floating_shadow = bool(effects.get("floating_shadow"))
+
+    items = sorted(layout["items"], key=lambda it: it.get("z", 0))
+
+    if shadow:
+        shadow_canvas = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
+        for item in items:
+            fp = item.get("filepath", "")
+            if not fp or not Path(fp).exists():
+                continue
+            try:
+                size_scale = 1.0
+                if floating_shadow:
+                    size_scale = max(0.35, 1.0 - float(item.get("float_drop", 0.0)))
+                _draw_contact_shadow(shadow_canvas, item, shadow_opacity, shadow_blur, size_scale=size_scale)
+            except Exception as e:
+                print(f"Advertencia: sombra fallida en {Path(fp).name}: {e}")
+        canvas.alpha_composite(shadow_canvas)
+        stack.append(("Sombras", shadow_canvas, 0, 0))
+
+    for item in items:
+        fp = item.get("filepath", "")
+        if not fp or not Path(fp).exists():
+            continue
+        try:
+            img, px, py = _process_item_image(item)
+            if studio_effects:
+                img = _studio_grade(img)
+                canvas.alpha_composite(_studio_rim_glow(img), (px, py))
+                canvas.alpha_composite(_studio_reflection(img), (px, py + img.height))
+            canvas.alpha_composite(img, (px, py))
+            stack.append((item["name"], img, px, py))
+        except Exception as e:
+            print(f"Advertencia: no se pudo renderizar {Path(fp).name} para PSD: {e}")
+
+    if not any(name not in ("Fondo", "Sombras") for name, *_ in stack):
+        raise ValueError("No hay productos para exportar")
+
+    # Mismo criterio de recorte que render_png — el PSD debe terminar exacto
+    # donde termina el contenido real, igual que el PNG.
+    bbox = _content_bbox(canvas)
+    if bbox == (0, 0, cw, ch):
+        crop_left, crop_top = 0, 0
+    else:
+        crop_left, crop_top, right, bottom = bbox
+        canvas = canvas.crop(bbox)
+    final_w, final_h = canvas.size
+
+    psd = PSDImage.new("RGBA", (final_w, final_h))
+    for name, img, left, top in stack:
+        psd.create_pixel_layer(img, name=name, top=top - crop_top, left=left - crop_left)
+
+    # El auto-flatten interno de psd-tools al guardar (composite() sobre un
+    # documento recién creado, para generar el preview aplanado) está roto —
+    # comprobado con datos reales: tira AssertionError de longitud al
+    # releer el archivo. Se inyecta a mano el preview con el MISMO canvas ya
+    # compuesto arriba (mismo criterio que usa render_png), evitando el bug
+    # por completo y garantizando que el preview coincide con el PNG.
+    channels_bytes = [c.tobytes() for c in canvas.split()]
+    psd._record.image_data.set_data(channels_bytes, psd._record.header)
+    psd._updated = False
+
+    psd.save(output_path)
 
 
 def get_image_dimensions(filepath: str) -> tuple:
