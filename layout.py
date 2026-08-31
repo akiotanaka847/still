@@ -873,12 +873,15 @@ def compute_layout_ai_freeform(
         max_bottom = max(max_bottom, cy + rh / 2)
 
     margin = round(base_height * 0.12)
-    # Sin dato de profundidad explícito de la IA: el más grande (más
-    # prominente) se pinta al frente, criterio consistente con el resto del motor.
-    order_by_size = sorted(range(len(placed)), key=lambda i: placed[i][0].sh)
+    # Sin dato de profundidad explícito de la IA: combinamos posición vertical
+    # y tamaño. En fotografía de producto, lo que está más abajo en el lienzo
+    # suele leerse más al frente; sumar un poco de altura conserva al héroe
+    # grande con prioridad sin dejar que tape arbitrariamente a secundarios
+    # que la IA colocó en primer plano.
+    order_by_depth = sorted(range(len(placed)), key=lambda i: placed[i][2] + placed[i][0].sh * 0.18)
 
     out = []
-    for rank, idx in enumerate(order_by_size):
+    for rank, idx in enumerate(order_by_depth):
         it, cx, cy, rot = placed[idx]
         x0 = (cx - it.sw / 2) - min_left + margin
         y0 = (cy - it.sh / 2) - min_top + margin

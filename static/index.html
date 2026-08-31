@@ -686,15 +686,24 @@
             <span id="ai-status" class="text-[11px] text-purple-400">Opcional</span>
           </div>
           <p id="ai-reasoning" class="text-[11px] text-gray-500 mb-2.5 leading-relaxed max-w-3xl"></p>
-          <button id="ai-analyze-btn" onclick="bodAnalyzeAI()"
-                  class="mb-3 inline-flex items-center gap-2 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-2 rounded-lg transition-all">
-            ✦ Analizar productos con IA
-          </button>
+          <div class="flex flex-col sm:flex-row sm:items-center gap-2 mb-3 max-w-3xl">
+            <select id="ai-layout-select"
+                    style="color-scheme: light; -webkit-appearance: none; appearance: none; color: #111827; background-color: #fff;"
+                    class="text-xs text-gray-900 bg-white border border-purple-200 rounded-lg px-3 py-2 focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all">
+              <option value="dynamic">Dinámica</option>
+              <option value="elegant">Elegante</option>
+              <option value="editorial">Editorial</option>
+            </select>
+            <button id="ai-analyze-btn" onclick="bodAnalyzeAI()"
+                    class="inline-flex items-center justify-center gap-2 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-2 rounded-lg transition-all">
+              ✦ Generar composición IA
+            </button>
+          </div>
 
           <div class="flex items-center gap-2 mb-3 max-w-3xl">
             <input id="ai-custom-input" type="text" maxlength="200"
                    style="color-scheme: light; -webkit-appearance: none; appearance: none; color: #111827; background-color: #fff;"
-                   placeholder="Describí una composición a tu manera (opcional) — dejalo vacío para pedir una propuesta más"
+                   placeholder="Describe una composición a tu manera (opcional) — déjalo vacío para pedir una propuesta más"
                    class="flex-1 text-xs text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
                    onkeydown="if(event.key==='Enter'){event.preventDefault(); bodGenerateCustomAI();}">
             <button id="ai-custom-btn" onclick="bodGenerateCustomAI()" title="Con texto: sigue tu idea. Vacío: la IA propone otra composición distinta a las de arriba"
@@ -1192,6 +1201,7 @@ let BOD_AI_VARIANTS  = [];   // [{id,label,desc,layout}] devueltas por la IA
 let BOD_AI_REASONING = '';   // razonamiento (compartido por las variantes)
 let BOD_UPLOAD_PROMISE = null;
 let BOD_AI_DONE = false;
+let BOD_AI_STYLE = 'dynamic';
 let BOD_BACKGROUND_STYLE = null;  // id del fondo de estudio elegido (null = sin fondo)
 let BOD_ZOOM_DETAIL = false;      // burbuja de zoom sobre el héroe
 let BOD_REOPENED = false;    // true = bod-preview viene de "Proyectos" (reusar el layout guardado tal cual, no recomputar por STRATEGIES[BOD_SELECTED_IDX])
@@ -1407,17 +1417,58 @@ const STRATEGIES = [
 // "Ver todos los estilos" — ver bodShowProposals/bodToggleMoreStyles.
 const CURATED_STRATEGY_IDS = ['auto', 'profundidad', 'impacto'];
 
-// "Propuestas IA" muestra por defecto solo las 3 composiciones "IA · Libre"
-// (criterio 100% propio de la IA) — las 3 "ai"/"ai_depth"/"ai_impacto" son
-// los mismos estilos geométricos de arriba pero reordenados por IA, quedan
-// redundantes con "Estilos de layout" y se ocultan de esta sección. Filtrar
-// por id (no por posición en el array) porque BOD_AI_VARIANTS se reconstruye
-// también al usar "Generar con mi idea" — filtrar por índice ahí haría
-// reaparecer las ocultas.
+// "Propuestas IA" muestra una sola composición libre a la vez (elegida en el
+// selector), más la propuesta abierta del cuadro de texto si existe. Las tres
+// "ai"/"ai_depth"/"ai_impacto" siguen llegando desde el backend por compat,
+// pero se ocultan porque son estilos geométricos reordenados por IA.
 const HIDDEN_AI_IDS = new Set(['ai', 'ai_depth', 'ai_impacto']);
-// Mismo criterio que HIDDEN_AI_IDS pero por label — para el placeholder de
-// carga, que todavía no tiene ids reales (solo AI_VARIANT_LABELS genéricos).
-const HIDDEN_AI_LABELS = new Set(['IA · Equilibrado', 'IA · Profundidad', 'IA · Impacto']);
+
+function aiStyleOfVariant(v) {
+  const txt = `${v.id || ''} ${v.label || ''}`.toLowerCase();
+  if (txt.includes('eleg')) return 'elegant';
+  if (txt.includes('editor')) return 'editorial';
+  if (txt.includes('libre_2')) return 'elegant';
+  if (txt.includes('libre_3')) return 'editorial';
+  if (txt.includes('din') || txt.includes('libre_1')) return 'dynamic';
+  return '';
+}
+
+function aiSelectedVariant() {
+  return BOD_AI_VARIANTS.find(v => !HIDDEN_AI_IDS.has(v.id) && v.id !== 'ai_custom' && aiStyleOfVariant(v) === BOD_AI_STYLE);
+}
+
+function renderAIGrid() {
+  const aiGrid = document.getElementById('ai-grid');
+  aiGrid.innerHTML = '';
+  const selected = aiSelectedVariant();
+  if (selected) {
+    const idx = AI_BASE + BOD_AI_VARIANTS.indexOf(selected);
+    const { card, cv } = _makeProposalCard(idx, selected.label, selected.desc || '', 'text-purple-800', _aiCardClass);
+    aiGrid.appendChild(card);
+    if (selected.layout) renderMiniCanvas(cv, selected.layout);
+  }
+
+  const custom = BOD_AI_VARIANTS.find(v => v.id === 'ai_custom');
+  if (custom) {
+    const idx = AI_BASE + BOD_AI_VARIANTS.indexOf(custom);
+    const { card, cv } = _makeProposalCard(idx, custom.label, custom.desc || '', 'text-purple-800', _aiCardClass);
+    aiGrid.appendChild(card);
+    if (custom.layout) renderMiniCanvas(cv, custom.layout);
+  }
+
+  if (!aiGrid.children.length) {
+    aiGrid.innerHTML = `
+      <div class="col-span-1 sm:col-span-3 rounded-2xl border-2 border-dashed border-purple-200 bg-purple-50/40 p-3 text-xs text-purple-600">
+        Elige un tipo de composición y genera una propuesta con IA. Los estilos de layout de arriba no consumen IA.
+      </div>`;
+  }
+}
+
+function selectCurrentAIStyle() {
+  const selected = aiSelectedVariant();
+  if (!selected) return;
+  BOD_SELECTED_IDX = AI_BASE + BOD_AI_VARIANTS.indexOf(selected);
+}
 
 function bodToggleMoreStyles() {
   const more = document.getElementById('proposals-grid-more');
@@ -1429,10 +1480,6 @@ function bodToggleMoreStyles() {
 
 // Las propuestas IA ocupan índices a partir de AI_BASE
 const AI_BASE = STRATEGIES.length;
-// Placeholders mientras carga (los 3 últimos son genéricos: el label real de
-// "IA · Libre" lo define la IA en cada análisis — ver free_layout_options).
-const AI_VARIANT_LABELS = ['IA · Equilibrado', 'IA · Profundidad', 'IA · Impacto', 'IA · Libre 1', 'IA · Libre 2', 'IA · Libre 3'];
-
 // Inclinación del abanico en "impacto" (espejo de TILT_* en layout.py)
 const TILT_BASE = 20.0, TILT_STEP = 10.0, TILT_MAX = 30.0;
 const isAi      = idx => idx >= AI_BASE;
@@ -1910,7 +1957,7 @@ function _makeProposalCard(idx, label, desc, labelColor, clsFn) {
 function bodShowProposals() {
   if (!BOD_FILES.length) { toast('Agrega al menos una imagen de producto'); return; }
 
-  BOD_SESSION = null; BOD_UPLOAD_PROMISE = null; BOD_AI_VARIANTS = []; BOD_AI_REASONING = ''; BOD_AI_DONE = false;
+  BOD_SESSION = null; BOD_UPLOAD_PROMISE = null; BOD_AI_VARIANTS = []; BOD_AI_REASONING = ''; BOD_AI_DONE = false; BOD_AI_STYLE = 'dynamic';
   BOD_SELECTED_IDX = 0; BOD_REOPENED = false;
 
   const baseCfg = buildConfig();
@@ -1952,13 +1999,11 @@ function bodShowProposals() {
   document.getElementById('ai-custom-input').value = '';
   document.getElementById('ai-gen-input').value = '';
   document.getElementById('ai-gen-result').classList.add('hidden');
+  document.getElementById('ai-layout-select').value = BOD_AI_STYLE;
   const st = document.getElementById('ai-status');
   st.textContent = 'Opcional'; st.classList.remove('hidden');
   document.getElementById('ai-analyze-btn').disabled = false;
-  aiGrid.innerHTML = `
-    <div class="col-span-1 sm:col-span-3 rounded-2xl border-2 border-dashed border-purple-200 bg-purple-50/40 p-3 text-xs text-purple-600">
-      Haz clic en "Analizar productos con IA" si quieres propuestas inteligentes. Los estilos de layout de arriba no consumen IA.
-    </div>`;
+  renderAIGrid();
 
   showBOD('bod-proposals');
   bodEnsureUploaded().catch(() => {});
@@ -1985,14 +2030,16 @@ async function bodEnsureUploaded() {
 }
 
 async function bodAnalyzeAI() {
+  BOD_AI_STYLE = document.getElementById('ai-layout-select').value || 'dynamic';
   const cfg = buildConfig();
-  if (BOD_AI_DONE && BOD_AI_VARIANTS.length) { toast('El análisis IA ya está listo', 'warn'); return; }
   const btn = document.getElementById('ai-analyze-btn');
   const oldLabel = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = `<div class="w-3.5 h-3.5 border-2 border-purple-300 border-t-purple-600 rounded-full spin inline-block align-middle"></div> Analizando...`;
+  btn.innerHTML = `<div class="w-3.5 h-3.5 border-2 border-purple-300 border-t-purple-600 rounded-full spin inline-block align-middle"></div> Generando...`;
   try {
-    await bodUploadAndAnalyzeAI(cfg);
+    if (!BOD_AI_DONE || !BOD_AI_VARIANTS.length) await bodUploadAndAnalyzeAI(cfg);
+    selectCurrentAIStyle();
+    renderAIGrid();
   } finally {
     btn.disabled = false;
     btn.innerHTML = oldLabel;
@@ -2017,15 +2064,8 @@ async function bodUploadAndAnalyzeAI(cfg) {
     document.getElementById('ai-reasoning').textContent = BOD_AI_REASONING;
     BOD_AI_DONE = true;
 
-    const aiGrid = document.getElementById('ai-grid');
-    aiGrid.innerHTML = '';
-    BOD_AI_VARIANTS.forEach((v, k) => {
-      const idx = AI_BASE + k;
-      if (HIDDEN_AI_IDS.has(v.id)) return;   // redundante con "Estilos de layout" — ver HIDDEN_AI_IDS
-      const { card, cv } = _makeProposalCard(idx, v.label, v.desc || '', 'text-purple-800', _aiCardClass);
-      aiGrid.appendChild(card);
-      if (v.layout) renderMiniCanvas(cv, v.layout);
-    });
+    selectCurrentAIStyle();
+    renderAIGrid();
 
   } catch(e) {
     document.getElementById('ai-status').classList.add('hidden');
@@ -2073,15 +2113,7 @@ async function bodGenerateCustomAI() {
     if (existingIdx >= 0) BOD_AI_VARIANTS[existingIdx] = variant;
     else BOD_AI_VARIANTS.push(variant);
 
-    const aiGrid = document.getElementById('ai-grid');
-    aiGrid.innerHTML = '';
-    BOD_AI_VARIANTS.forEach((v, k) => {
-      const idx = AI_BASE + k;
-      if (HIDDEN_AI_IDS.has(v.id)) return;   // redundante con "Estilos de layout" — ver HIDDEN_AI_IDS
-      const { card, cv } = _makeProposalCard(idx, v.label, v.desc || '', 'text-purple-800', _aiCardClass);
-      aiGrid.appendChild(card);
-      if (v.layout) renderMiniCanvas(cv, v.layout);
-    });
+    renderAIGrid();
     toast('Nueva propuesta generada', 'warn');
   } catch (e) {
     toast(e.message);
@@ -2122,7 +2154,7 @@ async function bodGenerateAIImage() {
 }
 
 function bodSelectProposal(idx) {
-  if (isAi(idx) && !aiVariant(idx)) { toast('Espera a que termine el análisis IA', 'warn'); return; }
+  if (isAi(idx) && !aiVariant(idx)) { toast('Genera una composición IA primero', 'warn'); return; }
   BOD_SELECTED_IDX = idx;
   STRATEGIES.forEach((s, i) => {
     const c = document.getElementById(`prop-card-${i}`);
@@ -2137,7 +2169,7 @@ function bodSelectProposal(idx) {
 // ── Usar propuesta seleccionada ──────────────────────────────────────────────
 async function bodUseProposal() {
   const ai = isAi(BOD_SELECTED_IDX);
-  if (ai && !aiVariant(BOD_SELECTED_IDX)) { toast('Espera a que termine el análisis IA', 'warn'); return; }
+  if (ai && !aiVariant(BOD_SELECTED_IDX)) { toast('Genera una composición IA primero', 'warn'); return; }
 
   const btn = document.getElementById('bod-use-btn');
   btn.disabled = true;
@@ -2403,7 +2435,7 @@ async function bodRender(format) {
 // ── Reset ───────────────────────────────────────────────────────────────────
 function bodReset() {
   BOD_SESSION=null; BOD_LAYOUT=null; BOD_SELECTED_IDX=0; BOD_REOPENED=false;
-  BOD_UPLOAD_PROMISE=null; BOD_AI_VARIANTS=[]; BOD_AI_REASONING=''; BOD_AI_DONE=false; BOD_BACKGROUND_STYLE=null; BOD_ZOOM_DETAIL=false; BOD_SHADOW=true;
+  BOD_UPLOAD_PROMISE=null; BOD_AI_VARIANTS=[]; BOD_AI_REASONING=''; BOD_AI_DONE=false; BOD_AI_STYLE='dynamic'; BOD_BACKGROUND_STYLE=null; BOD_ZOOM_DETAIL=false; BOD_SHADOW=true;
   { const cb=document.getElementById('zoom-detail-toggle'); if (cb) cb.checked=false; }
   { const cb=document.getElementById('shadow-toggle'); if (cb) cb.checked=true; }
   BOD_FILES.forEach(f=>URL.revokeObjectURL(f.url));
@@ -2414,6 +2446,7 @@ function bodReset() {
   document.getElementById('bod-prod-input').value='';
   document.getElementById('bod-bg-input').value='';
   { const ci=document.getElementById('ai-custom-input'); if (ci) ci.value=''; }
+  { const sel=document.getElementById('ai-layout-select'); if (sel) sel.value=BOD_AI_STYLE; }
   { const gi=document.getElementById('ai-gen-input'); if (gi) gi.value=''; }
   { const gr=document.getElementById('ai-gen-result'); if (gr) gr.classList.add('hidden'); }
   showBOD('bod-upload');
@@ -2440,7 +2473,7 @@ async function bodOpenSession(id) {
 
     bodClearProducts();
     BOD_SESSION = id; BOD_LAYOUT = null; BOD_SELECTED_IDX = 0; BOD_REOPENED = false;
-    BOD_UPLOAD_PROMISE = null; BOD_AI_VARIANTS = []; BOD_AI_REASONING = ''; BOD_AI_DONE = false;
+    BOD_UPLOAD_PROMISE = null; BOD_AI_VARIANTS = []; BOD_AI_REASONING = ''; BOD_AI_DONE = false; BOD_AI_STYLE = 'dynamic';
 
     const files = new Array((data.images || []).length).fill(null);
     await Promise.all((data.images || []).map(async (img, i) => {

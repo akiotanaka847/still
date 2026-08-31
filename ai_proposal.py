@@ -15,6 +15,7 @@ motor geométrico (layout.py) compone igual que siempre.
 import base64
 import io
 import json
+import math
 import re
 from pathlib import Path
 
@@ -66,7 +67,34 @@ def _to_jpeg_bytes(filepath: str, max_size: int = 512) -> bytes:
         return buf.getvalue()
 
 
-def _build_prompt(names: list) -> str:
+def _product_brief(images_or_names: list) -> tuple[list, str]:
+    """Resumen compacto de cada producto para que la IA piense composición
+    con siluetas reales, no solo nombres. Acepta la lista completa de
+    imágenes o, por compatibilidad, una lista de nombres."""
+    names = []
+    rows = []
+    for item in images_or_names:
+        if isinstance(item, dict):
+            name = item.get("name", "")
+            w = max(1, int(item.get("width") or item.get("w") or 1))
+            h = max(1, int(item.get("height") or item.get("h") or 1))
+            ratio = w / h
+            if ratio < 0.72:
+                shape = "vertical/alto"
+            elif ratio > 1.35:
+                shape = "horizontal/ancho"
+            else:
+                shape = "compacto/cuadrado"
+            rows.append(f"- {name}: {shape}, proporción visual aprox. {w}:{h}")
+        else:
+            name = str(item)
+            rows.append(f"- {name}")
+        names.append(name)
+    return names, "\n".join(rows)
+
+
+def _build_prompt(images_or_names: list) -> str:
+    names, product_brief = _product_brief(images_or_names)
     return f"""Eres un experto en diseño visual de bodegones comerciales y fotografía de producto.
 
 Analiza los {len(names)} productos mostrados y determina el orden óptimo para componer un bodegón visualmente atractivo.
@@ -77,6 +105,9 @@ Criterios de evaluación:
 3. Contraste de formas: alterna productos verticales y horizontales para crear ritmo
 4. Peso visual: distribuye productos de apariencia "pesada" (oscuros, grandes) con los más "ligeros"
 5. Flujo natural: el ojo del espectador debe moverse fluidamente por la composición
+
+Productos y siluetas aproximadas:
+{product_brief}
 
 TAMAÑO REAL (muy importante): estima el tamaño físico real de cada producto según lo que ES
 (p. ej. una botella de 1L es mucho más grande que un serum de 30ml o una barra de labial).
@@ -92,23 +123,42 @@ superior izquierda del recuadro; w,h = ancho/alto), pensado para una burbuja cir
 zoom de ~30% de ancho x 20% de alto del producto.
 
 COMPOSICIÓN LIBRE (lo más importante de esta tarea, y lo que más se nota que lo hizo una IA
-—no una fórmula fija—): actuá como director de arte y proponé TRES composiciones fotográficas
-profesionales completas, cada una con una intención bien distinta entre sí (nunca variaciones
-menores de la misma idea):
+—no una fórmula fija—): actúa como director de arte y propone TRES composiciones fotográficas
+profesionales completas y COHERENTES. No repartas productos al azar por el lienzo: todos deben
+sentirse parte de una misma escena, con una base visual común, jerarquía clara y aire suficiente
+para reconocer cada etiqueta. Cada composición debe tener una intención bien distinta entre sí
+(nunca variaciones menores de la misma idea):
   1. "Dinámica": máxima energía — superposición fuerte, ángulos marcados y contrastantes,
      tamaños con mucha diferencia entre el héroe y el resto.
   2. "Elegante": minimalista — más espacio en blanco entre productos, ángulos sutiles o nulos,
      composición serena tipo producto premium.
   3. "Editorial": asimétrica y con ritmo — como una revista de moda: tamaños contrastados,
      algún producto bien arriba o abajo del resto, no todos a la misma altura.
+
+Reglas de composición por cantidad:
+- Si hay 2 productos: NO los pongas uno encima del otro ni pegados al centro. Haz un dúo claro:
+  héroe ligeramente dominante y acompañante visible, con centros separados horizontalmente.
+- Si hay 3 a 5 productos: crea una familia compacta tipo triángulo/pirámide: héroe cerca del
+  centro, secundarios a los lados o levemente atrás. Deben verse unidos, no dispersos.
+- Si hay 6 a 9 productos: agrúpalos en una composición de catálogo/editorial con 2 niveles
+  visuales o arco suave. Evita una fila plana interminable y evita una nube caótica.
+- Si hay 10 o más productos: prioriza orden legible: dos filas o arco amplio, grupos por tamaño
+  y color, con el héroe anclando el centro. La coherencia importa más que la extravagancia.
+
+Reglas duras de visibilidad:
+- Ningún producto puede quedar casi totalmente tapado por otro.
+- No uses el mismo cx/cy para varios productos.
+- En cualquier par de productos, separa los centros al menos 0.14 en distancia normalizada
+  (0.20 o más si solo hay 2 o 3 productos), salvo solapamientos leves e intencionales.
+- Mantén los centros entre 0.14 y 0.86 cuando sea posible; usa 0.10-0.90 solo para extremos.
 Para cada una, y para cada producto, sobre un lienzo cuadrado imaginario de 0.0 a 1.0 en cada
 eje (0,0 = arriba-izquierda, 1,1 = abajo-derecha), dame:
   - cx, cy: el CENTRO del producto. El héroe suele ir más al centro y grande; los secundarios
-    pueden ir más chicos, superpuestos, a los costados o a distinta altura — pero mantené todos
+    pueden ir más chicos, superpuestos, a los costados o a distinta altura — pero mantén todos
     entre 0.12 y 0.88 en ambos ejes para que ninguno quede cortado contra el borde. IMPORTANTE:
     con 2 productos, sus cx NUNCA deben quedar a menos de ~0.2 de distancia entre sí (p. ej. 0.35
     y 0.65, no 0.48 y 0.52) — si quedan casi en el mismo punto, uno tapa por completo al otro y
-    se pierde el producto. En "Elegante" en particular, separalos con criterio generoso: se busca
+    se pierde el producto. En "Elegante" en particular, sepáralos con criterio generoso: se busca
     espacio en blanco entre ellos, NO amontonados.
   - rotation: inclinación en grados, de -35 a 35 (en "Elegante" pueden ser todos cercanos a 0).
 Las tres deben poder distinguirse a simple vista entre sí — si dos quedan parecidas, no cumpliste
@@ -150,14 +200,165 @@ def _parse_result(raw: str, names: list) -> dict:
     missing = [n for n in names if n not in set(result["order"])]
     result["order"].extend(missing)
     result.setdefault("hero", result["order"][0] if result["order"] else "")
+    if result["hero"] not in names:
+        result["hero"] = result["order"][0] if result["order"] else ""
     result.setdefault("reasoning", "")
     result["sizes"] = _normalize_sizes(result.get("sizes", {}), names)
     result["detail_crop"] = _normalize_detail_crop(result.get("detail_crop"))
-    result["free_layout_options"] = _normalize_free_layout_options(result.get("free_layout_options"), names)
+    result["free_layout_options"] = _normalize_free_layout_options(
+        result.get("free_layout_options"), names, result.get("hero")
+    )
     return result
 
 
-def _normalize_free_layout_options(options, names):
+def _style_key(label: str, option_index: int = 0) -> str:
+    txt = (label or "").lower()
+    if "eleg" in txt or option_index == 1:
+        return "elegant"
+    if "editor" in txt or option_index == 2:
+        return "editorial"
+    return "dynamic"
+
+
+def _ordered_for_layout(names: list, hero: str = None) -> list:
+    if hero in names:
+        return [hero] + [n for n in names if n != hero]
+    return list(names)
+
+
+def _fallback_free_layout(names: list, style: str = "dynamic", hero: str = None) -> dict:
+    """Composición determinista de respaldo cuando la IA devuelve centros
+    inutilizables. No intenta reemplazar el criterio artístico del modelo:
+    solo evita que la tarjeta 'IA · Libre' termine como una pila ilegible."""
+    ordered = _ordered_for_layout(names, hero)
+    n = len(ordered)
+    if n == 0:
+        return {}
+    if n == 1:
+        return {ordered[0]: {"cx": 0.5, "cy": 0.52, "rotation": 0.0}}
+
+    out = {}
+    if style == "elegant":
+        if n <= 4:
+            xs = [0.50] if n == 1 else [0.24 + i * (0.52 / (n - 1)) for i in range(n)]
+            for i, name in enumerate(ordered):
+                out[name] = {"cx": xs[i], "cy": 0.52 + (0.025 if i % 2 else 0.0), "rotation": 0.0}
+        else:
+            cols = min(5, max(3, round(n ** 0.5) + 1))
+            rows = (n + cols - 1) // cols
+            for i, name in enumerate(ordered):
+                row, col = divmod(i, cols)
+                denom_x = max(1, cols - 1)
+                denom_y = max(1, rows - 1)
+                out[name] = {
+                    "cx": 0.20 + 0.60 * (col / denom_x),
+                    "cy": 0.38 + 0.26 * (row / denom_y),
+                    "rotation": 0.0,
+                }
+        return {k: {kk: round(vv, 3) if kk != "rotation" else round(vv, 1)
+                    for kk, vv in v.items()} for k, v in out.items()}
+
+    if style == "editorial":
+        seed = [
+            (0.47, 0.56, -4), (0.66, 0.39, 10), (0.30, 0.45, -12),
+            (0.70, 0.66, 7), (0.38, 0.72, 14), (0.55, 0.30, -8),
+            (0.21, 0.62, 6), (0.82, 0.50, -10), (0.50, 0.80, 3),
+        ]
+    else:
+        seed = [
+            (0.50, 0.58, 0), (0.35, 0.52, -14), (0.65, 0.52, 14),
+            (0.27, 0.67, 9), (0.73, 0.67, -9), (0.42, 0.39, 17),
+            (0.58, 0.39, -17), (0.20, 0.55, -6), (0.80, 0.55, 6),
+        ]
+
+    for i, name in enumerate(ordered):
+        if i < len(seed):
+            cx, cy, rot = seed[i]
+        else:
+            # Más productos: arco ordenado alrededor del centro, legible y compacto.
+            t = (i - len(seed)) / max(1, n - len(seed))
+            angle = math.pi * (0.10 + 0.80 * t)
+            radius_x = 0.36
+            radius_y = 0.28
+            cx = 0.50 + math.cos(angle) * radius_x
+            cy = 0.56 + math.sin(angle) * radius_y
+            rot = max(-18, min(18, (0.5 - t) * 32))
+        out[name] = {"cx": cx, "cy": cy, "rotation": rot}
+
+    return {k: {kk: round(vv, 3) if kk != "rotation" else round(vv, 1)
+                for kk, vv in v.items()} for k, v in out.items()}
+
+
+def _layout_quality(layout: dict, names: list) -> tuple[float, float, float]:
+    pts = [(layout[n]["cx"], layout[n]["cy"]) for n in names if n in layout]
+    if len(pts) < 2:
+        return 1.0, 1.0, 1.0
+    min_dist = min(
+        ((ax - bx) ** 2 + (ay - by) ** 2) ** 0.5
+        for i, (ax, ay) in enumerate(pts)
+        for bx, by in pts[i + 1:]
+    )
+    xs = [p[0] for p in pts]
+    ys = [p[1] for p in pts]
+    return min_dist, max(xs) - min(xs), max(ys) - min(ys)
+
+
+def _polish_free_layout(layout: dict, names: list, style: str = "dynamic", hero: str = None) -> dict:
+    n = len(names)
+    if n < 2:
+        return layout
+
+    min_dist, x_span, y_span = _layout_quality(layout, names)
+    severe_cluster = min_dist < 0.055 or (x_span < 0.16 and y_span < 0.16)
+    if severe_cluster:
+        return _fallback_free_layout(names, style, hero)
+
+    target = 0.20 if n <= 3 else 0.16 if n <= 6 else 0.12
+    if style == "elegant":
+        target += 0.04 if n <= 6 else 0.02
+    elif style == "dynamic":
+        target -= 0.02
+
+    pts = {name: [layout[name]["cx"], layout[name]["cy"], layout[name]["rotation"]] for name in names}
+    for _ in range(24):
+        moved = False
+        for i, a in enumerate(names):
+            for b in names[i + 1:]:
+                ax, ay, _ = pts[a]
+                bx, by, _ = pts[b]
+                dx, dy = bx - ax, by - ay
+                dist = (dx * dx + dy * dy) ** 0.5
+                if dist >= target:
+                    continue
+                if dist < 1e-6:
+                    dx, dy, dist = 1.0, 0.0, 1.0
+                push = (target - dist) / 2
+                ux, uy = dx / dist, dy / dist
+                pts[a][0] -= ux * push
+                pts[a][1] -= uy * push
+                pts[b][0] += ux * push
+                pts[b][1] += uy * push
+                moved = True
+        for name in names:
+            pts[name][0] = max(0.10, min(0.90, pts[name][0]))
+            pts[name][1] = max(0.10, min(0.90, pts[name][1]))
+        if not moved:
+            break
+
+    polished = {
+        name: {"cx": round(pts[name][0], 3), "cy": round(pts[name][1], 3), "rotation": round(pts[name][2], 1)}
+        for name in names
+    }
+    _, _, y_span = _layout_quality(polished, names)
+    if style != "elegant" and n >= 3 and y_span < 0.08:
+        ordered = _ordered_for_layout(names, hero)
+        offsets = [0.00, -0.07, 0.06, -0.03, 0.04]
+        for i, name in enumerate(ordered):
+            polished[name]["cy"] = round(max(0.10, min(0.90, polished[name]["cy"] + offsets[i % len(offsets)])), 3)
+    return polished
+
+
+def _normalize_free_layout_options(options, names, hero: str = None):
     """Valida la lista de composiciones libres (cada una con su 'label' y su
     'layout' posición/rotación por producto). Si la IA no devolvió nada
     usable, la lista queda vacía y 'IA · Libre' simplemente no aparece —
@@ -169,11 +370,12 @@ def _normalize_free_layout_options(options, names):
         if not isinstance(opt, dict):
             continue
         label = str(opt.get("label") or f"Libre {i + 1}").strip()[:40] or f"Libre {i + 1}"
-        out.append({"label": label, "layout": _normalize_free_layout(opt.get("layout"), names)})
+        style = _style_key(label, i)
+        out.append({"label": label, "layout": _normalize_free_layout(opt.get("layout"), names, style, hero)})
     return out
 
 
-def _normalize_free_layout(free_layout, names):
+def _normalize_free_layout(free_layout, names, style: str = "dynamic", hero: str = None):
     """Valida la composición libre (posición/rotación por producto) que
     propone la IA. Si un producto falta o vino con datos inválidos, se le
     asigna una posición central neutra en vez de descartar toda la
@@ -185,13 +387,15 @@ def _normalize_free_layout(free_layout, names):
         pos = free_layout.get(n)
         pos = pos if isinstance(pos, dict) else {}
         try:
-            cx = max(0.08, min(0.92, float(pos.get("cx", 0.5))))
-            cy = max(0.08, min(0.92, float(pos.get("cy", 0.5))))
+            fallback = _fallback_free_layout(names, style, hero).get(n, {"cx": 0.5, "cy": 0.5, "rotation": 0.0})
+            cx = max(0.08, min(0.92, float(pos.get("cx", fallback["cx"]))))
+            cy = max(0.08, min(0.92, float(pos.get("cy", fallback["cy"]))))
             rot = max(-35.0, min(35.0, float(pos.get("rotation", 0.0))))
         except (TypeError, ValueError):
-            cx, cy, rot = 0.5, 0.5, 0.0
+            fallback = _fallback_free_layout(names, style, hero).get(n, {"cx": 0.5, "cy": 0.5, "rotation": 0.0})
+            cx, cy, rot = fallback["cx"], fallback["cy"], fallback["rotation"]
         out[n] = {"cx": round(cx, 3), "cy": round(cy, 3), "rotation": round(rot, 1)}
-    return out
+    return _polish_free_layout(out, names, style, hero)
 
 
 def _normalize_detail_crop(crop):
@@ -269,7 +473,7 @@ def _analyze_gemini(images: list, api_key: str) -> dict:
                     data=_to_jpeg_bytes(fp), mime_type="image/jpeg"
                 )
             )
-    contents.append(_build_prompt(names))
+    contents.append(_build_prompt(images))
 
     response = client.models.generate_content(
         model="gemini-2.5-flash",
@@ -300,7 +504,7 @@ def _analyze_claude(images: list, api_key: str) -> dict:
                 "type": "image",
                 "source": {"type": "base64", "media_type": "image/jpeg", "data": b64},
             })
-    content.append({"type": "text", "text": _build_prompt(names)})
+    content.append({"type": "text", "text": _build_prompt(images)})
 
     response = client.messages.create(
         model="claude-sonnet-4-6",
@@ -338,7 +542,7 @@ def _analyze_groq(images: list, api_key: str) -> dict:
                 "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
             })
             sent += 1
-    content.append({"type": "text", "text": _build_prompt(names)})
+    content.append({"type": "text", "text": _build_prompt(images)})
 
     response = client.chat.completions.create(
         model="qwen/qwen3.6-27b",
@@ -377,7 +581,7 @@ def _analyze_openai(images: list, api_key: str) -> dict:
                 "type": "image_url",
                 "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
             })
-    content.append({"type": "text", "text": _build_prompt(names)})
+    content.append({"type": "text", "text": _build_prompt(images)})
 
     response = client.chat.completions.create(
         model="gpt-5.1",
@@ -454,26 +658,33 @@ def analyze_products(
 MAX_CUSTOM_PROMPT_LEN = 200  # una instrucción de dirección de arte no necesita más que esto
 
 
-def _build_custom_layout_prompt(names: list, custom_prompt: str) -> str:
-    return f"""Sos un director de arte de fotografía de producto. Te muestro {len(names)} productos
+def _build_custom_layout_prompt(images_or_names: list, custom_prompt: str) -> str:
+    names, product_brief = _product_brief(images_or_names)
+    return f"""Eres un director de arte de fotografía de producto. Te muestro {len(names)} productos
 (fotos reales) y el pedido de un cliente sobre cómo componerlos.
 
 ESTE ES EL ÚNICO CRITERIO DE TODA LA TAREA — no hay otra consigna estética, no hay estilos
-predefinidos que seguir, no evalúes "equilibrio" ni "ritmo visual" por tu cuenta. Cumplí el
-pedido con la mayor fidelidad literal posible. El único límite es que ningún producto quede
-totalmente tapado por otro o cortado fuera del lienzo — más allá de eso, priorizá el pedido
+predefinidos que seguir. Cumple el pedido con la mayor fidelidad literal posible. El límite
+obligatorio es que, si hay más de un producto, deben verse como una composición coherente:
+jerarquía clara, centros separados, productos reconocibles y una relación visual entre ellos.
+Ningún producto puede quedar totalmente tapado por otro o cortado fuera del lienzo. Más allá
+de eso, prioriza el pedido
 por sobre cualquier otro criterio de composición que se te ocurra.
 
 PEDIDO DEL CLIENTE: "{custom_prompt}"
 
-Además, para que los productos se vean en proporción entre sí como en un bodegón real, estimá
+Productos:
+{product_brief}
+
+Además, para que los productos se vean en proporción entre sí como en un bodegón real, estima
 el tamaño físico real de cada uno (no el tamaño del recorte de la foto) — un valor entre 0.3 y
 1.0, donde 1.0 es el producto más grande del conjunto.
 
 Para cada producto, sobre un lienzo cuadrado imaginario de 0.0 a 1.0 en cada eje (0,0 =
 arriba-izquierda, 1,1 = abajo-derecha), dame el CENTRO (cx, cy — entre 0.12 y 0.88 en ambos
-ejes) y la rotación en grados (-35 a 35; usá 0 salvo que el pedido mencione ángulos o
-inclinación).
+ejes) y la rotación en grados (-35 a 35; usa 0 salvo que el pedido mencione ángulos o
+inclinación). Si hay 2 o 3 productos, separa sus centros al menos 0.20; si hay más, al menos
+0.14 salvo solapamientos leves e intencionales.
 
 Nombres exactos de los productos: {json.dumps(names)}
 
@@ -523,7 +734,7 @@ def _analyze_custom_gemini(images: list, api_key: str, custom_prompt: str) -> di
         fp = item.get("filepath", "")
         if fp and Path(fp).exists():
             contents.append(types.Part.from_bytes(data=_to_jpeg_bytes(fp), mime_type="image/jpeg"))
-    contents.append(_build_custom_layout_prompt(names, custom_prompt))
+    contents.append(_build_custom_layout_prompt(images, custom_prompt))
 
     response = client.models.generate_content(
         model="gemini-2.5-flash",
@@ -552,7 +763,7 @@ def _analyze_custom_claude(images: list, api_key: str, custom_prompt: str) -> di
                 "type": "image",
                 "source": {"type": "base64", "media_type": "image/jpeg", "data": b64},
             })
-    content.append({"type": "text", "text": _build_custom_layout_prompt(names, custom_prompt)})
+    content.append({"type": "text", "text": _build_custom_layout_prompt(images, custom_prompt)})
 
     response = client.messages.create(
         model="claude-sonnet-4-6",
@@ -582,7 +793,7 @@ def _analyze_custom_groq(images: list, api_key: str, custom_prompt: str) -> dict
                 "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
             })
             sent += 1
-    content.append({"type": "text", "text": _build_custom_layout_prompt(names, custom_prompt)})
+    content.append({"type": "text", "text": _build_custom_layout_prompt(images, custom_prompt)})
 
     response = client.chat.completions.create(
         model="qwen/qwen3.6-27b",
@@ -613,7 +824,7 @@ def _analyze_custom_openai(images: list, api_key: str, custom_prompt: str) -> di
                 "type": "image_url",
                 "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
             })
-    content.append({"type": "text", "text": _build_custom_layout_prompt(names, custom_prompt)})
+    content.append({"type": "text", "text": _build_custom_layout_prompt(images, custom_prompt)})
 
     response = client.chat.completions.create(
         model="gpt-5.1",
