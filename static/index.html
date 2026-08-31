@@ -400,7 +400,7 @@
             <svg class="w-5 h-5 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="7" r="1.6"/><circle cx="16" cy="12" r="1.6"/><circle cx="9" cy="17" r="1.6"/><path d="M4 7h2M18 12h2M4 17h3"/></svg>
           </div>
           <h3 class="font-bold text-gray-900 text-sm mb-1">Compone</h3>
-          <p class="text-xs text-gray-500 leading-relaxed">Elegí un estilo o dejá que Still proponga.</p>
+          <p class="text-xs text-gray-500 leading-relaxed">Elige un estilo o deja que Still proponga.</p>
         </div>
         <svg class="hidden sm:block w-4 h-4 text-gray-300 mt-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
         <div class="flex-1">
@@ -446,9 +446,9 @@
   <section class="mb-14 pt-12" style="border-top:1px solid rgba(255,255,255,.08)">
     <div class="grid lg:grid-cols-[260px_1fr] gap-8 lg:gap-14 items-center">
       <div>
-        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">¿Tenés muchos productos?</p>
-        <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight leading-snug mb-3">Generá cientos de composiciones <span class="brand-text">por lote.</span></h2>
-        <p class="text-sm text-gray-500 max-w-sm leading-relaxed">Subí tus carpetas. Cada carpeta se convierte en una composición independiente.</p>
+        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">¿Tienes muchos productos?</p>
+        <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight leading-snug mb-3">Genera cientos de composiciones <span class="brand-text">por lote.</span></h2>
+        <p class="text-sm text-gray-500 max-w-sm leading-relaxed">Sube tus carpetas. Cada carpeta se convierte en una composición independiente.</p>
         <button onclick="switchTab('batch')" class="mt-4 text-sm font-semibold text-indigo-600 hover:underline">Generar por lotes →</button>
       </div>
       <div class="flex items-center gap-3 flex-wrap">
@@ -466,7 +466,7 @@
     <div class="grid lg:grid-cols-[260px_1fr] gap-8 lg:gap-14 items-center">
       <div>
         <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Exportación</p>
-        <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight leading-snug">Generá en segundos. Seguí en Photoshop.</h2>
+        <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight leading-snug">Genera en segundos. Sigue en Photoshop.</h2>
       </div>
       <div class="grid sm:grid-cols-2 gap-8">
         <div>
@@ -2014,9 +2014,9 @@ async function bodUploadAndAnalyzeAI(cfg) {
 async function bodGenerateCustomAI() {
   const input = document.getElementById('ai-custom-input');
   const text = input.value.trim();
-  // Vacío es válido: el backend lo toma como "generá una propuesta más a tu
+  // Vacío es válido: el backend lo toma como "genera una propuesta más a tu
   // criterio" — mismo botón sirve para pedir algo puntual o solo variedad.
-  if (!BOD_SESSION) { toast('Esperá a que termine el análisis inicial', 'warn'); return; }
+  if (!BOD_SESSION) { toast('Espera a que termine el análisis inicial', 'warn'); return; }
 
   const btn = document.getElementById('ai-custom-btn');
   const oldLabel = btn.innerHTML;
@@ -2056,7 +2056,7 @@ async function bodGenerateCustomAI() {
 }
 
 async function bodGenerateAIImage() {
-  if (!BOD_SESSION) { toast('Esperá a que termine el análisis inicial', 'warn'); return; }
+  if (!BOD_SESSION) { toast('Espera a que termine el análisis inicial', 'warn'); return; }
 
   const input = document.getElementById('ai-gen-input');
   const btn = document.getElementById('ai-gen-btn');
