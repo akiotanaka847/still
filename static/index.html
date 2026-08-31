@@ -1417,11 +1417,9 @@ const STRATEGIES = [
 // "Ver todos los estilos" — ver bodShowProposals/bodToggleMoreStyles.
 const CURATED_STRATEGY_IDS = ['auto', 'profundidad', 'impacto'];
 
-// "Propuestas IA" muestra una sola composición libre a la vez (elegida en el
-// selector), más la propuesta abierta del cuadro de texto si existe. Las tres
-// "ai"/"ai_depth"/"ai_impacto" siguen llegando desde el backend por compat,
-// pero se ocultan porque son estilos geométricos reordenados por IA.
-const HIDDEN_AI_IDS = new Set(['ai', 'ai_depth', 'ai_impacto']);
+// "Propuestas IA" muestra una sola composición visora a la vez (elegida en
+// el selector), más la propuesta abierta del cuadro de texto si existe.
+const HIDDEN_AI_IDS = new Set(['ai', 'ai_depth', 'ai_impacto']); // compat con sesiones viejas
 
 function aiStyleOfVariant(v) {
   const txt = `${v.id || ''} ${v.label || ''}`.toLowerCase();

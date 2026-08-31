@@ -359,27 +359,26 @@ async def auth_me(request: Request):
 
 VALID_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp", ".gif"}
 
-# Propuestas IA: mismo análisis (orden + tamaños), distinto tratamiento de layout
-# Solo quedan las variantes donde el orden/tamaño que decide la IA cambia
-# realmente el resultado (el héroe se escala/centra distinto). Se sacaron
-# ai_shadow/ai_fila_recta/ai_cruce/ai_inclinado_* porque su fórmula geométrica
-# es fija — con la IA se veían casi idénticas a la versión gratis, sin ningún
-# valor visible a cambio de gastar la llamada de IA. Las composiciones
-# "IA · Libre" (varias, con criterio propio de la IA) se arman aparte, ver
-# free_layout_options en bodegon_ai_proposal — esas sí muestran una IA
-# decidiendo de verdad, no alimentando una fórmula nuestra.
+# Propuestas IA visora: la IA decide orden/tamaño/héroe, y el layout final lo
+# arma Pillow con estrategias que ya se ven bien visualmente. Así evitamos que
+# el modelo invente coordenadas libres inconsistentes.
 AI_VARIANT_DEFS = [
-    ("ai",             "IA · Equilibrado",  "Orden y tamaños inteligentes"),
-    ("ai_depth",       "IA · Profundidad",  "Héroe al frente + solapamiento"),
-    ("ai_impacto",     "IA · Impacto",      "Abanico dinámico tipo anuncio"),
+    ("ai_dinamica",  "IA visora — Dinámica",  "Impacto con orden y tamaños IA", "impacto"),
+    ("ai_elegante",  "IA visora — Elegante",  "Profundidad limpia con héroe IA", "profundidad"),
+    ("ai_editorial", "IA visora — Editorial", "Radial editorial con criterio IA", "radial"),
 ]
-AI_STRATEGY_IDS = {vid for vid, _, _ in AI_VARIANT_DEFS}
+AI_STRATEGY_IDS = {vid for vid, _, _, _ in AI_VARIANT_DEFS}
+AI_STRATEGY_TO_LAYOUT = {vid: sid for vid, _, _, sid in AI_VARIANT_DEFS}
 
 
 def _is_ai_strategy(sort_strategy: str) -> bool:
     """'ai_libre_1'/'ai_libre_2'/... son dinámicas (una por cada composición
     libre que devolvió la IA), no entradas fijas de AI_VARIANT_DEFS."""
     return sort_strategy in AI_STRATEGY_IDS or sort_strategy.startswith("ai_libre_")
+
+
+def _layout_strategy_for_ai(sort_strategy: str) -> str:
+    return AI_STRATEGY_TO_LAYOUT.get(sort_strategy, sort_strategy)
 
 
 def _owned_by(info: dict, request: Request) -> bool:
@@ -570,6 +569,7 @@ def _resolve_render_params(body: dict, info: dict, info_file: Path):
         # Para las estrategias de IA usamos las imágenes ordenadas + escaladas
         # que persistió /ai-proposal
         strategy_id = cfg.get("sort_strategy", "auto")
+        layout_strategy_id = _layout_strategy_for_ai(strategy_id)
         if _is_ai_strategy(strategy_id) and info.get("ai_images"):
             render_images = info["ai_images"]
         else:
@@ -600,7 +600,7 @@ def _resolve_render_params(body: dict, info: dict, info_file: Path):
         else:
             layout = compute_layout_any(
                 images=render_images,
-                sort_strategy=strategy_id,
+                sort_strategy=layout_strategy_id,
                 rows_count=int(cfg.get("rows_count", 0)),
                 base_height=int(cfg.get("base_height", 760)),
                 item_gap=int(cfg.get("item_gap", 40)),
@@ -928,7 +928,7 @@ async def bodegon_ai_proposal(body: dict, request: Request):
     def _ai_layout(strategy_id: str):
         return compute_layout_any(
             images=ordered,
-            sort_strategy=strategy_id,
+            sort_strategy=_layout_strategy_for_ai(strategy_id),
             rows_count=int(cfg.get("rows_count", 0)),
             base_height=int(cfg.get("base_height", 760)),
             item_gap=int(cfg.get("item_gap", 40)),
@@ -941,24 +941,8 @@ async def bodegon_ai_proposal(body: dict, request: Request):
 
     variants = [
         {"id": vid, "label": label, "desc": desc, "layout": _ai_layout(vid)}
-        for vid, label, desc in AI_VARIANT_DEFS
+        for vid, label, desc, _layout_strategy in AI_VARIANT_DEFS
     ]
-
-    # "IA visora": la IA decide orden/héroe/tamaño real; el backend usa tres
-    # patrones controlados para convertir esa jerarquía en composiciones
-    # legibles y consistentes.
-    for i, opt in enumerate(suggestion.get("free_layout_options", [])):
-        variants.append({
-            "id": f"ai_libre_{i + 1}",
-            "label": f"IA visora — {opt['label']}",
-            "desc": "Jerarquía IA + composición guiada",
-            "layout": compute_layout_ai_freeform(
-                images=ordered,
-                free_layout=opt.get("layout"),
-                base_height=int(cfg.get("base_height", 760)),
-                max_vertical_boost=float(cfg.get("max_vertical_boost", 1.20)),
-            ),
-        })
 
     return {
         "variants": variants,
