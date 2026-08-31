@@ -83,15 +83,20 @@ def _client_ip(request: Request) -> str:
 
 
 # ─── Directorios ─────────────────────────────────────────────────────────────
-SESSIONS_DIR = Path("sessions")
+# DATA_DIR: dónde vive todo lo que NO es código (sesiones, usuarios, secreto de
+# cookies) — separado del código para poder montar un volumen persistente ahí
+# en despliegues con filesystem efímero (ej. Railway) sin tocar el resto. Por
+# defecto "." (mismo comportamiento de siempre en desarrollo local).
+DATA_DIR = Path(os.environ.get("DATA_DIR", "."))
+SESSIONS_DIR = DATA_DIR / "sessions"
 STATIC_DIR = Path("static")
-SESSIONS_DIR.mkdir(exist_ok=True)
+SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
 STATIC_DIR.mkdir(exist_ok=True)
 
 
 # ─── Autenticación ────────────────────────────────────────────────────────────
-USERS_FILE = Path("users.json")
-SECRET_FILE = Path(".secret")
+USERS_FILE = DATA_DIR / "users.json"
+SECRET_FILE = DATA_DIR / ".secret"
 
 # Prefijos de rutas que requieren sesión iniciada
 PROTECTED_PREFIXES = ("/api/bodegon", "/api/batch")
