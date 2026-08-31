@@ -573,10 +573,16 @@
                  class="max-w-full rounded-xl border border-gray-200 shadow-sm mb-2"
                  style="background-image: repeating-conic-gradient(#e5e7eb 0% 25%, #fff 0% 50%); background-size: 16px 16px;">
             <br>
-            <a id="ai-gen-download" href="#" download="bodegon_ai.png"
-               class="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700">
-              ⬇ Descargar esta versión
-            </a>
+            <div class="flex items-center gap-3">
+              <a id="ai-gen-download" href="#" download="bodegon_ai.png"
+                 class="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700">
+                ⬇ Descargar PNG
+              </a>
+              <a id="ai-gen-download-psd" href="#" download="bodegon_ai.psd" title="Una sola capa — la IA redibujó todo como una imagen, no hay productos separados"
+                 class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-700">
+                ⬇ Descargar PSD
+              </a>
+            </div>
           </div>
         </div>
 
@@ -1918,6 +1924,7 @@ async function bodGenerateAIImage() {
     const url = `/api/bodegon/ai-generated-file/${BOD_SESSION}?t=${Date.now()}`;
     document.getElementById('ai-gen-img').src = url;
     document.getElementById('ai-gen-download').href = url;
+    document.getElementById('ai-gen-download-psd').href = `/api/bodegon/ai-generated-psd/${BOD_SESSION}?t=${Date.now()}`;
     document.getElementById('ai-gen-result').classList.remove('hidden');
     toast('Imagen generada con IA', 'warn');
   } catch (e) {

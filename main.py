@@ -25,7 +25,7 @@ load_dotenv()
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.sessions import SessionMiddleware
@@ -716,6 +716,35 @@ async def bodegon_ai_generated_file(session_id: str, request: Request):
     if not out.exists():
         raise HTTPException(404, "PNG no encontrado. Generalo primero.")
     return FileResponse(str(out), filename="bodegon_ai.png", media_type="image/png")
+
+
+@app.get("/api/bodegon/ai-generated-psd/{session_id}")
+async def bodegon_ai_generated_psd(session_id: str, request: Request):
+    """Descarga el resultado de Generación IA como PSD de una sola capa
+    (no hay productos separados que envolver en capas — ver
+    image_gen.wrap_as_psd). Convierte al vuelo el PNG ya generado por
+    /ai-generate-image, no dispara una nueva llamada a la IA."""
+    if not re.match(r"^[0-9a-f\-]{36}$", session_id):
+        raise HTTPException(400, "Session ID inválido")
+    session_dir = SESSIONS_DIR / session_id
+    info_file = session_dir / "bodegon.json"
+    if info_file.exists():
+        info = json.loads(info_file.read_text(encoding="utf-8"))
+        if not _owned_by(info, request):
+            raise HTTPException(404, "PNG no encontrado. Generalo primero.")
+    src = session_dir / "output" / "bodegon_ai.png"
+    if not src.exists():
+        raise HTTPException(404, "PNG no encontrado. Generalo primero.")
+    try:
+        from image_gen import wrap_as_psd
+        psd_bytes = wrap_as_psd(src.read_bytes())
+    except Exception as e:
+        raise HTTPException(500, f"Error generando PSD: {e}")
+    return Response(
+        content=psd_bytes,
+        media_type="image/vnd.adobe.photoshop",
+        headers={"Content-Disposition": 'attachment; filename="bodegon_ai.psd"'},
+    )
 
 
 @app.get("/api/bodegon/background-styles")

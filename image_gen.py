@@ -103,3 +103,31 @@ def generate_bodegon_image(images: list, api_key: str, custom_prompt: str = "", 
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     return buf.getvalue()
+
+
+def wrap_as_psd(png_bytes: bytes, layer_name: str = "Bodegón (IA)") -> bytes:
+    """Envuelve el PNG de Generación IA como PSD de UNA sola capa. A
+    diferencia de renderer.render_psd (una capa por producto), acá no hay
+    productos separados que envolver — la IA redibujó la escena entera
+    como una sola imagen, así que el PSD solo aporta el formato/metadata
+    para seguir editando en Photoshop, no capas por producto.
+
+    Reusa el mismo workaround que renderer.render_psd: el auto-flatten
+    interno de psd-tools al guardar un documento recién creado está roto
+    (ver ese docstring para el detalle) — se inyecta el preview a mano."""
+    try:
+        from psd_tools import PSDImage
+    except ImportError as e:
+        raise RuntimeError("Falta psd-tools. Ejecuta: pip install psd-tools") from e
+
+    img = Image.open(io.BytesIO(png_bytes)).convert("RGBA")
+    psd = PSDImage.new("RGBA", img.size)
+    psd.create_pixel_layer(img, name=layer_name, top=0, left=0)
+
+    channels_bytes = [c.tobytes() for c in img.split()]
+    psd._record.image_data.set_data(channels_bytes, psd._record.header)
+    psd._updated = False
+
+    buf = io.BytesIO()
+    psd.save(buf)
+    return buf.getvalue()
