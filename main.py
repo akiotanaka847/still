@@ -864,12 +864,19 @@ async def bodegon_ai_proposal(body: dict, request: Request):
     cached = bool(info.get("ai_images")) and bool(info.get("ai_free_layout_options"))
     if cached and not body.get("force"):
         ordered = info["ai_images"]
+        from ai_proposal import build_directed_free_layout_options
+        free_layout_options = build_directed_free_layout_options(
+            [img["name"] for img in ordered],
+            info.get("ai_hero", ""),
+        )
+        info["ai_free_layout_options"] = free_layout_options
+        info_file.write_text(json.dumps(info, indent=2), encoding="utf-8")
         suggestion = {
             "order": [img["name"] for img in ordered],
             "hero": info.get("ai_hero", ""),
             "sizes": {img["name"]: img.get("scale", 1.0) for img in ordered},
             "detail_crop": info.get("ai_detail_crop"),
-            "free_layout_options": info.get("ai_free_layout_options", []),
+            "free_layout_options": free_layout_options,
             "reasoning": info.get("ai_reasoning", ""),
         }
     else:
@@ -937,14 +944,14 @@ async def bodegon_ai_proposal(body: dict, request: Request):
         for vid, label, desc in AI_VARIANT_DEFS
     ]
 
-    # "IA · Libre": una tarjeta por cada composición que propuso la IA (ver
-    # free_layout_options en ai_proposal._build_prompt) — no una fórmula fija
-    # nuestra, así que no pasa por compute_layout_any.
+    # "IA visora": la IA decide orden/héroe/tamaño real; el backend usa tres
+    # patrones controlados para convertir esa jerarquía en composiciones
+    # legibles y consistentes.
     for i, opt in enumerate(suggestion.get("free_layout_options", [])):
         variants.append({
             "id": f"ai_libre_{i + 1}",
-            "label": f"IA · Libre — {opt['label']}",
-            "desc": "Composición 100% propuesta por la IA",
+            "label": f"IA visora — {opt['label']}",
+            "desc": "Jerarquía IA + composición guiada",
             "layout": compute_layout_ai_freeform(
                 images=ordered,
                 free_layout=opt.get("layout"),

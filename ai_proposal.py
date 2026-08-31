@@ -122,47 +122,17 @@ un recuadro en fracciones de 0.0 a 1.0 relativas SOLO al recuadro del héroe (x,
 superior izquierda del recuadro; w,h = ancho/alto), pensado para una burbuja circular de
 zoom de ~30% de ancho x 20% de alto del producto.
 
-COMPOSICIÓN LIBRE (lo más importante de esta tarea, y lo que más se nota que lo hizo una IA
-—no una fórmula fija—): actúa como director de arte y propone TRES composiciones fotográficas
-profesionales completas y COHERENTES. No repartas productos al azar por el lienzo: todos deben
-sentirse parte de una misma escena, con una base visual común, jerarquía clara y aire suficiente
-para reconocer cada etiqueta. Cada composición debe tener una intención bien distinta entre sí
-(nunca variaciones menores de la misma idea):
-  1. "Dinámica": máxima energía — superposición fuerte, ángulos marcados y contrastantes,
-     tamaños con mucha diferencia entre el héroe y el resto.
-  2. "Elegante": minimalista — más espacio en blanco entre productos, ángulos sutiles o nulos,
-     composición serena tipo producto premium.
-  3. "Editorial": asimétrica y con ritmo — como una revista de moda: tamaños contrastados,
-     algún producto bien arriba o abajo del resto, no todos a la misma altura.
+COMPOSICIÓN VISUAL: no inventes coordenadas ni posiciones exactas. El sistema generará tres
+composiciones coherentes (Dinámica, Elegante y Editorial) usando reglas deterministas a partir
+de tu análisis. Tu tarea es entregar una buena dirección visual: orden, héroe y tamaños reales.
+Eso es lo que más impacta la composición final.
 
-Reglas de composición por cantidad:
-- Si hay 2 productos: NO los pongas uno encima del otro ni pegados al centro. Haz un dúo claro:
-  héroe ligeramente dominante y acompañante visible, con centros separados horizontalmente.
-- Si hay 3 a 5 productos: crea una familia compacta tipo triángulo/pirámide: héroe cerca del
-  centro, secundarios a los lados o levemente atrás. Deben verse unidos, no dispersos.
-- Si hay 6 a 9 productos: agrúpalos en una composición de catálogo/editorial con 2 niveles
-  visuales o arco suave. Evita una fila plana interminable y evita una nube caótica.
-- Si hay 10 o más productos: prioriza orden legible: dos filas o arco amplio, grupos por tamaño
-  y color, con el héroe anclando el centro. La coherencia importa más que la extravagancia.
-
-Reglas duras de visibilidad:
-- Ningún producto puede quedar casi totalmente tapado por otro.
-- No uses el mismo cx/cy para varios productos.
-- En cualquier par de productos, separa los centros al menos 0.14 en distancia normalizada
-  (0.20 o más si solo hay 2 o 3 productos), salvo solapamientos leves e intencionales.
-- Mantén los centros entre 0.14 y 0.86 cuando sea posible; usa 0.10-0.90 solo para extremos.
-Para cada una, y para cada producto, sobre un lienzo cuadrado imaginario de 0.0 a 1.0 en cada
-eje (0,0 = arriba-izquierda, 1,1 = abajo-derecha), dame:
-  - cx, cy: el CENTRO del producto. El héroe suele ir más al centro y grande; los secundarios
-    pueden ir más chicos, superpuestos, a los costados o a distinta altura — pero mantén todos
-    entre 0.12 y 0.88 en ambos ejes para que ninguno quede cortado contra el borde. IMPORTANTE:
-    con 2 productos, sus cx NUNCA deben quedar a menos de ~0.2 de distancia entre sí (p. ej. 0.35
-    y 0.65, no 0.48 y 0.52) — si quedan casi en el mismo punto, uno tapa por completo al otro y
-    se pierde el producto. En "Elegante" en particular, sepáralos con criterio generoso: se busca
-    espacio en blanco entre ellos, NO amontonados.
-  - rotation: inclinación en grados, de -35 a 35 (en "Elegante" pueden ser todos cercanos a 0).
-Las tres deben poder distinguirse a simple vista entre sí — si dos quedan parecidas, no cumpliste
-la consigna.
+Reglas para tu análisis:
+- Si hay 2 productos, elige un héroe claro y un acompañante visible.
+- Si hay 3 a 5 productos, piensa en una familia compacta tipo triángulo/pirámide.
+- Si hay 6 a 9 productos, ordena pensando en dos niveles visuales o arco suave.
+- Si hay 10 o más productos, prioriza legibilidad: grupos por tamaño/color y héroe al centro.
+- Alterna formas y colores para que el conjunto se vea coherente, no como una fila accidental.
 
 Nombres exactos de los productos: {json.dumps(names)}
 
@@ -172,11 +142,6 @@ Responde ÚNICAMENTE con este JSON (sin texto adicional, sin markdown):
   "hero": "nombre del producto más prominente",
   "sizes": {{"NOMBRE_EXACTO": tamaño_relativo_0.3_a_1.0, ...}} para los {len(names)} productos,
   "detail_crop": {{"x": 0.0_a_1.0, "y": 0.0_a_1.0, "w": 0.0_a_1.0, "h": 0.0_a_1.0}},
-  "free_layout_options": [
-    {{"label": "Dinámica", "layout": {{"NOMBRE_EXACTO": {{"cx":0.0_a_1.0,"cy":0.0_a_1.0,"rotation":-35_a_35}}, ...}} para los {len(names)} productos}},
-    {{"label": "Elegante", "layout": {{...}} para los {len(names)} productos}},
-    {{"label": "Editorial", "layout": {{...}} para los {len(names)} productos}}
-  ],
   "reasoning": "explicación de 1-2 oraciones en español que mencione el orden y los tamaños"
 }}"""
 
@@ -205,9 +170,7 @@ def _parse_result(raw: str, names: list) -> dict:
     result.setdefault("reasoning", "")
     result["sizes"] = _normalize_sizes(result.get("sizes", {}), names)
     result["detail_crop"] = _normalize_detail_crop(result.get("detail_crop"))
-    result["free_layout_options"] = _normalize_free_layout_options(
-        result.get("free_layout_options"), names, result.get("hero")
-    )
+    result["free_layout_options"] = build_directed_free_layout_options(names, result.get("hero"))
     return result
 
 
@@ -239,22 +202,22 @@ def _fallback_free_layout(names: list, style: str = "dynamic", hero: str = None)
 
     out = {}
     if style == "elegant":
-        if n <= 4:
-            xs = [0.50] if n == 1 else [0.24 + i * (0.52 / (n - 1)) for i in range(n)]
-            for i, name in enumerate(ordered):
-                out[name] = {"cx": xs[i], "cy": 0.52 + (0.025 if i % 2 else 0.0), "rotation": 0.0}
-        else:
-            cols = min(5, max(3, round(n ** 0.5) + 1))
-            rows = (n + cols - 1) // cols
-            for i, name in enumerate(ordered):
-                row, col = divmod(i, cols)
-                denom_x = max(1, cols - 1)
-                denom_y = max(1, rows - 1)
-                out[name] = {
-                    "cx": 0.20 + 0.60 * (col / denom_x),
-                    "cy": 0.38 + 0.26 * (row / denom_y),
-                    "rotation": 0.0,
-                }
+        elegant_seed = [
+            (0.50, 0.50, 0), (0.30, 0.54, 0), (0.70, 0.54, 0),
+            (0.42, 0.68, 0), (0.58, 0.68, 0), (0.20, 0.64, 0),
+            (0.80, 0.64, 0), (0.36, 0.38, 0), (0.64, 0.38, 0),
+            (0.50, 0.78, 0),
+        ]
+        for i, name in enumerate(ordered):
+            if i < len(elegant_seed):
+                cx, cy, rot = elegant_seed[i]
+            else:
+                cols = 5
+                row, col = divmod(i - len(elegant_seed), cols)
+                cx = 0.18 + 0.64 * (col / (cols - 1))
+                cy = min(0.88, 0.82 + row * 0.08)
+                rot = 0.0
+            out[name] = {"cx": cx, "cy": cy, "rotation": rot}
         return {k: {kk: round(vv, 3) if kk != "rotation" else round(vv, 1)
                     for kk, vv in v.items()} for k, v in out.items()}
 
@@ -266,9 +229,9 @@ def _fallback_free_layout(names: list, style: str = "dynamic", hero: str = None)
         ]
     else:
         seed = [
-            (0.50, 0.58, 0), (0.35, 0.52, -14), (0.65, 0.52, 14),
-            (0.27, 0.67, 9), (0.73, 0.67, -9), (0.42, 0.39, 17),
-            (0.58, 0.39, -17), (0.20, 0.55, -6), (0.80, 0.55, 6),
+            (0.50, 0.58, 0), (0.30, 0.52, -14), (0.70, 0.52, 14),
+            (0.20, 0.67, 9), (0.80, 0.67, -9), (0.39, 0.39, 17),
+            (0.61, 0.39, -17), (0.14, 0.55, -6), (0.86, 0.55, 6),
         ]
 
     for i, name in enumerate(ordered):
@@ -287,6 +250,21 @@ def _fallback_free_layout(names: list, style: str = "dynamic", hero: str = None)
 
     return {k: {kk: round(vv, 3) if kk != "rotation" else round(vv, 1)
                 for kk, vv in v.items()} for k, v in out.items()}
+
+
+def build_directed_free_layout_options(names: list, hero: str = None) -> list:
+    """Tres composiciones base para IA visora. La IA decide jerarquía
+    (order/hero/sizes); estas plantillas deciden geometría para que el
+    resultado sea consistente y visualmente coherente."""
+    styles = [
+        ("Dinámica", "dynamic"),
+        ("Elegante", "elegant"),
+        ("Editorial", "editorial"),
+    ]
+    return [
+        {"label": label, "layout": _fallback_free_layout(names, style, hero)}
+        for label, style in styles
+    ]
 
 
 def _layout_quality(layout: dict, names: list) -> tuple[float, float, float]:
