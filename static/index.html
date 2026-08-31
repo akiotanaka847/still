@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
 <link rel="shortcut icon" href="/static/favicon.ico">
 <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon-180.png">
-<link rel="stylesheet" href="/static/css/tailwind.css?v=3">
+<link rel="stylesheet" href="/static/css/tailwind.css?v=4">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -300,260 +300,249 @@
 ═══════════════════════════════════════════════════════ -->
 <div id="panel-home" class="hidden">
 
-  <!-- 01 · HERO -->
-  <section class="relative overflow-hidden rounded-3xl text-white px-8 py-14 sm:px-14 sm:py-16 mb-7"
+  <!-- 01 · HERO: mensaje + flujo antes→Still→después en una sola pantalla -->
+  <section class="relative overflow-hidden rounded-3xl text-white px-6 py-8 sm:px-10 sm:py-10 mb-5"
            style="background:radial-gradient(120% 120% at 0% 0%,#131a33 0%,#0a0e1f 55%,#070a16 100%);">
     <div class="aurora w-72 h-72" style="top:-50px;left:-40px;background:#5B8CF7;"></div>
     <div class="aurora w-96 h-96" style="bottom:-90px;right:-40px;background:#A855F7;animation-delay:-5s;"></div>
-    <div class="aurora w-60 h-60" style="top:35%;left:58%;background:#22d3ee;opacity:.35;animation-delay:-9s;"></div>
     <div class="absolute inset-0 grid-fade"></div>
 
-    <div class="relative grid lg:grid-cols-2 gap-10 lg:gap-8 items-center">
+    <div class="relative grid lg:grid-cols-2 gap-8 items-center">
       <div>
-        <span class="inline-flex items-center gap-2 text-xs font-semibold text-indigo-200 glass px-3 py-1.5 rounded-full mb-6">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-          La IA decide. Still compone.
-        </span>
-        <h1 class="text-4xl sm:text-5xl font-black leading-[1.05] tracking-tight mb-5">
-          De productos sueltos a <span class="shine">imágenes que venden</span>.
+        <h1 class="text-3xl sm:text-4xl font-black leading-[1.1] tracking-tight mb-3">
+          De tus productos a <span class="shine">imágenes que venden</span>.
         </h1>
-        <p class="text-base sm:text-lg text-slate-300/90 max-w-lg mb-8">
-          Still convierte tus fotos reales de producto en composiciones profesionales — listas
-          para tienda, catálogo y redes. Creá una composición o generá cientos por lote.
+        <p class="text-sm sm:text-base text-slate-300/90 max-w-md mb-5">
+          Still convierte tus fotos reales de producto en composiciones profesionales, listas para tienda, catálogo y redes.
         </p>
 
-        <div class="flex flex-wrap gap-3 mb-8">
+        <div class="grid grid-cols-2 gap-x-4 gap-y-2.5 mb-6 max-w-sm">
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg glass flex items-center justify-center flex-shrink-0 text-indigo-200">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            </span>
+            <span class="text-xs text-slate-300">Productos reales</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg glass flex items-center justify-center flex-shrink-0 text-indigo-200">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+            </span>
+            <span class="text-xs text-slate-300">Escala proporcional</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg glass flex items-center justify-center flex-shrink-0 text-indigo-200">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 12 22l-9-9 8.6-8.6A2 2 0 0 1 13 4h6a1 1 0 0 1 1 1v6a2 2 0 0 1-.4 1.4Z"/><circle cx="16" cy="8" r="1.1" fill="currentColor" stroke="none"/></svg>
+            </span>
+            <span class="text-xs text-slate-300">Branding intacto</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg glass flex items-center justify-center flex-shrink-0 text-indigo-200">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="1.6"/><path d="m21 15-5-5-9 9"/></svg>
+            </span>
+            <span class="text-xs text-slate-300">PNG + PSD listos para usar</span>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-3">
           <button onclick="switchTab('bodegon')"
-                  class="glow-btn brand-gradient text-white font-semibold px-6 py-3.5 rounded-2xl flex items-center gap-2 shadow-lg">
+                  class="glow-btn brand-gradient text-white font-semibold px-6 py-3 rounded-2xl flex items-center gap-2 shadow-lg text-sm">
             Crear mi primera composición
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
           </button>
           <button onclick="switchTab('batch')"
-                  class="glow-btn glass text-white font-semibold px-6 py-3.5 rounded-2xl flex items-center gap-2">
+                  class="glow-btn glass text-white font-semibold px-6 py-3 rounded-2xl flex items-center gap-2 text-sm">
             📁 Generar por lotes
           </button>
         </div>
-
-        <div class="flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-300/90">
-          <span>✓ Productos reales</span>
-          <span>✓ Escala proporcional</span>
-          <span>✓ Branding intacto</span>
-          <span>✓ PNG + PSD</span>
-        </div>
       </div>
 
-      <!-- Visual: la composición final es la protagonista, "antes" queda como detalle de apoyo -->
-      <div class="relative flex items-center justify-center" style="min-height:280px;">
-        <img src="/static/landing/despues.png" alt="Composición final generada por Still"
-             class="floaty w-full h-auto object-contain relative z-10" style="max-width:380px;filter:drop-shadow(0 25px 50px rgba(91,140,247,.4)) drop-shadow(0 8px 20px rgba(168,85,247,.25));">
-
-        <span class="absolute top-0 right-2 sm:right-6 glass rounded-full px-3 py-1.5 text-[10px] font-semibold text-indigo-200 z-20">
-          ✓ Resultado real — sin retocar
-        </span>
-
-        <div class="absolute bottom-2 left-0 sm:left-4 flex gap-1.5 z-20">
-          <img src="/static/landing/antes-1.png" alt="Foto suelta de producto" class="w-9 h-9 object-contain glass rounded-lg p-1.5" style="transform:rotate(-8deg)">
-          <img src="/static/landing/antes-2.png" alt="Foto suelta de producto" class="w-9 h-9 object-contain glass rounded-lg p-1.5" style="transform:rotate(5deg)">
-          <img src="/static/landing/antes-3.png" alt="Foto suelta de producto" class="w-9 h-9 object-contain glass rounded-lg p-1.5" style="transform:rotate(-4deg)">
+      <!-- Flujo: antes → Still compone → después, con resultado real -->
+      <div>
+        <div class="flex items-center justify-center gap-1.5 sm:gap-2 text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-3">
+          <span>1 · Subís tus productos</span>
+          <span class="text-slate-600">┈┈→</span>
+          <span>2 · Still compone</span>
+          <span class="text-slate-600">┈┈→</span>
+          <span class="text-indigo-300">3 · Imagen lista para vender</span>
         </div>
-        <span class="absolute -bottom-5 left-0 sm:left-4 text-[9px] text-slate-500">↑ fotos sueltas, antes</span>
+        <div class="flex items-center gap-2 sm:gap-3">
+          <div class="grid grid-cols-2 gap-1.5 flex-shrink-0">
+            <img src="/static/landing/antes-1.png" alt="Foto suelta de producto" class="w-10 h-10 sm:w-11 sm:h-11 object-contain glass rounded-lg p-1.5">
+            <img src="/static/landing/antes-2.png" alt="Foto suelta de producto" class="w-10 h-10 sm:w-11 sm:h-11 object-contain glass rounded-lg p-1.5">
+            <img src="/static/landing/antes-3.png" alt="Foto suelta de producto" class="w-10 h-10 sm:w-11 sm:h-11 object-contain glass rounded-lg p-1.5">
+            <img src="/static/landing/antes-4.png" alt="Foto suelta de producto" class="w-10 h-10 sm:w-11 sm:h-11 object-contain glass rounded-lg p-1.5">
+          </div>
+          <svg class="w-4 h-4 text-indigo-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+          <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl brand-gradient flex items-center justify-center text-white font-black flex-shrink-0" style="box-shadow:0 0 22px rgba(91,140,247,.55)">S</div>
+          <svg class="w-4 h-4 text-indigo-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+          <div class="flex-1 min-w-0">
+            <img src="/static/landing/despues.png" alt="Composición final generada por Still, sin retocar" class="floaty w-full h-auto object-contain" style="filter:drop-shadow(0 18px 34px rgba(91,140,247,.4));">
+          </div>
+        </div>
+        <div class="flex items-center justify-between mt-3">
+          <span class="text-[10px] text-slate-500">✓ Resultado real — sin retocar</span>
+          <div class="flex gap-1.5">
+            <span class="glass rounded-md px-2 py-1 text-[9px] font-semibold text-slate-200">PNG · transparente</span>
+            <span class="glass rounded-md px-2 py-1 text-[9px] font-semibold text-slate-200">PSD · por capas</span>
+          </div>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- 02 · PROBLEMA + CÓMO FUNCIONA -->
-  <section class="mb-8">
-    <h2 class="text-xl sm:text-2xl font-black text-gray-900 tracking-tight text-center mb-2">Crear una pieza no debería tomar horas.</h2>
-    <p class="text-center text-xs sm:text-sm text-gray-500 mb-5 max-w-xl mx-auto">
-      <span class="line-through text-gray-400">Fotografía · Recorte · Photoshop · Escala · Alineación · Sombras · Exportación</span>
-      — <span class="brand-text font-semibold">Still automatiza el proceso.</span>
+  <!-- 02 · LA IA DECIDE. STILL COMPONE. -->
+  <section class="glass rounded-2xl px-5 py-4 sm:px-7 sm:py-5 mb-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 card">
+    <div class="flex items-center gap-2.5 flex-shrink-0">
+      <span class="w-8 h-8 rounded-lg flex items-center justify-center text-indigo-400" style="background:rgba(99,102,241,.16)">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>
+      </span>
+      <h2 class="text-sm sm:text-base font-black text-gray-900 tracking-tight whitespace-nowrap">LA IA DECIDE. <span class="brand-text">STILL COMPONE.</span></h2>
+    </div>
+    <p class="text-xs sm:text-sm text-gray-500 sm:pl-6" style="border-left:1px solid rgba(255,255,255,.1)">
+      La IA analiza tus productos, define jerarquía, escala y composición. Still usa tus imágenes reales para construir el resultado final.
     </p>
-    <div class="grid sm:grid-cols-3 gap-3">
-      <div class="glass rounded-xl p-4 card">
-        <span class="text-[10px] font-bold text-indigo-400 tracking-widest">PASO 01</span>
-        <h3 class="font-bold text-gray-900 text-sm mt-0.5">Sube</h3>
-        <p class="text-xs text-gray-500 mt-1">Tus fotos de producto — PNG o JPG.</p>
-      </div>
-      <div class="glass rounded-xl p-4 card">
-        <span class="text-[10px] font-bold text-indigo-400 tracking-widest">PASO 02</span>
-        <h3 class="font-bold text-gray-900 text-sm mt-0.5">Compone</h3>
-        <p class="text-xs text-gray-500 mt-1">Elegí un estilo o dejá que Still proponga.</p>
-      </div>
-      <div class="glass rounded-xl p-4 card">
-        <span class="text-[10px] font-bold text-indigo-400 tracking-widest">PASO 03</span>
-        <h3 class="font-bold text-gray-900 text-sm mt-0.5">Genera</h3>
-        <p class="text-xs text-gray-500 mt-1">PNG para publicar, PSD para editar.</p>
-      </div>
-    </div>
-    <p class="text-center text-xs text-gray-500 mt-4">¿Tenés cientos? <button onclick="switchTab('batch')" class="font-semibold text-indigo-600 hover:underline">Generá por lotes →</button></p>
   </section>
 
-  <!-- 03 · ANTES / DESPUÉS -->
-  <section class="mb-8">
-    <div class="glass rounded-2xl p-5 sm:p-6 card overflow-hidden">
-      <div class="grid sm:grid-cols-2 gap-6 items-center">
-        <div>
-          <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Antes</p>
-          <div class="flex gap-3 items-end">
-            <img src="/static/landing/antes-1.png" alt="Foto suelta de producto" class="h-16 sm:h-20 w-auto object-contain">
-            <img src="/static/landing/antes-2.png" alt="Foto suelta de producto" class="h-16 sm:h-20 w-auto object-contain">
-            <img src="/static/landing/antes-3.png" alt="Foto suelta de producto" class="h-16 sm:h-20 w-auto object-contain">
+  <!-- 03 · DASHBOARD: 3 modos · cómo funciona · batch · PSD -->
+  <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+
+    <div class="glass rounded-2xl p-5 card">
+      <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-3">3 modos de composición</p>
+      <div class="space-y-3">
+        <div class="flex items-start gap-2.5">
+          <span class="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0 text-indigo-500">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>
+          </span>
+          <div>
+            <h3 class="font-bold text-gray-900 text-xs">Composición rápida</h3>
+            <p class="text-[11px] text-gray-500 mt-0.5 leading-snug">Reglas precisas. Rápido, consistente y sin IA.</p>
           </div>
-          <p class="text-xs text-gray-500 mt-3">Fotos sueltas, sin relación entre sí.</p>
         </div>
-        <div>
-          <p class="text-[11px] font-bold text-indigo-400 uppercase tracking-wide mb-2">Después — generado por Still</p>
-          <div class="glass rounded-xl p-2" style="max-width:220px">
-            <img src="/static/landing/despues.png" alt="Composición final generada por Still, sin retocar" class="w-full h-auto object-contain rounded-lg">
+        <div class="flex items-start gap-2.5">
+          <span class="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0 text-purple-500">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>
+          </span>
+          <div>
+            <h3 class="font-bold text-gray-900 text-xs">Composición inteligente</h3>
+            <p class="text-[11px] text-gray-500 mt-0.5 leading-snug">La IA analiza tus productos y propone la mejor composición.</p>
           </div>
-          <p class="text-xs text-gray-500 mt-3">Mismas fotos, sin retocar — héroe, escala real y sombra de contacto.</p>
         </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- 04 · TRES MOTORES DE COMPOSICIÓN -->
-  <section class="mb-8">
-    <p class="text-center text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Un solo Still, tres motores de composición</p>
-    <div class="grid md:grid-cols-3 gap-3">
-      <div class="glass rounded-xl p-4 card">
-        <div class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-base mb-2">📐</div>
-        <h3 class="font-bold text-gray-900 text-sm">Composición rápida</h3>
-        <p class="text-xs text-gray-500 mt-1 leading-relaxed">Reglas precisas — 18 estilos, resultado instantáneo.</p>
-      </div>
-      <div class="glass rounded-xl p-4 card relative" style="border-color:rgba(129,140,248,.55)">
-        <span class="absolute -top-2.5 left-4 text-[9px] font-bold text-white brand-gradient px-2 py-0.5 rounded-full">Dirección de arte con IA</span>
-        <div class="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-base mb-2 mt-1">🎨</div>
-        <h3 class="font-bold text-gray-900 text-sm">Composición inteligente</h3>
-        <p class="text-xs text-gray-500 mt-1 leading-relaxed">Still propone posición, escala y jerarquía — como una directora de arte.</p>
-      </div>
-      <div class="glass rounded-xl p-4 card">
-        <div class="w-8 h-8 rounded-lg bg-cyan-50 flex items-center justify-center text-base mb-2">✨</div>
-        <h3 class="font-bold text-gray-900 text-sm">Escena generativa</h3>
-        <p class="text-xs text-gray-500 mt-1 leading-relaxed">La IA crea una escena nueva — más orgánica. Experimental.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- 05 · DIFERENCIAL -->
-  <section class="relative overflow-hidden rounded-2xl text-white px-8 py-7 sm:px-10 sm:py-8 mb-8"
-           style="background:radial-gradient(120% 120% at 100% 0%,#131a33 0%,#0a0e1f 55%,#070a16 100%);">
-    <div class="aurora w-56 h-56" style="top:-30px;right:-30px;background:#A855F7;"></div>
-    <div class="absolute inset-0 grid-fade"></div>
-    <div class="relative max-w-2xl mx-auto text-center">
-      <h2 class="text-lg sm:text-xl font-black tracking-tight mb-1.5">La IA decide. <span class="shine">Tus productos siguen siendo los tuyos.</span></h2>
-      <p class="text-slate-300/90 text-xs sm:text-sm max-w-xl mx-auto">La IA analiza, elige jerarquía y propone la composición — Still la construye siempre con tus imágenes reales, sin tocar el producto.</p>
-    </div>
-  </section>
-
-  <!-- 06 · ESCALA REAL DE PRODUCTO -->
-  <section class="mb-8">
-    <div class="glass rounded-2xl p-5 sm:p-6 card">
-      <div class="grid sm:grid-cols-2 gap-5 items-center">
-        <div>
-          <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Escala real de producto</p>
-          <h2 class="text-base sm:text-lg font-black text-gray-900 tracking-tight mb-2">Tus productos no tienen todos el mismo tamaño. Tu composición tampoco debería tratarlos igual.</h2>
-          <p class="text-xs text-gray-500">Still usa las proporciones reales de cada producto — una botella de 1 L, una de 500 ml y un frasco de 100 ml no deberían verse iguales.</p>
-        </div>
-        <div class="flex items-end justify-center gap-4 py-2">
-          <div class="flex flex-col items-center gap-1.5">
-            <div class="w-7 rounded-lg brand-gradient" style="height:80px;"></div>
-            <span class="text-[10px] font-semibold text-gray-500">1 L</span>
-          </div>
-          <div class="flex flex-col items-center gap-1.5">
-            <div class="w-6 rounded-lg brand-gradient opacity-80" style="height:52px;"></div>
-            <span class="text-[10px] font-semibold text-gray-500">500 ml</span>
-          </div>
-          <div class="flex flex-col items-center gap-1.5">
-            <div class="w-5 rounded-lg brand-gradient opacity-60" style="height:26px;"></div>
-            <span class="text-[10px] font-semibold text-gray-500">100 ml</span>
+        <div class="flex items-start gap-2.5">
+          <span class="w-7 h-7 rounded-lg bg-cyan-50 flex items-center justify-center flex-shrink-0 text-cyan-500">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.5 6.5l2 2M15.5 15.5l2 2M17.5 6.5l-2 2M8.5 15.5l-2 2"/></svg>
+          </span>
+          <div>
+            <h3 class="font-bold text-gray-900 text-xs">Escena generativa</h3>
+            <p class="text-[11px] text-gray-500 mt-0.5 leading-snug">La IA crea una nueva escena a partir de tus productos.</p>
           </div>
         </div>
       </div>
     </div>
-  </section>
 
-  <!-- 07 · BATCH -->
-  <section class="mb-8">
-    <div class="glass rounded-2xl p-5 sm:p-6 card">
-      <p class="text-[11px] font-bold text-purple-400 uppercase tracking-wide mb-1.5 text-center">Generación por lotes</p>
-      <h2 class="text-lg sm:text-xl font-black text-gray-900 tracking-tight text-center mb-2">¿100 productos? Hacé 100 composiciones.</h2>
-      <p class="text-xs text-gray-500 text-center max-w-xl mx-auto mb-5">Subí tus carpetas. Cada carpeta se convierte en una composición independiente y Still procesa todo en una sola corrida.</p>
-
-      <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-5">
-        <div class="text-center px-5 py-3 rounded-xl glass">
-          <p class="font-bold text-gray-900 text-sm">100 SKUs</p>
+    <div class="glass rounded-2xl p-5 card">
+      <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-3">¿Cómo funciona?</p>
+      <div class="space-y-3">
+        <div class="flex items-start gap-2.5">
+          <span class="w-7 h-7 rounded-lg brand-gradient flex items-center justify-center flex-shrink-0 text-white">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4.5 4.5 0 0 1-1-8.9A5.5 5.5 0 0 1 16.9 8H17a4 4 0 0 1 1 7.9"/><path d="M12 12v7M9 15l3-3 3 3"/></svg>
+          </span>
+          <div>
+            <h3 class="font-bold text-gray-900 text-xs">01 · Sube</h3>
+            <p class="text-[11px] text-gray-500 mt-0.5 leading-snug">Tus fotos de producto. PNG o JPG.</p>
+          </div>
         </div>
-        <svg class="w-5 h-5 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-        <div class="text-center px-5 py-3 rounded-xl brand-gradient">
-          <p class="font-bold text-white text-sm">Still</p>
+        <div class="flex items-start gap-2.5">
+          <span class="w-7 h-7 rounded-lg brand-gradient flex items-center justify-center flex-shrink-0 text-white">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="7" r="1.6"/><circle cx="16" cy="12" r="1.6"/><circle cx="9" cy="17" r="1.6"/><path d="M4 7h2M18 12h2M4 17h3"/></svg>
+          </span>
+          <div>
+            <h3 class="font-bold text-gray-900 text-xs">02 · Compone</h3>
+            <p class="text-[11px] text-gray-500 mt-0.5 leading-snug">Elegí un estilo o dejá que Still proponga.</p>
+          </div>
         </div>
-        <svg class="w-5 h-5 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-        <div class="text-center px-5 py-3 rounded-xl glass">
-          <p class="font-bold text-gray-900 text-sm">100 composiciones</p>
+        <div class="flex items-start gap-2.5">
+          <span class="w-7 h-7 rounded-lg brand-gradient flex items-center justify-center flex-shrink-0 text-white">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4M4 19h16"/></svg>
+          </span>
+          <div>
+            <h3 class="font-bold text-gray-900 text-xs">03 · Genera</h3>
+            <p class="text-[11px] text-gray-500 mt-0.5 leading-snug">PNG para publicar. PSD para editar.</p>
+          </div>
         </div>
-        <svg class="w-5 h-5 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-        <div class="text-center px-5 py-3 rounded-xl glass">
-          <p class="font-bold text-gray-900 text-sm">📦 ZIP</p>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap justify-center gap-2 mb-7">
-        <span class="text-xs text-gray-500 px-3 py-1 rounded-full glass">E-commerce</span>
-        <span class="text-xs text-gray-500 px-3 py-1 rounded-full glass">Retail</span>
-        <span class="text-xs text-gray-500 px-3 py-1 rounded-full glass">Marcas con muchos SKUs</span>
-        <span class="text-xs text-gray-500 px-3 py-1 rounded-full glass">Equipos de marketing</span>
-        <span class="text-xs text-gray-500 px-3 py-1 rounded-full glass">Agencias</span>
-        <span class="text-xs text-gray-500 px-3 py-1 rounded-full glass">Catálogos</span>
-      </div>
-
-      <div class="text-center">
-        <button onclick="switchTab('batch')" class="inline-flex items-center gap-1.5 text-sm font-semibold text-purple-600 hover:gap-2.5 transition-all">
-          Generar por lotes <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-        </button>
       </div>
     </div>
-  </section>
 
-  <!-- 08 · PSD + EXTRAS -->
-  <section class="mb-8">
-    <div class="glass rounded-2xl p-5 sm:p-6 card">
-      <div class="grid sm:grid-cols-2 gap-4 mb-4">
-        <div>
-          <h3 class="font-bold text-gray-900 text-sm">🖼️ PNG — listo para publicar</h3>
-          <p class="text-xs text-gray-500 mt-1">Fondo transparente al ras, listo para tienda, catálogo o redes.</p>
-        </div>
-        <div>
-          <h3 class="font-bold text-gray-900 text-sm">🗂️ PSD — listo para editar</h3>
-          <p class="text-xs text-gray-500 mt-1">Una capa por producto + sombras, para seguir en Photoshop.</p>
-        </div>
+    <div class="glass rounded-2xl p-5 card flex flex-col">
+      <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2">Generación por lotes</p>
+      <h3 class="font-bold text-gray-900 text-sm mb-1 leading-snug">¿100 productos? Hacé 100 composiciones.</h3>
+      <p class="text-[11px] text-gray-500 mb-4 leading-snug">Cada carpeta se convierte en una composición.</p>
+      <div class="flex items-center gap-1.5 mb-4">
+        <span class="w-8 h-8 rounded-lg glass flex items-center justify-center text-amber-400 flex-shrink-0">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
+        </span>
+        <svg class="w-3.5 h-3.5 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        <span class="w-8 h-8 rounded-lg glass flex items-center justify-center text-indigo-300 flex-shrink-0">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/></svg>
+        </span>
+        <svg class="w-3.5 h-3.5 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        <span class="px-2 py-1.5 rounded-lg brand-gradient text-white text-[9px] font-bold flex-shrink-0">ZIP</span>
       </div>
-      <div class="flex flex-wrap justify-center gap-2 pt-3" style="border-top:1px solid rgba(255,255,255,.08)">
-        <span class="text-[11px] text-gray-500 px-2.5 py-1 rounded-full glass">🖼️ Fondos de estudio</span>
-        <span class="text-[11px] text-gray-500 px-2.5 py-1 rounded-full glass">🌗 Sombra de contacto</span>
-        <span class="text-[11px] text-gray-500 px-2.5 py-1 rounded-full glass">🔍 Zoom de detalle</span>
-        <span class="text-[11px] text-gray-500 px-2.5 py-1 rounded-full glass">🪄 Transparencia al ras</span>
+      <button onclick="switchTab('batch')" class="mt-auto text-xs font-semibold text-purple-600 hover:underline text-left">Generar por lotes →</button>
+    </div>
+
+    <div class="glass rounded-2xl p-5 card flex flex-col">
+      <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2">PSD editable</p>
+      <h3 class="font-bold text-gray-900 text-sm mb-1 leading-snug">Generá en segundos.</h3>
+      <p class="text-[11px] text-gray-500 mb-4 leading-snug">Seguí trabajando en Photoshop — una capa por producto.</p>
+      <div class="flex flex-wrap gap-1.5">
+        <span class="text-[10px] px-2 py-1 rounded-md glass text-gray-600">🧴 Producto 1</span>
+        <span class="text-[10px] px-2 py-1 rounded-md glass text-gray-600">🧴 Producto 2</span>
+        <span class="text-[10px] px-2 py-1 rounded-md glass text-gray-600">🌗 Sombras</span>
+      </div>
+      <p class="text-[10px] text-gray-500 mt-auto pt-3">En los modos 1 y 2: PSD con una capa por producto.</p>
+    </div>
+  </div>
+
+  <!-- 04 · EXTRAS + TECNOLOGÍA -->
+  <div class="glass rounded-2xl px-5 py-4 sm:px-7 sm:py-5 mb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 card">
+    <div class="flex flex-wrap gap-x-6 gap-y-3">
+      <div class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500 flex-shrink-0">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="1.6"/><path d="m21 15-5-5-9 9"/></svg>
+        </span>
+        <div><p class="text-xs font-semibold text-gray-800">Fondos de estudio</p><p class="text-[10px] text-gray-500">Profesionales y realistas</p></div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center text-purple-500 flex-shrink-0">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.5A9 9 0 1 1 11.5 3a7 7 0 0 0 9.5 9.5Z"/></svg>
+        </span>
+        <div><p class="text-xs font-semibold text-gray-800">Sombras de contacto</p><p class="text-[10px] text-gray-500">Ancla tus productos</p></div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-lg bg-cyan-50 flex items-center justify-center text-cyan-500 flex-shrink-0">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m20.5 20.5-4-4"/></svg>
+        </span>
+        <div><p class="text-xs font-semibold text-gray-800">Zoom de detalle</p><p class="text-[10px] text-gray-500">Destaca lo importante</p></div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4V2M15 10V8M11 6H9M22 6h-2M18.7 3.3l-1 1M18.7 8.7l-1-1M3 21l9-9M12.5 9.5l2 2"/></svg>
+        </span>
+        <div><p class="text-xs font-semibold text-gray-800">Transparencia al ras</p><p class="text-[10px] text-gray-500">Sin márgenes innecesarios</p></div>
       </div>
     </div>
-  </section>
-
-  <!-- 09 · TECNOLOGÍA -->
-  <section class="relative overflow-hidden rounded-2xl text-white px-8 py-7 sm:px-10 sm:py-8 mb-8 text-center"
-           style="background:radial-gradient(120% 120% at 50% 0%,#131a33 0%,#0a0e1f 55%,#070a16 100%);">
-    <div class="absolute inset-0 grid-fade"></div>
-    <div class="relative">
-      <h2 class="text-lg sm:text-xl font-black tracking-tight mb-1.5">Una capa inteligente. Múltiples modelos de IA.</h2>
-      <p class="text-slate-300/90 text-xs sm:text-sm max-w-xl mx-auto mb-4">Still puede usar distintos modelos para analizar tus productos y proponer la composición.</p>
-      <div class="flex flex-wrap justify-center gap-2">
-        <span class="glass px-3 py-1.5 rounded-full text-xs font-semibold text-slate-100">Groq</span>
-        <span class="glass px-3 py-1.5 rounded-full text-xs font-semibold text-slate-100">Gemini</span>
-        <span class="glass px-3 py-1.5 rounded-full text-xs font-semibold text-slate-100">Claude</span>
-        <span class="glass px-3 py-1.5 rounded-full text-xs font-semibold text-slate-100">OpenAI</span>
+    <div class="flex items-center gap-3 lg:pl-6 flex-shrink-0" style="border-left:1px solid rgba(255,255,255,.1)">
+      <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wide whitespace-nowrap">Potenciado por</span>
+      <div class="flex gap-2 flex-wrap">
+        <span class="glass px-2.5 py-1 rounded-full text-[11px] font-semibold text-gray-700">Groq</span>
+        <span class="glass px-2.5 py-1 rounded-full text-[11px] font-semibold text-gray-700">Gemini</span>
+        <span class="glass px-2.5 py-1 rounded-full text-[11px] font-semibold text-gray-700">Claude</span>
+        <span class="glass px-2.5 py-1 rounded-full text-[11px] font-semibold text-gray-700">OpenAI</span>
       </div>
     </div>
-  </section>
+  </div>
 
-  <!-- 10 · MÓDULOS -->
+  <!-- 05 · MÓDULOS -->
   <p class="text-xs font-semibold text-gray-500 mb-3">Elige tu flujo</p>
   <div class="grid md:grid-cols-2 gap-5 mb-8">
     <button onclick="switchTab('bodegon')"
@@ -583,16 +572,16 @@
     </button>
   </div>
 
-  <!-- 11 · CTA FINAL -->
-  <section class="relative overflow-hidden rounded-3xl text-white px-8 py-14 sm:px-14 sm:py-16 mb-7 text-center"
+  <!-- 06 · CTA FINAL -->
+  <section class="relative overflow-hidden rounded-3xl text-white px-8 py-12 sm:px-14 sm:py-14 mb-7 text-center"
            style="background:radial-gradient(120% 120% at 50% 100%,#131a33 0%,#0a0e1f 55%,#070a16 100%);">
     <div class="aurora w-72 h-72" style="bottom:-60px;left:20%;background:#5B8CF7;"></div>
     <div class="aurora w-72 h-72" style="bottom:-60px;right:20%;background:#A855F7;animation-delay:-6s;"></div>
     <div class="absolute inset-0 grid-fade"></div>
     <div class="relative max-w-xl mx-auto">
-      <h2 class="text-2xl sm:text-3xl font-black tracking-tight mb-6">Tu próximo catálogo no debería empezar en Photoshop.</h2>
+      <h2 class="text-xl sm:text-2xl font-black tracking-tight mb-5">Tu próximo catálogo no debería empezar en Photoshop.</h2>
       <button onclick="switchTab('bodegon')"
-              class="glow-btn brand-gradient text-white font-semibold px-7 py-3.5 rounded-2xl inline-flex items-center gap-2 shadow-lg">
+              class="glow-btn brand-gradient text-white font-semibold px-7 py-3 rounded-2xl inline-flex items-center gap-2 shadow-lg text-sm">
         Crear mi primera composición
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
       </button>
