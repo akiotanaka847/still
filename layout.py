@@ -727,6 +727,78 @@ def _enforce_min_separation(placed, allowed_overlap: float = ALLOWED_OVERLAP_FRA
     return placed
 
 
+def _compact_layout(placed, shrink_step: float = 0.9, max_iterations: int = 120):
+    """Achica la composición hacia su centroide en pasos chicos, volviendo a
+    exigir separación mínima (_enforce_min_separation) después de cada paso,
+    hasta que la dispersión total deja de reducirse (equilibrio).
+
+    Por qué hace falta: el lienzo de referencia (ref_side, más abajo) crece
+    con la cantidad de productos para evitar que se amontonen, pero la IA
+    propone sus coordenadas 0-1 sin saber qué tan grande va a terminar
+    siendo ese lienzo — con grupos grandes (7+), sus propias coordenadas ya
+    bastante separadas más un lienzo grande se combinan y el resultado
+    queda con espacio muerto enorme entre productos, sin ninguna cohesión
+    visual (reportado por el usuario con un caso real de 9 productos).
+    Compactar DESPUÉS de ubicar y separar, en vez de intentar adivinar de
+    antemano cuánto lienzo hace falta, es más simple y siempre exacto —
+    mismo principio que ya se usó para el margen del canvas (ver "Canvas
+    transparente exacto al contenido" en la memoria del proyecto).
+
+    Por qué es por pasos chicos y no un solo salto grande: si un solo par ya
+    está en su distancia mínima, un achicamiento grande de una sola vez hace
+    que ESE par frene TODO el achicamiento, aunque el resto del grupo tenga
+    espacio de sobra para seguir juntándose. Yendo de a pasos chicos y
+    re-separando en cada uno, ese par se queda fijo en su mínimo (la
+    separación lo empuja de vuelta ahí) mientras los demás siguen
+    acercándose — el criterio de parada es que la dispersión total del
+    grupo deje de bajar entre una vuelta y la siguiente, no que un par
+    puntual haya llegado a su límite.
+
+    shrink_step=0.9 y max_iterations=120 son el resultado de medir con hasta
+    60 productos (el máximo de la app): con un paso más chico (0.98) el
+    resultado final es prácticamente idéntico pero tarda ~4x más (~1.8s vs
+    ~0.5s con 60 productos) — el paso solo afecta CUÁNTAS vueltas hacen
+    falta para llegar al mismo lugar, no A DÓNDE llega.
+
+    Aplica desde 2 productos (con pocos, si ya están ajustados, converge en
+    la primera vuelta y no se mueve nada) hasta el máximo de la app (60) —
+    sin casos especiales por cantidad."""
+    if len(placed) < 2:
+        return placed
+
+    def _spread(pts):
+        # Suma de distancias al centroide — mide qué tan agrupado está el
+        # conjunto EN GENERAL. El bounding box (max-min) NO sirve acá: queda
+        # dominado por el par más alejado, y si ESE par ya está en su
+        # distancia mínima (no puede acercarse más), el bounding box deja de
+        # bajar aunque el resto del grupo todavía tenga lugar para juntarse.
+        cx0 = sum(cx for _, cx, cy, _ in pts) / len(pts)
+        cy0 = sum(cy for _, cx, cy, _ in pts) / len(pts)
+        return sum(math.hypot(cx - cx0, cy - cy0) for _, cx, cy, _ in pts)
+
+    current = placed
+    current_spread = _spread(current)
+    for _ in range(max_iterations):
+        cx0 = sum(cx for _, cx, cy, _ in current) / len(current)
+        cy0 = sum(cy for _, cx, cy, _ in current) / len(current)
+        shrunk = [
+            (it, cx0 + (cx - cx0) * shrink_step, cy0 + (cy - cy0) * shrink_step, rot)
+            for it, cx, cy, rot in current
+        ]
+        enforced = _enforce_min_separation(shrunk)
+        new_spread = _spread(enforced)
+        # Achicar + re-separar puede a veces AUMENTAR la dispersión (una
+        # corrección local empuja un producto más lejos del centro de lo que
+        # estaba) — solo se acepta la vuelta si de verdad agrupó más al
+        # conjunto; si no, se corta ahí y se devuelve el mejor estado ya
+        # alcanzado.
+        if new_spread >= current_spread - 0.5:
+            break
+        current = enforced
+        current_spread = new_spread
+    return current
+
+
 def compute_layout_ai_freeform(
     images: List[dict],
     free_layout: dict,
@@ -786,6 +858,10 @@ def compute_layout_ai_freeform(
     # dirección (no solo lado a lado). Se separan lo mínimo necesario;
     # rotación queda igual a lo que propuso la IA.
     placed = _enforce_min_separation(placed)
+
+    # Elimina el espacio muerto que puede quedar entre productos, sobre todo
+    # con grupos grandes — ver _compact_layout.
+    placed = _compact_layout(placed)
 
     min_left = min_top = 0.0
     max_right = max_bottom = 0.0
