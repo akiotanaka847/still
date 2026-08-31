@@ -16,6 +16,11 @@ fallback a Groq/Gemini/Claude acá.
 """
 
 import base64
+import io
+
+from PIL import Image
+
+from renderer import _content_bbox
 
 MAX_PRODUCTS_FOR_GENERATION = 12
 MAX_CUSTOM_PROMPT_LEN = 300
@@ -70,4 +75,15 @@ def generate_bodegon_image(images: list, api_key: str, custom_prompt: str = "", 
         for f in files:
             f.close()
 
-    return base64.b64decode(result.data[0].b64_json)
+    png_bytes = base64.b64decode(result.data[0].b64_json)
+
+    # gpt-image-2 devuelve el lienzo completo pedido (ej. 1536x1024) con los
+    # productos centrados y bastante margen vacío alrededor — mismo problema
+    # que ya se resolvió para el pipeline determinista (ver _content_bbox en
+    # renderer.py): recortar DESPUÉS al contenido real, no intentar pedirle
+    # el encuadre exacto al prompt.
+    img = Image.open(io.BytesIO(png_bytes)).convert("RGBA")
+    img = img.crop(_content_bbox(img))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
