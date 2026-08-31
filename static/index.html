@@ -502,45 +502,30 @@
           </div>
         </div>
 
-        <!-- Cómo funciona cada propuesta: explicación breve en lenguaje simple
-             (sin nombres técnicos como "Pillow") para que el usuario entienda
-             la diferencia entre los 3 motores antes de elegir. Los títulos
-             coinciden EXACTO con los headers de cada sección de abajo. -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-          <div class="bg-white border border-gray-200 rounded-2xl p-3.5">
-            <div class="flex items-center gap-2 mb-1">
-              <span class="text-base">📐</span>
-              <p class="text-xs font-bold text-gray-800">Estilos de layout</p>
-            </div>
-            <p class="text-[11px] text-gray-500 leading-relaxed">
-              Arma la composición con reglas de diseño (grilla, tamaños, sombras).
-              Instantáneo y gratis — son 100% tus fotos reales, sin que ninguna IA las toque.
-            </p>
+        <!-- Cómo funciona cada propuesta: leyenda breve en lenguaje simple
+             (sin nombres técnicos como "Pillow"), UNA línea por opción para
+             no repetir la descripción más larga que ya tiene cada sección de
+             abajo — esto es solo un mapa rápido, no una segunda explicación. -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5 text-[11px]">
+          <div class="flex items-start gap-1.5 text-gray-500">
+            <span class="flex-shrink-0">📐</span>
+            <span><b class="text-gray-700">Estilos de layout</b> — instantáneo y gratis, tus fotos sin tocar</span>
           </div>
-          <div class="bg-white border border-purple-200 rounded-2xl p-3.5">
-            <div class="flex items-center gap-2 mb-1">
-              <span class="text-base text-purple-600">✦</span>
-              <p class="text-xs font-bold text-purple-800">Propuestas IA</p>
-            </div>
-            <p class="text-[11px] text-gray-500 leading-relaxed">
-              Una IA mira tus fotos y sugiere el mejor orden, tamaño y posición de
-              cada producto. Vos elegís entre varias — siguen siendo tus fotos reales.
-            </p>
+          <div class="flex items-start gap-1.5 text-gray-500">
+            <span class="flex-shrink-0 text-purple-600">✦</span>
+            <span><b class="text-purple-800">Propuestas IA</b> — la IA sugiere cómo acomodarlas</span>
           </div>
-          <div class="bg-white border border-purple-200 rounded-2xl p-3.5">
-            <div class="flex items-center gap-2 mb-1">
-              <span class="text-base">🧪</span>
-              <p class="text-xs font-bold text-purple-800">Generación IA</p>
-            </div>
-            <p class="text-[11px] text-gray-500 leading-relaxed">
-              La IA redibuja la imagen entera desde cero, como una foto nueva. Más
-              lento (1-3 min) y sin control fino de posición, pero muy vistoso.
-            </p>
+          <div class="flex items-start gap-1.5 text-gray-500">
+            <span class="flex-shrink-0">🧪</span>
+            <span><b class="text-purple-800">Generación IA</b> — la IA redibuja la imagen entera</span>
           </div>
         </div>
 
-        <!-- Propuestas IA (destacadas, una sola análisis → varias variantes) -->
-        <div id="ai-block" class="mb-5">
+        <!-- Propuestas IA (destacadas, una sola análisis → varias variantes).
+             Mismo tratamiento de tarjeta que las otras 2 secciones (borde +
+             fondo suave) para que las 3 se vean como bloques paralelos, no
+             una destacada con caja y las otras sueltas. -->
+        <div id="ai-block" class="mb-5 border border-purple-100 bg-purple-50/40 rounded-2xl p-4">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="text-purple-600 text-sm">✦</span>
             <p class="text-sm font-bold text-purple-800">Propuestas IA</p>
@@ -567,18 +552,16 @@
              (gpt-image-2, images.edit) en vez de proponer un layout para que
              Pillow lo componga — ver image_gen.py. No es una tarjeta más del
              grid de arriba porque no produce un 'layout', produce un PNG
-             final directo. -->
-        <div id="ai-gen-block" class="mb-5 border border-purple-100 bg-purple-50/40 rounded-2xl p-4 max-w-3xl">
-          <div class="flex items-center gap-2 mb-1.5">
-            <span class="text-purple-600 text-sm">🧪</span>
-            <p class="text-sm font-bold text-purple-800">Generación IA (experimental)</p>
-          </div>
-          <p class="text-[11px] text-gray-500 mb-2.5 leading-relaxed">
-            La IA redibuja la imagen completa desde cero — no compone tus fotos originales.
-            Es más lento (1-3 min) y no tenés control fino de posiciones, pero preserva el
-            texto de tus etiquetas con muy buena fidelidad.
-          </p>
+             final directo. Sin párrafo descriptivo propio (ya lo dice la
+             leyenda de arriba) — repetirlo acá era la fuente principal del
+             amontonamiento que reportó el usuario. -->
+        <div id="ai-gen-block" class="mb-5 border border-purple-100 bg-purple-50/40 rounded-2xl p-4">
           <div class="flex items-center gap-2 mb-3">
+            <span class="text-purple-600 text-sm">🧪</span>
+            <p class="text-sm font-bold text-purple-800">Generación IA</p>
+            <span class="text-[10px] font-semibold text-purple-400 bg-purple-100 px-1.5 py-0.5 rounded-full">Experimental</span>
+          </div>
+          <div class="flex items-center gap-2 mb-3 max-w-3xl">
             <input id="ai-gen-input" type="text" maxlength="300"
                    style="color-scheme: light; -webkit-appearance: none; appearance: none; color: #111827; background-color: #fff;"
                    placeholder="Estilo opcional — ej: fondo oscuro dramático, gotas de agua, minimalista..."
@@ -601,9 +584,16 @@
           </div>
         </div>
 
-        <!-- Estilos geométricos -->
-        <p class="text-xs font-semibold text-gray-500 mb-2">Estilos de layout</p>
-        <div id="proposals-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-4"></div>
+        <!-- Estilos geométricos — mismo tratamiento de tarjeta que las 2 de
+             arriba (antes era solo un label suelto, sin caja ni ícono, la
+             tercera pata desalineada del trío). -->
+        <div class="mb-4 border border-gray-200 bg-gray-50/60 rounded-2xl p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-sm">📐</span>
+            <p class="text-sm font-bold text-gray-700">Estilos de layout</p>
+          </div>
+          <div id="proposals-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"></div>
+        </div>
 
         <button id="bod-use-btn" onclick="bodUseProposal()"
                 class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 rounded-2xl
