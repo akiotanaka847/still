@@ -9,7 +9,10 @@ Validado empíricamente (2026-08-30) con productos 100% inventados (texto
 nunca visto por el modelo, para descartar que "recuerde" una marca real):
 preserva el texto/branding de cada etiqueta con fidelidad perfecta, incluso
 componiendo varios productos distintos en una sola escena, con fondo
-transparente real. Ver memoria del proyecto para el detalle de la prueba.
+transparente real. También probado con 14 productos reales de un catálogo
+real (bebidas, snacks, dips, formas muy variadas) — buena fidelidad y
+composición coherente, sin recorte de productos ni caos visual por la
+cantidad. Ver memoria del proyecto para el detalle de ambas pruebas.
 
 Solo OpenAI tiene este modelo — a diferencia de ai_proposal.py, no hay
 fallback a Groq/Gemini/Claude acá.
@@ -22,7 +25,11 @@ from PIL import Image
 
 from renderer import _content_bbox
 
-MAX_PRODUCTS_FOR_GENERATION = 12
+MAX_PRODUCTS_FOR_GENERATION = 16  # probado con 14 productos reales (2026-08-30,
+                                   # catálogo real: bebidas, snacks, dips) con
+                                   # buena fidelidad — no es un límite duro
+                                   # conocido de la API, es un tope propio con
+                                   # margen chico sobre lo ya verificado
 MAX_CUSTOM_PROMPT_LEN = 300
 
 
