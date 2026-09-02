@@ -1245,12 +1245,35 @@ async function buildSvg(template, mapping, rawExcelFields) {
     hasPrevious = true;
   }
 
+  /* Estado del armado que necesita el intérprete declarativo (promo_flow.js).
+   * Se pasa explícito en vez de exponer el cierre entero: así queda a la vista
+   * exactamente de qué depende un bloque declarado. */
+  function ctxFlujo() {
+    return {
+      cw, ch, gap,
+      get cursorY() { return cursorY; },
+      set cursorY(v) { cursorY = v; },
+      bodyParts, trackX, trackY, advance, isPresent,
+      fieldsByColumn, rawFieldByColumn,
+    };
+  }
+
+  /* Mientras se verifica que la versión declarada da EXACTAMENTE lo mismo que
+   * la escrita a mano, mandan los flujos originales. La bandera permite
+   * generar por los dos caminos y compararlos. */
+  const declarativo = window.PROMO_FLOW_DECLARADO &&
+                      typeof renderMecanicaDeclarada === "function";
+
   if (doubleDescData) {
     await renderDoubleDescriptionFlow();
   } else if (segundoPorData) {
     await renderSegundoPorFlow();
   } else if (soloDescripcionData) {
-    await renderOnlyDescriptionFlow();
+    if (declarativo) await renderMecanicaDeclarada("comunicacion_imagen", ctxFlujo());
+    else await renderOnlyDescriptionFlow();
+  } else if (declarativo) {
+    await renderMecanicaDeclarada(
+      soloFraseDescData ? "simple_descripcion_larga" : "simple", ctxFlujo());
   } else {
     await renderNormalFlow(soloFraseDescData ? 8 : 4);
   }
