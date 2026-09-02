@@ -381,7 +381,18 @@ async function kitFetch(url, opts) {
 function renderAssets(assets) {
   if (!assetList) return;
   assetList.innerHTML = "";
-  assets.forEach((a) => {
+
+  const propias = assets.filter((a) => !a.system);
+  const sistema = assets.filter((a) => a.system);
+
+  if (!propias.length) {
+    const vacio = document.createElement("p");
+    vacio.className = "text-[11px] text-gray-500 py-2";
+    vacio.textContent = "Todavía no subiste ninguna imagen. Elegí el tipo arriba y subí tus plecas, callouts y marcas.";
+    assetList.appendChild(vacio);
+  }
+
+  propias.forEach((a) => {
     const row = document.createElement("div");
     row.className = "flex items-center gap-2 px-2 py-1.5 rounded-lg glass";
 
@@ -428,7 +439,28 @@ function renderAssets(assets) {
     row.append(tipo, nombre, borrar);
     assetList.appendChild(row);
   });
-  if (assetCount) assetCount.textContent = `(${assets.length})`;
+
+  // Las del sistema van aparte y sin borrar: el motor las pide por nombre
+  // fijo, así que no son biblioteca del cliente sino parte de la plantilla.
+  if (sistema.length) {
+    const t = document.createElement("p");
+    t.className = "text-[10px] text-gray-500 pt-3 pb-1";
+    t.textContent = "Del sistema — las usa el motor para las variantes fijas, no se pueden borrar:";
+    assetList.appendChild(t);
+    const cont = document.createElement("div");
+    cont.className = "flex flex-wrap gap-1.5";
+    sistema.forEach((a) => {
+      const chip = document.createElement("span");
+      chip.className = "text-[10px] px-2 py-1 rounded-md text-gray-500";
+      chip.style.cssText = "background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.12)";
+      chip.textContent = a.file;
+      cont.appendChild(chip);
+    });
+    assetList.appendChild(cont);
+  }
+
+  // El conteo del encabezado cuenta SOLO las del usuario: son las que importan.
+  if (assetCount) assetCount.textContent = `(${propias.length})`;
 }
 
 function renderFonts(font) {

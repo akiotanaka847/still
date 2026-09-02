@@ -37,6 +37,20 @@ FONT_EXTS = (".woff2",)
 ASSET_TYPES = ("callout", "pleca", "marca")
 DEFAULT_TYPE = "callout"
 
+# Imágenes que NO son biblioteca del usuario sino parte del motor: el layout
+# las pide por nombre fijo desde el código (static/js/promo.js), así que
+# borrarlas rompe variantes de promoción enteras.
+#   CAFIJO_LLEVATE / CAFIJO_Y_LLEVATE -> banners fijos de las variantes
+#                                        "doble descripción" y "segundo por"
+#   CA_ERROR                          -> imagen de reemplazo cuando falta un asset
+# Se marcan como del sistema para que no aparezcan mezcladas con las del
+# cliente ni se puedan borrar por accidente desde la pantalla.
+SYSTEM_ASSETS = frozenset({
+    "CAFIJO_LLEVATE.svg",
+    "CAFIJO_Y_LLEVATE.svg",
+    "CA_ERROR.svg",
+})
+
 # Prefijos con los que la biblioteca nombra las placas. Se usan para adivinar
 # el tipo al migrar lo que ya existía, y para que el texto suelto ("NUEVO")
 # encuentre "CA_NUEVO.svg".
@@ -147,8 +161,10 @@ def list_assets(kit_id):
                 out.append({
                     "file": f.name,
                     "type": (meta.get(f.name) or {}).get("type") or guess_type(f.name),
+                    "system": f.name in SYSTEM_ASSETS,
                 })
-    return sorted(out, key=lambda a: (a["type"], a["file"].lower()))
+    # Las del sistema al final: la biblioteca del usuario es lo que importa.
+    return sorted(out, key=lambda a: (a["system"], a["type"], a["file"].lower()))
 
 
 def guess_type(filename) -> str:
@@ -223,6 +239,11 @@ def delete_asset(kit_id, filename) -> None:
     safe = _safe_filename(filename)
     if not safe:
         raise PromoKitError("Nombre de archivo inválido")
+    if safe in SYSTEM_ASSETS:
+        raise PromoKitError(
+            f"{safe} es del sistema: el motor la usa por nombre fijo y borrarla "
+            f"rompería variantes de promoción. No se puede eliminar."
+        )
     d = assets_dir(kit_id)
     target = d / safe
     if not target.exists() or not target.is_file():
@@ -335,10 +356,14 @@ def delete_kit(kit_id) -> None:
 
 # ─── Migración de la biblioteca plana que existía antes ──────────────────────
 def ensure_base_kit(legacy_assets=PROMO_DIR / "assets") -> bool:
-    """Crea el kit base y mueve ahí la biblioteca plana, una sola vez.
+    """Crea el kit base, migrando la biblioteca plana si todavía existiera.
 
     Devuelve True si migró algo. Es idempotente: si el kit base ya existe no
     toca nada, así que se puede llamar en cada arranque sin riesgo.
+
+    La carpeta plana original ya no está en el repo (la biblioteca vive en el
+    kit), pero el parámetro se conserva por si una instalación vieja la tiene:
+    si no existe, simplemente se crea el kit vacío.
     """
     base = _kit_dir(DEFAULT_KIT)
     if (base / "kit.json").exists():

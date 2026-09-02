@@ -175,7 +175,7 @@ async def upload_assets(files: list[UploadFile] = File(...)):
     nombre ya existe se sobrescribe: es lo esperado al corregir un logo.
 
     Nota: la biblioteca es COMPARTIDA por todos los usuarios (una sola carpeta
-    static/promo/assets). Está pendiente decidir con el usuario si debe pasar
+    static/promo/kits/base/assets). Está pendiente decidir con el usuario si debe pasar
     a ser por-usuario.
     """
     ASSETS_DIR.mkdir(parents=True, exist_ok=True)
