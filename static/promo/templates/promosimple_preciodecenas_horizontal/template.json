@@ -1,0 +1,81 @@
+{
+  "name": "PROMOHORIZONTAL",
+  "orientation": "horizontal",
+  "canvas": {
+    "width": 29500,
+    "height": 6466
+  },
+  "background": "background_clean.png",
+  "fields": [
+    {
+      "excel_column": "BRAND",
+      "layer_name": "IMAGE_BRAND_PROMOSIMPLE_PRECIODECENAS_HORIZONTAL",
+      "type": "image",
+      "box": {
+        "x": 11109.0,
+        "y": 5348.0,
+        "width": 3582.0,
+        "height": 1118.0
+      }
+    },
+    {
+      "excel_column": "DESCRIPCION",
+      "layer_name": "TEXT_DESCRIPCION_PROMOSIMPLE_PRECIODECENAS_HORIZONTAL",
+      "type": "text",
+      "box": {
+        "x": 8879.7,
+        "y": 1215.4,
+        "width": 8026.1,
+        "height": 3639.6
+      },
+      "font_family": "WorkSans-SemiBold",
+      "font_size": 800.8,
+      "color": "rgb(0,0,0)"
+    },
+    {
+      "excel_column": "PESOS",
+      "layer_name": "TEXT_PESOS_PROMOSIMPLE_PRECIODECENAS_HORIZONTAL",
+      "type": "text",
+      "box": {
+        "x": 20220.4,
+        "y": 1420.8,
+        "width": 6619.3,
+        "height": 3711.0
+      },
+      "font_family": "WorkSans-Black",
+      "font_size": 5389.5,
+      "color": "rgb(220,39,38)",
+      "prefix": {
+        "text": "$",
+        "font_family": "WorkSans-ExtraBold",
+        "font_size": 2553.7,
+        "color": "rgb(220,39,38)"
+      }
+    },
+    {
+      "excel_column": "FRASE APOYO",
+      "layer_name": "TEXT_FRASEAPOYO_PROMOSIMPLE_PRECIODECENAS_HORIZONTAL",
+      "type": "text",
+      "box": {
+        "x": 17116.2,
+        "y": 206.5,
+        "width": 12383.7,
+        "height": 808.6
+      },
+      "font_family": "WorkSans-Black",
+      "font_size": 1082.0,
+      "color": "rgb(0,0,0)"
+    },
+    {
+      "excel_column": "CALLOUT",
+      "layer_name": "IMAGE_CALLOUT_PROMOSIMPLE_PRECIODECENAS_HORIZONTAL",
+      "type": "image",
+      "box": {
+        "x": 0.0,
+        "y": 2460.0,
+        "width": 7441.0,
+        "height": 1547.0
+      }
+    }
+  ]
+}

@@ -113,7 +113,7 @@ USERS_FILE = DATA_DIR / "users.json"
 SECRET_FILE = DATA_DIR / ".secret"
 
 # Prefijos de rutas que requieren sesión iniciada
-PROTECTED_PREFIXES = ("/api/bodegon", "/api/batch")
+PROTECTED_PREFIXES = ("/api/bodegon", "/api/batch", "/api/promo")
 
 
 def _get_secret() -> str:
@@ -1165,5 +1165,12 @@ async def batch_download(batch_id: str, request: Request):
         raise HTTPException(404, "ZIP no encontrado")
     return FileResponse(str(z), filename="bodegones.zip", media_type="application/zip")
 
+
+# Módulo de Promos (Excel → plantilla → PNG/SVG/PSD). Va como router aparte y
+# no inline acá: su lógica de Excel son ~750 líneas portadas de otro repo, y
+# mantenerlas separadas permite resincronizar con el upstream. Queda detrás de
+# la misma sesión que el resto (ver PROTECTED_PREFIXES).
+from promo import router as promo_router
+app.include_router(promo_router)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")

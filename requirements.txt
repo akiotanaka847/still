@@ -12,3 +12,4 @@ psd-tools==1.11.0  # pin exacto: render_psd usa atributos internos (_record, _up
                     # versión distinta puede cambiar esos atributos sin aviso y romperlo en
                     # silencio. No subir de versión sin volver a probar esos workarounds.
 python-dotenv>=1.0.0
+openpyxl>=3.1

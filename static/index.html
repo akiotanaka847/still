@@ -242,9 +242,9 @@
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"/></svg>
         <span>Proyectos</span>
       </button>
-      <button onclick="toast('Próximamente','warn')" class="nav-item">
+      <button id="nav-promo" onclick="switchTab('promo')" class="nav-item">
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
-        <span>Plantillas</span> <span class="soon">Pronto</span>
+        <span>Promos</span>
       </button>
       <button onclick="toast('Próximamente','warn')" class="nav-item">
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.098 19.902a3.75 3.75 0 005.304 0l6.401-6.402M6.75 21A3.75 3.75 0 013 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 003.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125h-4.072M10.5 8.197l2.88-2.88c.438-.439 1.15-.439 1.59 0l3.712 3.713c.44.44.44 1.152 0 1.59l-2.879 2.88"/></svg>
@@ -1098,6 +1098,125 @@
 </div><!-- /panel-batch -->
 
 <!-- ═══════════════════════════════════════════════════════
+     TAB — PROMOS (Excel → plantilla → PNG / SVG / PSD)
+     El render ocurre en el navegador (ver static/js/promo.js): el SVG se
+     arma con <foreignObject> y se rasteriza a canvas. El servidor solo lee
+     el Excel, sirve la plantilla y ensambla el PSD/ZIP final.
+═══════════════════════════════════════════════════════ -->
+<div id="panel-promo" class="hidden">
+
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Generador de Promos</h1>
+    <p class="brand-text text-sm font-semibold">Still perfect. Every time.</p>
+    <p class="text-gray-500 text-sm mt-1 max-w-xl">
+      Sube tu Excel y Still arma la pieza sobre la plantilla:
+      <strong class="text-gray-600">una fila = una promo</strong>. Descarga en PNG, SVG o
+      PSD por capas.
+    </p>
+  </div>
+
+  <div class="grid lg:grid-cols-[1fr_360px] gap-5 items-start">
+
+    <!-- Columna principal -->
+    <div>
+      <div class="glass rounded-2xl p-5 mb-5 card">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+            <span class="text-white text-xs font-bold">1</span>
+          </div>
+          <h2 class="font-bold text-gray-900 text-base">Plantilla y datos</h2>
+        </div>
+
+        <label class="block text-xs font-semibold text-gray-500 mb-1.5">Plantilla</label>
+        <select id="templateSelect"
+                class="w-full text-sm rounded-xl px-3 py-2.5 mb-4"
+                style="color-scheme:dark; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); color:#e2e8f0;"></select>
+
+        <label class="block text-xs font-semibold text-gray-500 mb-1.5">Excel (.xlsx)</label>
+        <input type="file" id="excelInput" accept=".xlsx,.xlsm"
+               class="w-full text-sm rounded-xl px-3 py-2.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white"
+               style="background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); color:#94a3b8;">
+        <p id="excelStatus" class="text-[11px] text-gray-500 mt-1.5"></p>
+
+        <div class="mt-4">
+          <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Datos encontrados</p>
+          <p id="noData" class="text-xs text-gray-500">Selecciona un Excel para ver los datos de la promoción.</p>
+          <div class="overflow-x-auto">
+            <table id="dataTable" class="w-full text-xs"><tbody></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass rounded-2xl p-5 mb-5 card">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+            <span class="text-white text-xs font-bold">2</span>
+          </div>
+          <h2 class="font-bold text-gray-900 text-base">Generar</h2>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <button id="generateBtn" disabled
+                  class="glow-btn brand-gradient text-white font-semibold px-5 py-2.5 rounded-xl text-sm disabled:opacity-40">
+            Generar promo
+          </button>
+          <button id="generateBatchBtn" disabled
+                  class="glass text-white font-semibold px-5 py-2.5 rounded-xl text-sm disabled:opacity-40">
+            Generar todas las filas
+          </button>
+        </div>
+      </div>
+
+      <!-- Resultado por lotes -->
+      <div id="batchPanel" class="glass rounded-2xl p-5 mb-5 card" style="display:none;">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-bold text-gray-900 text-base">Lote generado</h2>
+          <button id="downloadZipBtn"
+                  class="text-xs font-semibold text-purple-600 hover:underline">Descargar ZIP</button>
+        </div>
+        <div id="batchLog"
+             class="text-[11px] font-mono text-gray-500 rounded-lg p-3 max-h-40 overflow-y-auto whitespace-pre-wrap"
+             style="background:rgba(0,0,0,.25);"></div>
+        <div class="overflow-x-auto">
+          <table id="batchTable" class="w-full text-xs mt-3" style="display:none;">
+            <thead><tr class="text-gray-400 text-[10px] uppercase tracking-wide">
+              <th class="text-left py-1.5">Fila</th><th class="text-left">Nombre</th>
+              <th class="text-left">Estado</th><th class="text-left">Tiempo</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p id="batchTotal" class="text-[11px] text-gray-500 mt-2"></p>
+      </div>
+    </div>
+
+    <!-- Columna lateral: vista previa y descargas -->
+    <aside class="glass rounded-2xl p-5 card lg:sticky lg:top-6">
+      <h2 class="font-bold text-gray-900 text-base mb-3">Vista previa</h2>
+      <div id="log"
+           class="text-[11px] font-mono text-gray-500 rounded-lg p-3 mb-3 max-h-32 overflow-y-auto whitespace-pre-wrap"
+           style="background:rgba(0,0,0,.25);"></div>
+      <div id="previewWrap" style="display:none;">
+        <div id="svgHost" class="checker-bg rounded-xl overflow-hidden mb-3 [&_svg]:w-full [&_svg]:h-auto"></div>
+        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Descargar</p>
+        <div class="flex flex-col gap-2">
+          <button id="downloadPngBtn" class="glass text-white text-xs font-semibold px-3 py-2 rounded-lg text-left">
+            ⬇ PNG <span class="text-gray-500 font-normal">— listo para publicar</span>
+          </button>
+          <button id="downloadSvgBtn" class="glass text-white text-xs font-semibold px-3 py-2 rounded-lg text-left">
+            ⬇ SVG <span class="text-gray-500 font-normal">— vectorial</span>
+          </button>
+          <button id="downloadPsdBtn" class="glass text-white text-xs font-semibold px-3 py-2 rounded-lg text-left">
+            ⬇ PSD <span class="text-gray-500 font-normal">— una capa por campo</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <canvas id="renderCanvas" style="display:none;"></canvas>
+</div><!-- /panel-promo -->
+
+<!-- ═══════════════════════════════════════════════════════
      TAB 4 — MIS PROYECTOS (bodegones guardados)
 ═══════════════════════════════════════════════════════ -->
 <div id="panel-projects" class="hidden">
@@ -1124,16 +1243,19 @@
 // TABS
 // ═══════════════════════════════════════════════════════
 function switchTab(name) {
-  ['so', 'bodegon', 'batch', 'home', 'projects'].forEach(p => {
+  ['so', 'bodegon', 'batch', 'home', 'projects', 'promo'].forEach(p => {
     const el = document.getElementById('panel-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
   });
   // Estado activo del menú lateral
-  [['nav-home', 'home'], ['nav-bodegon', 'bodegon'], ['nav-batch', 'batch'], ['nav-projects', 'projects']].forEach(([id, n]) => {
+  [['nav-home', 'home'], ['nav-bodegon', 'bodegon'], ['nav-batch', 'batch'], ['nav-projects', 'projects'], ['nav-promo', 'promo']].forEach(([id, n]) => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('nav-item-active', name === n);
   });
   if (name === 'projects') loadProjectsGrid();
+  // Promos carga sus plantillas la primera vez que se abre la pestaña, no al
+  // cargar la página: sus endpoints exigen sesión iniciada.
+  if (name === 'promo' && window.promoInit) window.promoInit();
   window.scrollTo({ top: 0 });
 }
 
@@ -2793,5 +2915,9 @@ async function checkAuth() {
 switchTab('home');   // panel por defecto
 checkAuth();         // muestra/oculta el login según la sesión
 </script>
+<!-- Módulo de Promos: va en archivo aparte y no inline como el resto porque
+     son ~2600 líneas portadas de otro repo (motor de plantillas SVG), y
+     mantenerlas separadas permite resincronizar con el upstream. -->
+<script src="/static/js/promo.js?v=2"></script>
 </body>
 </html>

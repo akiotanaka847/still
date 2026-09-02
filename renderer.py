@@ -594,21 +594,64 @@ def render_psd(layout: dict, output_path: str, background_path: str = None,
         canvas = canvas.crop(bbox)
     final_w, final_h = canvas.size
 
-    psd = PSDImage.new("RGBA", (final_w, final_h))
-    for name, img, left, top in stack:
-        psd.create_pixel_layer(img, name=name, top=top - crop_top, left=left - crop_left)
+    compose_psd(
+        [(name, img, left - crop_left, top - crop_top) for name, img, left, top in stack],
+        (final_w, final_h),
+        output_path,
+        preview=canvas,
+    )
 
-    # El auto-flatten interno de psd-tools al guardar (composite() sobre un
-    # documento recién creado, para generar el preview aplanado) está roto —
-    # comprobado con datos reales: tira AssertionError de longitud al
-    # releer el archivo. Se inyecta a mano el preview con el MISMO canvas ya
-    # compuesto arriba (mismo criterio que usa render_png), evitando el bug
-    # por completo y garantizando que el preview coincide con el PNG.
-    channels_bytes = [c.tobytes() for c in canvas.split()]
+
+def compose_psd(layers: list, size: tuple, output, preview=None) -> None:
+    """Arma un PSD con una capa por elemento y lo guarda.
+
+    layers: [(nombre, imagen_RGBA, left, top), ...] de ATRÁS hacia adelante —
+            la última de la lista queda arriba en Photoshop.
+    size:   (ancho, alto) del documento.
+    output: ruta de archivo o file-like (BytesIO).
+    preview: imagen ya compuesta para el preview aplanado. Si no viene, se
+            compone acá apilando las capas en orden.
+
+    Extraída de render_psd para que otros módulos (ej. promo.py, que arma un
+    PSD con una capa por campo de la plantilla) reusen el mismo workaround en
+    vez de duplicarlo: el auto-flatten interno de psd-tools al guardar
+    (composite() sobre un documento recién creado) está roto — comprobado con
+    datos reales, tira AssertionError de longitud al releer el archivo. Se
+    inyecta el preview a mano, garantizando además que coincide exactamente
+    con el PNG que ve el usuario.
+    """
+    if not PIL_AVAILABLE:
+        raise RuntimeError("Pillow no instalado. Ejecuta: pip install Pillow")
+    try:
+        from psd_tools import PSDImage
+    except ImportError as e:
+        raise RuntimeError("Falta psd-tools. Ejecuta: pip install psd-tools") from e
+
+    w, h = size
+    if preview is None:
+        preview = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        for _name, img, left, top in layers:
+            preview.alpha_composite(img, (left, top))
+
+    psd = PSDImage.new("RGBA", (w, h))
+    for name, img, left, top in layers:
+        psd.create_pixel_layer(img, name=name, top=top, left=left)
+
+    # Comprimir el preview con RLE en vez de crudo. Sin esto el preview pesa
+    # ancho x alto x 4 bytes sin comprimir — en una plantilla de promo real
+    # (20226x6122) eso solo ya son 472 MB. Con RLE, las zonas transparentes
+    # (que son casi todo) colapsan. Medido sobre un caso real.
+    try:
+        from psd_tools.constants import Compression
+        psd._record.image_data.compression = Compression.RLE
+    except (ImportError, AttributeError):
+        pass    # sin compresión sigue siendo válido, solo más pesado
+
+    channels_bytes = [c.tobytes() for c in preview.split()]
     psd._record.image_data.set_data(channels_bytes, psd._record.header)
     psd._updated = False
 
-    psd.save(output_path)
+    psd.save(output)
 
 
 def get_image_dimensions(filepath: str) -> tuple:
