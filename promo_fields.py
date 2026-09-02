@@ -35,6 +35,8 @@ from promo_excel import (
     CONNECTOR_PATTERN,
     FAMILIA_OUTPUT_FIELD,
     MECANICA_OUTPUT_FIELD,
+    MECANICA_TEXTO_COLUMNS,
+    MECANICA_TEXTO_OUTPUT_FIELD,
     TIPO_MECANICA_COLUMN,
     DESCRIPCION2_COLUMN_NAME,
     DISCOUNT_COLUMN_NAME,
@@ -51,6 +53,7 @@ from promo_excel import (
     SOLO_FRASE_DESC_OUTPUT_FIELD,
     apply_auto_superscript,
     build_multiplier_price_line,
+    detectar_mecanica_en_texto,
     familia_de_mecanica,
     looks_like_alcohol,
     mecanica_para_familia,
@@ -377,6 +380,30 @@ def extract_fields_from_row(headers, cells) -> list:
                 "runs": [],
                 "mecanica": mecanica,
             })
+
+    # La mecánica REDACTADA en el texto. La guía define cada una como una
+    # plantilla de texto, así que sus frases son las reglas. Cuando la frase
+    # nombra una mecánica que el motor sabe dibujar, gana: es más específica
+    # que la familia (que no distingue las cuatro formas de promopack).
+    texto_mecanica = ""
+    for col in MECANICA_TEXTO_COLUMNS:
+        texto_mecanica = cell_text(cells_by_normalized_header.get(normalize(col)))
+        if texto_mecanica:
+            break
+    mid, fam_texto = detectar_mecanica_en_texto(texto_mecanica)
+    if mid:
+        fields.append({
+            "column": MECANICA_TEXTO_OUTPUT_FIELD,
+            "column_normalized": normalize(MECANICA_TEXTO_OUTPUT_FIELD),
+            "type": "text",
+            "value": mid,
+            "runs": [],
+            "mecanica_texto": mid,
+            "familia_texto": fam_texto,
+            # Que la frase diga una cosa y la columna otra casi siempre es dato
+            # mal cargado. Se marca acá para que el motor lo pueda avisar.
+            "contradice": bool(familia and fam_texto and fam_texto != familia),
+        })
 
     # Alcohol: la guía prohíbe "Compra", "Llévate" y "Gratis" en estas promos.
     # Se marca acá, junto al dato, y el motor decide qué puede dibujar. Va como

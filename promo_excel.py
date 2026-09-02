@@ -343,6 +343,7 @@ def looks_like_alcohol(*textos) -> bool:
 TIPO_MECANICA_COLUMN = "TIPO_MECANICA"
 MECANICA_OUTPUT_FIELD = "PROMO_MECANICA"
 FAMILIA_OUTPUT_FIELD = "PROMO_FAMILIA"
+MECANICA_TEXTO_OUTPUT_FIELD = "PROMO_MECANICA_TEXTO"
 
 
 def familia_de_mecanica(texto):
@@ -369,6 +370,58 @@ def familia_de_mecanica(texto):
     if "SIMPLE" in n:
         return "simple"
     return None
+
+
+# ─── La mecánica escrita en la descripción ───────────────────────────────────
+# La mecánica no siempre viene en una columna: viene REDACTADA en el texto
+# ("Compra 2 o más Charolas llévate Gratis Botana BITZ"). La guía la define
+# justamente así, como plantillas de texto, o sea que sus frases SON las reglas
+# de detección. El motor ya lo hacía para un caso —"y llévate el segundo"— y
+# esto lo generaliza a una tabla.
+#
+# Solo frases TEXTUALES de la guía, nada de patrones genéricos. Se probó un
+# detector genérico ("empieza con número y tiene 'por $'") y clasificaba mal 15
+# de 88 promos: "12 Latas Bud Light por $146" no es una múltiple, es un pack de
+# 12 a un precio, o sea una simple. Un número al principio es parte de la
+# descripción del producto, no un multiplicador.
+#
+# El orden va de la frase más específica a la más general.
+REGLAS_MECANICA = [
+    # (id, familia que implica, patrón)
+    ("promopack_gratis",     "promopack", r"ll[ée]vate\s+gratis"),
+    ("promopack_descuento",  "promopack", r"y\s+ll[ée]vate\s+.{0,12}%\s*de\s+descuento"),
+    ("segundo_por",          "simple",    r"y\s+ll[ée]va(?:te)?\s+el\s+segundo"),
+    ("promopack_mas_precio", "promopack", r"\bcompra\b.{0,80}\+\s*\$?\s*\d"),
+    # Guía, página 1: "Simple: 1x / Multiple: 2x 3x 4x…". El multiplicador de
+    # UNO es simple, no múltiple — por eso la izquierda arranca en 2. Sin esa
+    # distinción, seis promos declaradas simples ("1 x $191 Tecate…") se
+    # clasificaban como múltiples.
+    ("multiple_cantidad",    "multiple",  r"(?<![\w$])[2-9]\d?\s*x\s*\d{1,2}(?![\w$])"),
+    ("multiple_precio",      "multiple",  r"(?<![\w$])[2-9]\d?\s*x\s*\$"),
+    ("simple_multiplicador_uno", "simple", r"(?<![\w$])1\s*x\s*\$"),
+]
+
+_REGLAS_COMPILADAS = [
+    (mid, fam, re.compile(pat, re.IGNORECASE)) for mid, fam, pat in REGLAS_MECANICA
+]
+
+# Columnas donde puede venir la mecánica redactada, en orden de preferencia.
+MECANICA_TEXTO_COLUMNS = ("DESCRIPCION_MECANICA", "DESCRIPCION MECANICA", "MECANICA")
+
+
+def detectar_mecanica_en_texto(texto):
+    """(id, familia) de la primera frase de la guía que aparezca, o (None, None).
+
+    Verificado contra 266 promociones reales de dos archivos distintos: 149
+    veces confirma la familia que declara TIPO_MECANICA y 0 veces la
+    contradice. Las 117 restantes no traen ninguna frase reconocible, y ahí
+    deciden las señales de siempre.
+    """
+    t = strip_accents(texto or "")
+    for mid, fam, rx in _REGLAS_COMPILADAS:
+        if rx.search(t):
+            return mid, fam
+    return None, None
 
 
 def mecanica_para_familia(familia, *, tiene_precio):

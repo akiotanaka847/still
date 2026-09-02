@@ -41,6 +41,11 @@ HEADERS = [
     # trae la familia que declara el reporte.
     "CATEGORIA",
     "TIPO_MECANICA",
+    # La mecánica REDACTADA. La guía define cada mecánica como una plantilla de
+    # texto, así que acá vienen las frases que la nombran ("llévate Gratis",
+    # "y llévate el segundo"). Es más específica que TIPO_MECANICA, que no
+    # distingue las cuatro formas de promopack.
+    "DESCRIPCION_MECANICA",
 ]
 
 
@@ -181,6 +186,7 @@ def to_table(doc, orientation="V", kit=promo_kits.DEFAULT_KIT):
             make_cell(value=asset(_txt(p, "PLECA"), idx_pleca, "pleca")),      # PLECA
             make_cell(value=_txt(p, "CATEGORIA")),                             # CATEGORIA
             make_cell(value=_txt(p, "TIPO_MECANICA")),                         # TIPO_MECANICA
+            make_cell(value=_txt(p, "DESCRIPCION_MECANICA")),                  # DESCRIPCION_MECANICA
         ])
 
     info = {

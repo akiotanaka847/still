@@ -1296,7 +1296,20 @@ async function buildSvg(template, mapping, rawExcelFields) {
   const declaradaField = rawFieldByColumn("PROMO_MECANICA");
   const declarada = declaradaField ? declaradaField.value : null;
 
-  const elegida = forzada || declarada;
+  /* La mecánica REDACTADA en la descripción. La guía define cada mecánica como
+   * una plantilla de texto ("Compra A + $ llévate B"), así que sus frases la
+   * nombran con más precisión que la columna de familia — que no distingue las
+   * cuatro formas de promopack. Por eso gana sobre la familia.
+   * Solo se usa cuando nombra una mecánica que este motor sabe dibujar; si
+   * nombra una que todavía va escrita a mano, se deja pasar. */
+  const porTextoField = rawFieldByColumn("PROMO_MECANICA_TEXTO");
+  if (porTextoField && porTextoField.contradice) {
+    log(`⚠ La descripción dice "${porTextoField.value}" pero TIPO_MECANICA declara otra familia. Revisá el dato.`);
+  }
+  const porTexto = porTextoField && window.MECANICAS && window.MECANICAS[porTextoField.value]
+    ? porTextoField.value : null;
+
+  const elegida = forzada || porTexto || declarada;
   if (declarativo && elegida && window.MECANICAS && window.MECANICAS[elegida]) {
     avisarSiContradice(elegida);
     await renderMecanicaDeclarada(elegida, ctxFlujo());
