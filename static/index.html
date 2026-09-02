@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
 <link rel="shortcut icon" href="/static/favicon.ico">
 <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon-180.png">
-<link rel="stylesheet" href="/static/css/tailwind.css?v=9">
+<link rel="stylesheet" href="/static/css/tailwind.css?v=10">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -1252,6 +1252,71 @@
         </div>
       </div>
     </aside>
+  </div>
+
+  <!-- ── Ingesta libre (experimental) ────────────────────────────────────
+       Mismas promos y mismo motor de render, pero alimentadas desde
+       cualquier origen (.json además de .xlsx). Vive acá dentro y no en una
+       pestaña aparte, igual que "Generación IA (experimental)" vive dentro
+       del panel de Bodegón. Ver static/js/promo_lab.js -->
+  <div class="glass rounded-2xl p-5 mt-8 card" style="border-color:rgba(129,140,248,.4)">
+    <div class="flex items-center gap-2 mb-2">
+      <span class="text-purple-400 text-sm">🧪</span>
+      <p class="text-sm font-bold text-gray-900">Ingesta libre</p>
+      <span class="text-[10px] font-semibold text-purple-400 px-1.5 py-0.5 rounded-full"
+            style="background:rgba(168,85,247,.16)">Experimental</span>
+    </div>
+    <p class="text-xs text-gray-500 mb-4 max-w-2xl">
+      Las mismas promos, pero los datos pueden venir en
+      <strong class="text-gray-600">JSON</strong> además de Excel — pensado para que otro
+      sistema alimente a Still sin depender de una planilla. El formato de texto se escribe
+      con marcas: <code class="text-indigo-300">*negrilla*</code>,
+      <code class="text-indigo-300">~tachado~</code>,
+      <code class="text-indigo-300">^superíndice^</code>.
+    </p>
+
+    <div class="grid lg:grid-cols-[1fr_320px] gap-5 items-start">
+      <div>
+        <input type="file" id="labInput" accept=".json,.xlsx,.xlsm"
+               class="w-full text-sm rounded-xl px-3 py-2.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-purple-600 file:text-white"
+               style="background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); color:#94a3b8;">
+        <div class="flex items-center gap-3 mt-1.5">
+          <p id="labStatus" class="text-[11px] text-gray-500"></p>
+          <p id="labRowCount" class="text-[11px] text-gray-500"></p>
+        </div>
+
+        <div class="flex flex-wrap gap-3 mt-4">
+          <button id="labGenerateBtn" disabled
+                  class="brand-gradient text-white font-semibold px-5 py-2.5 rounded-xl text-sm disabled:opacity-40">
+            Generar la primera
+          </button>
+          <button id="labBatchBtn" disabled
+                  class="glass text-white font-semibold px-5 py-2.5 rounded-xl text-sm disabled:opacity-40">
+            Generar todas
+          </button>
+          <button id="labZipBtn"
+                  class="text-xs font-semibold text-purple-600 hover:underline">Descargar ZIP</button>
+        </div>
+        <label class="flex items-start gap-2 mt-3 cursor-pointer">
+          <input type="checkbox" id="labPsdChk" class="mt-0.5 accent-purple-500">
+          <span class="text-[11px] text-gray-500">Incluir PSD por capas en el lote (más lento)</span>
+        </label>
+
+        <div id="labLog"
+             class="text-[11px] font-mono text-gray-500 rounded-lg p-3 mt-4 max-h-32 overflow-y-auto whitespace-pre-wrap"
+             style="background:rgba(0,0,0,.25);"></div>
+      </div>
+
+      <div id="labPreviewWrap" style="display:none;">
+        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Vista previa</p>
+        <div id="labSvgHost" class="checker-bg rounded-xl overflow-hidden mb-3 [&amp;_svg]:w-full [&amp;_svg]:h-auto"></div>
+        <div class="flex flex-col gap-2">
+          <button id="labPngBtn" class="glass text-white text-xs font-semibold px-3 py-2 rounded-lg text-left">⬇ PNG</button>
+          <button id="labSvgBtn" class="glass text-white text-xs font-semibold px-3 py-2 rounded-lg text-left">⬇ SVG</button>
+          <button id="labPsdBtn" class="glass text-white text-xs font-semibold px-3 py-2 rounded-lg text-left">⬇ PSD <span class="text-gray-500 font-normal">— por capas</span></button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <canvas id="renderCanvas" style="display:none;"></canvas>
@@ -2960,5 +3025,8 @@ checkAuth();         // muestra/oculta el login según la sesión
      son ~2600 líneas portadas de otro repo (motor de plantillas SVG), y
      mantenerlas separadas permite resincronizar con el upstream. -->
 <script src="/static/js/promo.js?v=4"></script>
+<!-- Ingesta libre (experimental). DEBE ir después de promo.js: reusa sus
+     funciones globales de render en vez de reimplementarlas. -->
+<script src="/static/js/promo_lab.js?v=1"></script>
 </body>
 </html>
