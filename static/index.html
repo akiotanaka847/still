@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
 <link rel="shortcut icon" href="/static/favicon.ico">
 <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon-180.png">
-<link rel="stylesheet" href="/static/css/tailwind.css?v=13">
+<link rel="stylesheet" href="/static/css/tailwind.css?v=14">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -1155,21 +1155,27 @@
         </div>
       </div>
 
-      <!-- Biblioteca de imágenes: el Excel referencia estas imágenes POR
-           NOMBRE DE ARCHIVO en las columnas CALLOUT y BRAND. -->
-      <div class="glass rounded-2xl p-5 mb-5 card">
-        <div class="flex items-center gap-2 mb-2">
+      <!-- Biblioteca de imágenes. Va PLEGADA: es configuración que se toca de
+           vez en cuando, y desplegada obliga a pasar de largo 11 filas cada
+           vez que se quiere generar una promo. -->
+      <details class="glass rounded-2xl mb-5 card group">
+        <summary class="flex items-center gap-2 p-5 cursor-pointer list-none">
           <div class="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
             <span class="text-white text-xs font-bold">2</span>
           </div>
           <h2 class="font-bold text-gray-900 text-base">Imágenes de marca</h2>
-        </div>
+          <span id="assetCount" class="text-[11px] text-gray-500"></span>
+          <svg class="w-4 h-4 text-gray-500 ml-auto transition-transform group-open:rotate-180"
+               fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </summary>
+        <div class="px-5 pb-5">
         <p class="text-xs text-gray-500 mb-3">
-          En el Excel, las columnas <strong class="text-gray-600">CALLOUT</strong> y
+          Las columnas <strong class="text-gray-600">CALLOUT</strong> y
           <strong class="text-gray-600">BRAND</strong> se escriben con el
-          <strong class="text-gray-600">nombre del archivo</strong> (por ejemplo
-          <code class="text-indigo-300">RUFFLES.SVG</code>). Si el nombre no está acá, la promo sale
-          con la imagen de error.
+          <strong class="text-gray-600">nombre del archivo</strong> (ej.
+          <code class="text-indigo-300">RUFFLES.SVG</code>), o con su texto si viene de un JSON.
         </p>
         <!-- Al subir se elige el TIPO: no es solo orden. La búsqueda es por
              texto, así que sin tipo una marca "NUEVO" y una placa "NUEVO"
@@ -1188,24 +1194,28 @@
                class="w-full text-sm rounded-xl px-3 py-2.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white"
                style="background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); color:#94a3b8;">
 
-        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wide mt-4 mb-2">
-          Disponibles <span id="assetCount" class="text-gray-500 font-normal normal-case"></span>
-        </p>
-        <div id="assetList" class="space-y-1"></div>
-      </div>
+        <!-- La lista tiene su propio scroll: con muchas imágenes, sin esto
+             empuja todo lo demás fuera de la pantalla. -->
+        <div id="assetList" class="space-y-1 mt-4 max-h-52 overflow-y-auto pr-1"></div>
+        </div>
+      </details>
 
-      <!-- Colores y tipografía del kit -->
-      <div class="glass rounded-2xl p-5 mb-5 card">
-        <div class="flex items-center gap-2 mb-2">
+      <!-- Colores y tipografía del kit. También plegado: es configuración. -->
+      <details class="glass rounded-2xl mb-5 card group">
+        <summary class="flex items-center gap-2 p-5 cursor-pointer list-none">
           <div class="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
             <span class="text-white text-xs font-bold">3</span>
           </div>
           <h2 class="font-bold text-gray-900 text-base">Colores y tipografía</h2>
-        </div>
+          <svg class="w-4 h-4 text-gray-500 ml-auto transition-transform group-open:rotate-180"
+               fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </summary>
+        <div class="px-5 pb-5">
         <p class="text-xs text-gray-500 mb-4">
-          Pisan a los de la plantilla. Si un dato trae su propio color, ese gana igual —
+          Pisan a los de la plantilla, pero si un dato trae su propio color, ese gana:
           el orden es <strong class="text-gray-600">dato → kit → plantilla</strong>.
-          Dejar vacío devuelve el color original de la plantilla.
         </p>
 
         <div class="flex flex-wrap gap-5 mb-4">
@@ -1246,7 +1256,8 @@
           Solo <code class="text-indigo-300">.woff2</code>. Si el kit no trae fuentes, se usan las de la plantilla.
         </p>
         <div id="fontList" class="flex flex-wrap gap-1.5"></div>
-      </div>
+        </div>
+      </details>
 
       <div class="glass rounded-2xl p-5 mb-5 card">
         <div class="flex items-center gap-2 mb-4">
@@ -1335,10 +1346,9 @@
             style="background:rgba(168,85,247,.16)">Experimental</span>
     </div>
     <p class="text-xs text-gray-500 mb-4 max-w-2xl">
-      Las mismas promos, pero los datos pueden venir en
-      <strong class="text-gray-600">JSON</strong> además de Excel — pensado para que otro
-      sistema alimente a Still sin depender de una planilla. El formato de texto se escribe
-      con marcas: <code class="text-indigo-300">*negrilla*</code>,
+      Las mismas promos, pero alimentadas desde
+      <strong class="text-gray-600">JSON</strong> además de Excel. Formato de texto con marcas:
+      <code class="text-indigo-300">*negrilla*</code>,
       <code class="text-indigo-300">~tachado~</code>,
       <code class="text-indigo-300">^superíndice^</code>.
     </p>
