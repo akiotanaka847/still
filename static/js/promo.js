@@ -27,6 +27,7 @@ const batchLogEl = document.getElementById("batchLog");
 const batchTable = document.getElementById("batchTable");
 const batchTableBody = document.querySelector("#batchTable tbody");
 const batchTotal = document.getElementById("batchTotal");
+const batchPsdChk = document.getElementById("batchPsdChk");
 
 const state = {
   templates: [],
@@ -2520,6 +2521,36 @@ generateBatchBtn.addEventListener("click", async () => {
         const { svgString, crop } = await buildSvgWithMaxFill(template, mapping, row.fields);
         const pngBlob = await renderToPng(svgString, crop.width, crop.height);
 
+        // Vista previa de la PRIMERA fila que sale bien: el lote tarda, y sin
+        // esto no se ve nada de lo que se está generando hasta que termina.
+        if (!state.batchOutputs.length) {
+          svgHost.innerHTML = svgString;
+          previewWrap.style.display = "block";
+          state.lastSvgString = svgString;
+          state.lastCrop = crop;
+          state.lastPngBlob = pngBlob;
+          batchLog("Vista previa: primera promo del lote.");
+        }
+
+        // PSD por fila, solo si se pidió: son ~6 rasterizaciones extra por
+        // promo, así que multiplica bastante el tiempo del lote.
+        let psdBlob = null;
+        if (batchPsdChk && batchPsdChk.checked) {
+          const layers = await rasterizeLayers(svgString, crop.width, crop.height);
+          if (layers.length) {
+            const form = new FormData();
+            layers.forEach((l, i) => form.append("layers", l.blob, `layer_${i}.png`));
+            form.append("names", JSON.stringify(layers.map((l) => l.name)));
+            form.append("filename", `promo_${slug}`);
+            const psdRes = await fetch("/api/promo/psd", { method: "POST", body: form });
+            if (!psdRes.ok) {
+              const e = await psdRes.json().catch(() => ({}));
+              throw new Error(e.detail || `PSD: error ${psdRes.status}`);
+            }
+            psdBlob = await psdRes.blob();
+          }
+        }
+
         // No se guarda en el servidor (ver nota en el generador individual):
         // se acumula en memoria y al final todo el lote baja en un solo ZIP,
         // mismo patrón que ya usa "Por lotes" de bodegones.
@@ -2528,6 +2559,7 @@ generateBatchBtn.addEventListener("click", async () => {
           name: outName,
           png: pngBlob,
           svg: new Blob([svgString], { type: "image/svg+xml" }),
+          psd: psdBlob,
         });
 
         const elapsed = performance.now() - rowStart;
@@ -2683,6 +2715,10 @@ if (downloadZipBtn) {
         names.push(`${o.name}.png`);
         form.append("files", o.svg, `${o.name}.svg`);
         names.push(`${o.name}.svg`);
+        if (o.psd) {
+          form.append("files", o.psd, `${o.name}.psd`);
+          names.push(`${o.name}.psd`);
+        }
       }
       form.append("names", JSON.stringify(names));
       const res = await fetch("/api/promo/zip", { method: "POST", body: form });

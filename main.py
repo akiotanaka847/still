@@ -239,7 +239,12 @@ _CSP = (
     "default-src 'self'; "
     "script-src 'self' 'unsafe-inline'; "
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-    "font-src 'self' https://fonts.gstatic.com; "
+    # data: en font-src lo necesita el módulo de Promos: las plantillas
+    # incrustan sus woff2 como data URL para que el SVG sea autocontenido (un
+    # canvas que rasteriza un SVG con recursos externos queda "tainted" y no
+    # se puede exportar). Sin esto, FontFace.load() falla con "A network error
+    # occurred" y no se genera ninguna promo.
+    "font-src 'self' data: https://fonts.gstatic.com; "
     "img-src 'self' data: blob:; "
     "connect-src 'self'; "
     "frame-ancestors 'none'; base-uri 'self'; form-action 'self'"

@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
 <link rel="shortcut icon" href="/static/favicon.ico">
 <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon-180.png">
-<link rel="stylesheet" href="/static/css/tailwind.css?v=6">
+<link rel="stylesheet" href="/static/css/tailwind.css?v=7">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -1164,6 +1164,17 @@
             Generar todas las filas
           </button>
         </div>
+        <label class="flex items-start gap-2 mt-4 cursor-pointer">
+          <input type="checkbox" id="batchPsdChk" class="mt-0.5 accent-indigo-500">
+          <span class="text-xs text-gray-500">
+            <strong class="text-gray-700">Incluir PSD por capas en el lote</strong> — cada promo suma
+            su .psd al ZIP. Hace el lote bastante más lento (rasteriza una capa por campo, por fila).
+          </span>
+        </label>
+        <p class="text-[11px] text-gray-500 mt-3">
+          Si el Excel trae la columna <strong class="text-gray-600">ORIENTACION</strong> (H/V), cada fila
+          usa la plantilla que le corresponde — un mismo lote puede mezclar verticales y horizontales.
+        </p>
       </div>
 
       <!-- Resultado por lotes -->
@@ -2918,6 +2929,6 @@ checkAuth();         // muestra/oculta el login según la sesión
 <!-- Módulo de Promos: va en archivo aparte y no inline como el resto porque
      son ~2600 líneas portadas de otro repo (motor de plantillas SVG), y
      mantenerlas separadas permite resincronizar con el upstream. -->
-<script src="/static/js/promo.js?v=2"></script>
+<script src="/static/js/promo.js?v=3"></script>
 </body>
 </html>
