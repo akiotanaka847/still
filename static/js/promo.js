@@ -2485,12 +2485,37 @@ async function buildSvgHorizontal(template, mapping, rawExcelFields) {
     }
   } // fin renderSegundoPorFlowHorizontal
 
+  /* Contexto para el intérprete de columnas (promo_flow.js). Los topes de
+   * ancho salen de las cajas ORIGINALES de la plantilla, no de la mecánica,
+   * así que se calculan acá y se pasan hechos. */
+  function ctxColumnas() {
+    return {
+      cw, ch, gap,
+      bodyParts, trackX, trackY, isPresent,
+      fieldsByColumn, rawFieldByColumn,
+      topes: {
+        callout: maxCalloutWidth,
+        calloutRightEdge: (origCallout ? origCallout.x : 0) + maxCalloutWidth,
+        descripcion: maxDescripcionWidth,
+        frase: maxFraseApoyoWidth,
+        pesos: maxPesosWidth,
+      },
+    };
+  }
+
+  const declarativoH = window.PROMO_FLOW_DECLARADO &&
+                       typeof renderMecanicaHorizontal === "function";
+  const mecH = soloFraseDescData ? "simple_descripcion_larga" : "simple";
+
   if (doubleDescData) {
     await renderDoubleDescriptionFlowHorizontal();
   } else if (segundoPorData) {
     await renderSegundoPorFlowHorizontal();
   } else if (soloDescripcionData) {
     await renderOnlyDescriptionFlowHorizontal();
+  } else if (declarativoH && window.MECANICAS_HORIZONTAL &&
+             window.MECANICAS_HORIZONTAL[mecH]) {
+    await renderMecanicaHorizontal(mecH, ctxColumnas());
   } else {
     await renderNormalFlowHorizontal(soloFraseDescData ? 8 : 4);
   }

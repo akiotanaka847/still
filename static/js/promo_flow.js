@@ -305,4 +305,192 @@ async function renderMecanicaDeclarada(id, ctx) {
   }
 }
 
+/* ── Horizontal: columnas, no pila ────────────────────────────────────────
+ * La vertical apila: el cursor solo baja, así que medir y dibujar es un solo
+ * paso. La horizontal reparte en COLUMNAS y centra cada una verticalmente en
+ * el lienzo, así que hay que saber el alto del grupo ANTES de dibujarlo. Por
+ * eso acá cada bloque se parte en medir() y dibujar(): no es un capricho de
+ * diseño, es lo que impone centrar.
+ *
+ * Los topes de ancho por columna (maxCalloutWidth y compañía) los calcula
+ * promo.js a partir de las cajas ORIGINALES de la plantilla y llegan en el
+ * ctx: dependen del PSD, no de la mecánica, así que no se declaran acá.
+ */
+const BLOQUES_COLUMNA = {
+  asset: {
+    async medir(paso, ctx) {
+      const f = campoDelPaso(paso, ctx);
+      if (!ctx.isPresent(f)) return null;
+      const tope = ctx.topes[paso.cap];
+      // El callout se alinea a la DERECHA contra un borde fijo; el resto se
+      // centra sobre su propio centro. Ver el porqué en promo.js: con el
+      // callout centrado, uno angosto dejaba un hueco distinto fila a fila.
+      const derecha = paso.align === "right";
+      const ancho = tope != null ? Math.min(f.box.width, tope) : f.box.width;
+      const par = derecha ? "xMaxYMid meet" : "xMidYMid meet";
+      const dataUrl = await fetchAssetDataUrl(f.value, par);
+      const natural = await loadImageNaturalSize(dataUrl);
+      return { f, ancho, alto: f.box.height, dataUrl, natural, derecha, par };
+    },
+    dibujar(paso, ctx, m, y) {
+      const { f, ancho, dataUrl, natural, derecha, par } = m;
+      const x = derecha
+        ? ctx.topes.calloutRightEdge - ancho
+        : f.box.x + f.box.width / 2 - ancho / 2;
+      const disp = containFit(natural.w, natural.h, ancho, f.box.height);
+      const dispLeft = derecha ? x + ancho - disp.w : x + (ancho - disp.w) / 2;
+      ctx.bodyParts.push(`<image href="${dataUrl}" xlink:href="${dataUrl}" x="${x}" y="${y}" width="${ancho}" height="${f.box.height}" preserveAspectRatio="${par}"/>`);
+      ctx.trackX(dispLeft, dispLeft + disp.w);
+      ctx.trackY(y, y + f.box.height);
+    },
+  },
+
+  line: {
+    async medir(paso, ctx) {
+      const f = campoDelPaso(paso, ctx);
+      if (!ctx.isPresent(f)) return null;
+      const weight = weightForFontName(f.font_family);
+      const runs = f.runs && f.runs.length ? f.runs : [{ text: f.value }];
+      const plainText = runs.map((r) => r.text).join("");
+      const maxWidth = Math.min(f.box.width, ctx.topes[paso.cap]) * 0.95;
+      const fittedSize = fitFontSizeToWidth(plainText, weight, f.font_size, maxWidth);
+      return {
+        f, weight, runs, plainText, fittedSize,
+        ancho: measureTextWidth(plainText, weight, fittedSize),
+        alto: paragraphHeight(1, fittedSize, plainText),
+        centerX: f.box.x + f.box.width / 2,
+      };
+    },
+    dibujar(paso, ctx, m, y) {
+      const baselineY = y + m.fittedSize * ascentRatioFor(m.plainText);
+      ctx.bodyParts.push(lineToSvgText(runsToWords(m.runs), m.weight, m.fittedSize, m.f.color, m.centerX, baselineY));
+      ctx.trackX(m.centerX - m.ancho / 2, m.centerX + m.ancho / 2);
+      ctx.trackY(y, y + m.alto);
+    },
+  },
+
+  paragraph: {
+    async medir(paso, ctx) {
+      const f = campoDelPaso(paso, ctx);
+      if (!ctx.isPresent(f)) return null;
+      const maxLines = paso.maxLines || 4;
+      const weight = weightForFontName(f.font_family);
+      const runs = f.runs && f.runs.length ? f.runs : [{ text: f.value }];
+      // El techo por líneas nunca puede pasarse de lo que REALMENTE cabe en el
+      // lienzo: el horizontal es más bajo que el vertical (6466 vs 8000), y con
+      // 8 líneas el doble de alto empujaba a BRAND fuera del lienzo.
+      const reservaAbajo = paso.reserve_for && ctx.fieldsByColumn[paso.reserve_for] &&
+                           ctx.isPresent(ctx.fieldsByColumn[paso.reserve_for])
+        ? ctx.gap + ctx.fieldsByColumn[paso.reserve_for].box.height : 0;
+      const disponible = Math.max(f.box.height * 0.4, ctx.ch * 0.98 - reservaAbajo);
+      const maxHeight = Math.min(f.box.height * (maxLines / 4) * 0.97, disponible);
+      const tope = ctx.topes[paso.cap];
+      const wrapWidth = tope != null ? Math.min(f.box.width, tope) : f.box.width;
+      const r = fitParagraph(runs, weight, f.font_size, wrapWidth, maxHeight, maxLines);
+      return {
+        f, weight, ...r, alto: r.actualHeight, ancho: r.maxLineWidth,
+        plainText: r.lines.map((l) => l.map((w) => w.text).join(" ")).join(" "),
+        centerX: f.box.x + f.box.width / 2,
+      };
+    },
+    dibujar(paso, ctx, m, y) {
+      const asc = ascentRatioFor(m.plainText);
+      m.lines.forEach((line, i) => {
+        const baselineY = y + m.fontSize * asc + i * m.fontSize * LINE_HEIGHT_RATIO;
+        ctx.bodyParts.push(lineToSvgText(line, m.weight, m.fontSize, m.f.color, m.centerX, baselineY));
+      });
+      ctx.trackX(m.centerX - m.ancho / 2, m.centerX + m.ancho / 2);
+      ctx.trackY(y, y + m.alto);
+    },
+  },
+
+  price: {
+    async medir(paso, ctx) {
+      const f = campoDelPaso(paso, ctx);
+      if (!ctx.isPresent(f)) return null;
+      const weight = weightForFontName(f.font_family);
+      const prefixWeight = f.prefix ? weightForFontName(f.prefix.font_family) : weight;
+      const centerX = f.box.x + f.box.width / 2;
+      const maxWidth = Math.min(f.box.width, ctx.topes[paso.cap]) * 0.95;
+      // renderPesosBlock SIEMPRE dibuja: se lo llama una vez al vacío, contra
+      // un bodyParts descartable y desde y=0, solo para conocer su alto real
+      // (el cursor que devuelve, habiendo arrancado en 0, ES el alto).
+      const alto = renderPesosBlock(f, weight, prefixWeight, centerX, maxWidth, 0, [], () => {}, () => {});
+      return { f, weight, prefixWeight, centerX, maxWidth, alto, ancho: maxWidth };
+    },
+    dibujar(paso, ctx, m, y) {
+      renderPesosBlock(m.f, m.weight, m.prefixWeight, m.centerX, m.maxWidth, y,
+                       ctx.bodyParts, ctx.trackX, ctx.trackY);
+    },
+  },
+};
+
+/* Mecánicas en horizontal. Mismos bloques, agrupados en columnas. */
+const MECANICAS_HORIZONTAL = {
+  simple: {
+    nombre: "Simple / Múltiple (horizontal)",
+    columnas: [
+      { flow: [{ kind: "asset", field: "CALLOUT", align: "right", cap: "callout" }] },
+      { flow: [
+        { kind: "paragraph", field: "DESCRIPCION", maxLines: 4, cap: "descripcion", reserve_for: "BRAND" },
+        { kind: "asset", field: "BRAND", cap: "descripcion" },
+      ] },
+      { flow: [
+        { kind: "line", field: "FRASE APOYO", cap: "frase" },
+        // El espacio antes del precio va reducido: su fórmula de alto reserva
+        // mucho ascenso por la fuente enorme y con el gap completo se veía
+        // más separado que el resto de las transiciones.
+        { kind: "price", field: "PESOS", cap: "pesos", gap: 0.4875 },
+      ] },
+    ],
+  },
+  simple_descripcion_larga: {
+    nombre: "Simple con descripción larga (horizontal)",
+    columnas: [
+      { flow: [{ kind: "asset", field: "CALLOUT", align: "right", cap: "callout" }] },
+      { flow: [
+        { kind: "paragraph", field: "DESCRIPCION", maxLines: 8, cap: "descripcion", reserve_for: "BRAND" },
+        { kind: "asset", field: "BRAND", cap: "descripcion" },
+      ] },
+      { flow: [
+        { kind: "line", field: "FRASE APOYO", cap: "frase" },
+        { kind: "price", field: "PESOS", cap: "pesos", gap: 0.4875 },
+      ] },
+    ],
+  },
+};
+
+/** Dibuja una mecánica horizontal: mide cada columna entera, la centra en el
+ *  alto del lienzo y recién ahí dibuja. */
+async function renderMecanicaHorizontal(id, ctx) {
+  const mec = MECANICAS_HORIZONTAL[id];
+  if (!mec) throw new Error(`Mecánica horizontal no declarada: ${id}`);
+
+  for (const columna of mec.columnas) {
+    const medidas = [];
+    for (const paso of columna.flow) {
+      const bloque = BLOQUES_COLUMNA[paso.kind];
+      if (!bloque) throw new Error(`Tipo de bloque desconocido: ${paso.kind}`);
+      medidas.push({ paso, m: await bloque.medir(paso, ctx) });
+    }
+    const presentes = medidas.filter((x) => x.m);
+    if (!presentes.length) continue;
+
+    // Alto del grupo = suma de altos + los espacios ENTRE los que sí están.
+    let total = 0;
+    presentes.forEach((x, i) => {
+      if (i > 0) total += ctx.gap * (x.paso.gap != null ? x.paso.gap : 1);
+      total += x.m.alto;
+    });
+
+    let y = (ctx.ch - total) / 2;
+    presentes.forEach((x, i) => {
+      if (i > 0) y += ctx.gap * (x.paso.gap != null ? x.paso.gap : 1);
+      BLOQUES_COLUMNA[x.paso.kind].dibujar(x.paso, ctx, x.m, y);
+      y += x.m.alto;
+    });
+  }
+}
+
 window.MECANICAS = MECANICAS;
+window.MECANICAS_HORIZONTAL = MECANICAS_HORIZONTAL;
