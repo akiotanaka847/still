@@ -26,7 +26,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, Response
 from PIL import Image
 
-from promo_excel import extract_fields_from_row, load_workbook_rows
+from promo_excel import PromoExcelError, extract_fields_from_row, load_workbook_rows
 from renderer import compose_psd
 
 router = APIRouter(prefix="/api/promo", tags=["promo"])
@@ -48,6 +48,8 @@ def _read_excel_upload(file: UploadFile, content: bytes):
         raise HTTPException(400, "El archivo debe ser .xlsx")
     try:
         ws, headers, data_rows, theme_colors = load_workbook_rows(content)
+    except PromoExcelError as e:
+        raise HTTPException(400, str(e))          # mensaje ya pensado para el usuario
     except Exception as e:
         raise HTTPException(400, f"No se pudo leer el Excel: {e}")
     if not data_rows:

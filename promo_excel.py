@@ -25,6 +25,18 @@ from openpyxl.utils import get_column_letter
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".svg")
 
 
+class PromoExcelError(ValueError):
+    """Excel inválido o sin datos utilizables.
+
+    Excepción propia y no HTTPException: este módulo es deliberadamente
+    agnóstico del framework (ver docstring de arriba). La capa web la traduce
+    a un 400 en promo.py. El código portado del upstream sí levantaba
+    HTTPException acá, lo que producía un NameError al no estar FastAPI
+    importado — es decir, un Excel corrupto reventaba con un mensaje que no
+    tenía nada que ver.
+    """
+
+
 def normalize(text: str) -> str:
     text = str(text)
     text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
@@ -517,7 +529,7 @@ def load_workbook_rows(content):
     try:
         wb = openpyxl.load_workbook(io.BytesIO(content), data_only=True, rich_text=True)
     except Exception as e:
-        raise HTTPException(400, f"No se pudo leer el Excel: {e}")
+        raise PromoExcelError(f"No se pudo leer el Excel: {e}")
 
     theme_colors = parse_theme_colors(getattr(wb, "loaded_theme", None))
     ws = wb.active
@@ -533,7 +545,7 @@ def load_workbook_rows(content):
 
     visible_rows = [row for i, row in enumerate(ws.iter_rows(), start=1) if not is_row_hidden(i)]
     if len(visible_rows) < 2:
-        raise HTTPException(400, "El Excel no tiene datos visibles (se esperaba fila de headers + al menos 1 fila de promoción, sin contar filas/columnas ocultas)")
+        raise PromoExcelError("El Excel no tiene datos visibles (se esperaba fila de headers + al menos 1 fila de promoción, sin contar filas/columnas ocultas)")
 
     def visible_cells(row):
         return [c for c in row if not is_col_hidden(c.column)]
