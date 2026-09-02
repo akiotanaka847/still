@@ -13,8 +13,10 @@ import json
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
+import promo_kits
 import promo_source_excel  # noqa: F401 — registra el lector .xlsx
 import promo_source_json   # noqa: F401 — registra el lector .json
+from promo_kits import PromoKitError
 from promo_fields import extract_fields_from_row, fields_for_table
 from promo_source import PromoSourceError, read_table, supported_extensions
 
@@ -45,6 +47,111 @@ async def _load_table(file: UploadFile = None, data: str = None, filename: str =
         raise HTTPException(400, str(e))
     except Exception as e:
         raise HTTPException(400, f"No se pudo leer el archivo: {e}")
+
+
+# ─── Kits de marca ───────────────────────────────────────────────────────────
+# Assets, colores y tipografía por cliente. Ver promo_kits.py para el porqué de
+# agruparlos en un solo concepto en vez de tres administraciones separadas.
+
+def _kit_guard(fn, *a, **kw):
+    """Traduce los errores de dominio del kit a respuestas HTTP."""
+    try:
+        return fn(*a, **kw)
+    except PromoKitError as e:
+        raise HTTPException(400, str(e))
+
+
+@router.get("/kits")
+async def kits_list():
+    return JSONResponse({
+        "kits": promo_kits.list_kits(),
+        "asset_types": list(promo_kits.ASSET_TYPES),
+    })
+
+
+@router.post("/kits")
+async def kits_create(kit_id: str = Form(...), name: str = Form(None)):
+    _kit_guard(promo_kits.create_kit, kit_id, name)
+    return JSONResponse({"id": kit_id, "kit": promo_kits.read_kit(kit_id)})
+
+
+@router.delete("/kits/{kit_id}")
+async def kits_delete(kit_id: str):
+    _kit_guard(promo_kits.delete_kit, kit_id)
+    return JSONResponse({"deleted": kit_id})
+
+
+@router.get("/kits/{kit_id}")
+async def kit_detail(kit_id: str):
+    kit = _kit_guard(promo_kits.read_kit, kit_id)
+    return JSONResponse({
+        "id": kit_id,
+        "name": kit.get("name"),
+        "colors": kit.get("colors", {}),
+        "font": kit.get("font", {}),
+        "assets": _kit_guard(promo_kits.list_assets, kit_id),
+    })
+
+
+@router.post("/kits/{kit_id}/assets")
+async def kit_upload_assets(
+    kit_id: str,
+    files: list[UploadFile] = File(...),
+    type: str = Form(promo_kits.DEFAULT_TYPE),
+):
+    guardados, omitidos = [], []
+    for up in files:
+        try:
+            guardados.append(
+                promo_kits.save_asset(kit_id, up.filename, await up.read(), type)
+            )
+        except PromoKitError as e:
+            omitidos.append({"filename": up.filename or "(sin nombre)", "reason": str(e)})
+    return JSONResponse({
+        "saved": guardados,
+        "skipped": omitidos,
+        "assets": promo_kits.list_assets(kit_id),
+    })
+
+
+@router.delete("/kits/{kit_id}/assets/{filename}")
+async def kit_delete_asset(kit_id: str, filename: str):
+    _kit_guard(promo_kits.delete_asset, kit_id, filename)
+    return JSONResponse({"deleted": filename, "assets": promo_kits.list_assets(kit_id)})
+
+
+@router.patch("/kits/{kit_id}/assets/{filename}")
+async def kit_set_asset_type(kit_id: str, filename: str, type: str = Form(...)):
+    _kit_guard(promo_kits.set_asset_type, kit_id, filename, type)
+    return JSONResponse({"assets": promo_kits.list_assets(kit_id)})
+
+
+@router.put("/kits/{kit_id}/colors")
+async def kit_set_colors(kit_id: str, colors: str = Form(...)):
+    try:
+        parsed = json.loads(colors)
+    except json.JSONDecodeError:
+        raise HTTPException(400, "'colors' debe ser un objeto JSON")
+    return JSONResponse({"colors": _kit_guard(promo_kits.set_colors, kit_id, parsed)})
+
+
+@router.post("/kits/{kit_id}/fonts")
+async def kit_upload_font(
+    kit_id: str,
+    file: UploadFile = File(...),
+    weight: str = Form(...),
+    family: str = Form(None),
+):
+    _kit_guard(promo_kits.save_font, kit_id, file.filename, await file.read(), weight)
+    if family:
+        _kit_guard(promo_kits.set_font_family, kit_id, family)
+    return JSONResponse({"font": promo_kits.read_kit(kit_id).get("font", {})})
+
+
+@router.delete("/kits/{kit_id}/fonts/{weight}")
+async def kit_delete_font(kit_id: str, weight: str):
+    _kit_guard(promo_kits.delete_font, kit_id, weight)
+    return JSONResponse({"font": promo_kits.read_kit(kit_id).get("font", {})})
 
 
 @router.get("/sources")

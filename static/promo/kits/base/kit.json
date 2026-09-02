@@ -1,0 +1,40 @@
+{
+  "name": "Base",
+  "colors": {},
+  "font": {},
+  "assets": {
+    "CAFIJO_LLEVATE.svg": {
+      "type": "pleca"
+    },
+    "CAFIJO_Y_LLEVATE.svg": {
+      "type": "pleca"
+    },
+    "CA_COMBINALOS_COMO_QUIERAS.svg": {
+      "type": "callout"
+    },
+    "CA_ERROR.svg": {
+      "type": "callout"
+    },
+    "CA_NUEVO.svg": {
+      "type": "callout"
+    },
+    "CA_NUEVO__1_.png": {
+      "type": "callout"
+    },
+    "CA_TUELIGES.svg": {
+      "type": "callout"
+    },
+    "CocaCola.svg": {
+      "type": "marca"
+    },
+    "RedBull.svg": {
+      "type": "marca"
+    },
+    "Ruffles.svg": {
+      "type": "marca"
+    },
+    "SPIN_PREMIA.png": {
+      "type": "marca"
+    }
+  }
+}

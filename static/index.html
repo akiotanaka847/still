@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
 <link rel="shortcut icon" href="/static/favicon.ico">
 <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon-180.png">
-<link rel="stylesheet" href="/static/css/tailwind.css?v=12">
+<link rel="stylesheet" href="/static/css/tailwind.css?v=13">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -1171,19 +1171,87 @@
           <code class="text-indigo-300">RUFFLES.SVG</code>). Si el nombre no está acá, la promo sale
           con la imagen de error.
         </p>
+        <!-- Al subir se elige el TIPO: no es solo orden. La búsqueda es por
+             texto, así que sin tipo una marca "NUEVO" y una placa "NUEVO"
+             colisionan. Con tipo, cada campo busca donde corresponde. -->
+        <div class="flex flex-wrap items-center gap-2 mb-2">
+          <label class="text-[11px] font-semibold text-gray-500">Subir como</label>
+          <select id="assetType"
+                  class="text-xs rounded-lg px-2 py-1.5"
+                  style="color-scheme:dark; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); color:#e2e8f0;">
+            <option value="callout">Callout</option>
+            <option value="pleca">Pleca</option>
+            <option value="marca">Marca</option>
+          </select>
+        </div>
         <input type="file" id="assetInput" accept=".svg,.png,.jpg,.jpeg,.webp" multiple
                class="w-full text-sm rounded-xl px-3 py-2.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white"
                style="background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); color:#94a3b8;">
+
         <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wide mt-4 mb-2">
           Disponibles <span id="assetCount" class="text-gray-500 font-normal normal-case"></span>
         </p>
-        <div id="assetList" class="flex flex-wrap gap-1.5"></div>
+        <div id="assetList" class="space-y-1"></div>
+      </div>
+
+      <!-- Colores y tipografía del kit -->
+      <div class="glass rounded-2xl p-5 mb-5 card">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+            <span class="text-white text-xs font-bold">3</span>
+          </div>
+          <h2 class="font-bold text-gray-900 text-base">Colores y tipografía</h2>
+        </div>
+        <p class="text-xs text-gray-500 mb-4">
+          Pisan a los de la plantilla. Si un dato trae su propio color, ese gana igual —
+          el orden es <strong class="text-gray-600">dato → kit → plantilla</strong>.
+          Dejar vacío devuelve el color original de la plantilla.
+        </p>
+
+        <div class="flex flex-wrap gap-5 mb-4">
+          <div class="flex items-center gap-2">
+            <input type="color" id="colorPrecio" value="#dc2726"
+                   class="w-8 h-8 rounded cursor-pointer" style="background:transparent;border:1px solid rgba(255,255,255,.14)">
+            <div>
+              <p class="text-xs font-semibold text-gray-700">Precio</p>
+              <button id="colorPrecioReset" class="text-[10px] text-gray-500 hover:underline">usar el de la plantilla</button>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="color" id="colorTexto" value="#000000"
+                   class="w-8 h-8 rounded cursor-pointer" style="background:transparent;border:1px solid rgba(255,255,255,.14)">
+            <div>
+              <p class="text-xs font-semibold text-gray-700">Textos</p>
+              <button id="colorTextoReset" class="text-[10px] text-gray-500 hover:underline">usar el de la plantilla</button>
+            </div>
+          </div>
+        </div>
+
+        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-2">Tipografía</p>
+        <div class="flex flex-wrap items-center gap-2 mb-2">
+          <select id="fontWeight"
+                  class="text-xs rounded-lg px-2 py-1.5"
+                  style="color-scheme:dark; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); color:#e2e8f0;">
+            <option value="900">Black (900)</option>
+            <option value="800">ExtraBold (800)</option>
+            <option value="700">Bold (700)</option>
+            <option value="600">SemiBold (600)</option>
+            <option value="400">Regular (400)</option>
+          </select>
+          <input type="file" id="fontInput" accept=".woff2"
+                 class="text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[11px] file:font-semibold file:bg-indigo-600 file:text-white"
+                 style="color:#94a3b8;">
+        </div>
+        <p class="text-[10px] text-gray-500 mb-2">
+          Solo <code class="text-indigo-300">.woff2</code>. Si el kit no trae fuentes, se usan las de la plantilla.
+        </p>
+        <div id="fontList" class="flex flex-wrap gap-1.5"></div>
       </div>
 
       <div class="glass rounded-2xl p-5 mb-5 card">
         <div class="flex items-center gap-2 mb-4">
           <div class="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
-            <span class="text-white text-xs font-bold">3</span>
+            <span class="text-white text-xs font-bold">4</span>
           </div>
           <h2 class="font-bold text-gray-900 text-base">Generar</h2>
         </div>
@@ -3045,9 +3113,9 @@ checkAuth();         // muestra/oculta el login según la sesión
 <!-- Módulo de Promos: va en archivo aparte y no inline como el resto porque
      son ~2600 líneas portadas de otro repo (motor de plantillas SVG), y
      mantenerlas separadas permite resincronizar con el upstream. -->
-<script src="/static/js/promo.js?v=5"></script>
+<script src="/static/js/promo.js?v=6"></script>
 <!-- Ingesta libre (experimental). DEBE ir después de promo.js: reusa sus
      funciones globales de render en vez de reimplementarlas. -->
-<script src="/static/js/promo_lab.js?v=5"></script>
+<script src="/static/js/promo_lab.js?v=6"></script>
 </body>
 </html>

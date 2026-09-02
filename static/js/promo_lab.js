@@ -107,11 +107,37 @@ function renderFaltantes(faltantes) {
   labLogMsg(`⚠ Faltan ${faltantes.length} imagen(es) en la biblioteca: ${faltantes.join(", ")}`);
 }
 
+/* ── Colores del kit ──────────────────────────────────────────────────────
+   La precedencia ya existía en el motor: el color del DATO pisa al de la
+   plantilla. El kit se mete en el medio, quedando `dato → kit → plantilla`.
+
+   Se aplica sobre una COPIA de la plantilla, no sobre la cacheada: si se
+   mutara la original, cambiar de kit no podría volver atrás sin recargar. */
+const COLOR_POR_CAMPO = { PESOS: "precio" };   // el resto de los textos: "texto"
+
+function aplicarColoresDelKit(template) {
+  const colores = (LAB.kit && LAB.kit.colors) || {};
+  if (!Object.keys(colores).length) return template;
+
+  const fields = template.fields.map((f) => {
+    if (f.type === "image") return f;
+    const clave = COLOR_POR_CAMPO[f.excel_column] || "texto";
+    const color = colores[clave];
+    if (!color) return f;
+    const out = { ...f, color };
+    // El "$" del precio es un elemento aparte con su propio color; si no se
+    // ajusta también, queda de otro color que el número.
+    if (f.prefix) out.prefix = { ...f.prefix, color };
+    return out;
+  });
+  return { ...template, fields };
+}
+
 /* ── Generar una promo ────────────────────────────────────────────────── */
 async function labRenderRow(fields) {
   // templateForRow viene de promo.js: respeta la columna ORIENTACION de la
   // fila y cae a la plantilla del desplegable si no la trae.
-  const template = await templateForRow(fields);
+  const template = aplicarColoresDelKit(await templateForRow(fields));
   const mapping = computeMapping(fields, template.fields);
   const { svgString, crop } = await buildSvgWithMaxFill(template, mapping, fields);
   const pngBlob = await renderToPng(svgString, crop.width, crop.height);
@@ -314,3 +340,217 @@ if (labZipBtn) {
     }
   });
 }
+
+/* =========================================================================
+   Kit de marca: imágenes (con tipo), colores y tipografía
+
+   Las tres cosas varían por el mismo eje —el cliente— así que se administran
+   juntas. Ver promo_kits.py para el modelo de datos.
+
+   El TIPO de imagen no es decorativo: la búsqueda es por texto, así que sin
+   tipo una marca "NUEVO" y una placa "NUEVO" colisionan y gana la que quede
+   primera alfabéticamente. Con tipo, PROVEEDOR busca solo entre marcas y
+   TEXTO APOYO solo entre placas.
+   ========================================================================= */
+const KIT_ID = "base";   // por ahora un solo kit; el modelo ya soporta varios
+
+const assetInput = document.getElementById("assetInput");
+const assetType = document.getElementById("assetType");
+const assetList = document.getElementById("assetList");
+const assetCount = document.getElementById("assetCount");
+const fontInput = document.getElementById("fontInput");
+const fontWeight = document.getElementById("fontWeight");
+const fontList = document.getElementById("fontList");
+
+const TIPO_LABEL = { callout: "Callout", pleca: "Pleca", marca: "Marca" };
+const TIPO_COLOR = {
+  callout: "text-indigo-300",
+  pleca: "text-cyan-300",
+  marca: "text-purple-300",
+};
+
+async function kitFetch(url, opts) {
+  const res = await fetch(url, opts);
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.detail || `Error ${res.status}`);
+  }
+  return res.json();
+}
+
+function renderAssets(assets) {
+  if (!assetList) return;
+  assetList.innerHTML = "";
+  assets.forEach((a) => {
+    const row = document.createElement("div");
+    row.className = "flex items-center gap-2 px-2 py-1.5 rounded-lg glass";
+
+    const tipo = document.createElement("select");
+    tipo.className = `text-[10px] font-semibold bg-transparent ${TIPO_COLOR[a.type] || ""}`;
+    tipo.style.cssText = "color-scheme:dark;border:none;outline:none;cursor:pointer";
+    Object.entries(TIPO_LABEL).forEach(([v, label]) => {
+      const o = document.createElement("option");
+      o.value = v; o.textContent = label; o.selected = v === a.type;
+      tipo.appendChild(o);
+    });
+    tipo.addEventListener("change", async () => {
+      try {
+        const fd = new FormData(); fd.append("type", tipo.value);
+        const r = await kitFetch(
+          `/api/promo-lab/kits/${KIT_ID}/assets/${encodeURIComponent(a.file)}`,
+          { method: "PATCH", body: fd });
+        renderAssets(r.assets);
+        labLogMsg(`"${a.file}" ahora es ${TIPO_LABEL[tipo.value]}.`);
+      } catch (e) { labLogMsg(`ERROR cambiando el tipo: ${e.message}`); }
+    });
+
+    const nombre = document.createElement("span");
+    nombre.className = "text-[11px] text-gray-500 flex-1 truncate";
+    nombre.textContent = a.file;
+
+    const borrar = document.createElement("button");
+    borrar.className = "text-[11px] text-gray-500 hover:text-red-400 px-1";
+    borrar.textContent = "✕";
+    borrar.title = `Borrar ${a.file}`;
+    borrar.addEventListener("click", async () => {
+      // Borrado real de un archivo: se confirma antes, no se puede deshacer.
+      if (!confirm(`¿Borrar "${a.file}" de la biblioteca?\n\nNo se puede deshacer.`)) return;
+      try {
+        const r = await kitFetch(
+          `/api/promo-lab/kits/${KIT_ID}/assets/${encodeURIComponent(a.file)}`,
+          { method: "DELETE" });
+        renderAssets(r.assets);
+        if (assetCount) assetCount.textContent = `(${r.assets.length})`;
+        labLogMsg(`"${a.file}" borrado.`);
+      } catch (e) { labLogMsg(`ERROR al borrar: ${e.message}`); }
+    });
+
+    row.append(tipo, nombre, borrar);
+    assetList.appendChild(row);
+  });
+  if (assetCount) assetCount.textContent = `(${assets.length})`;
+}
+
+function renderFonts(font) {
+  if (!fontList) return;
+  fontList.innerHTML = "";
+  const pesos = (font && font.weights) || {};
+  if (!Object.keys(pesos).length) {
+    const p = document.createElement("span");
+    p.className = "text-[10px] text-gray-500";
+    p.textContent = "Sin fuentes propias — se usan las de la plantilla.";
+    fontList.appendChild(p);
+    return;
+  }
+  Object.entries(pesos).sort((a, b) => b[0] - a[0]).forEach(([w, file]) => {
+    const chip = document.createElement("span");
+    chip.className = "text-[10px] px-2 py-1 rounded-md glass text-gray-500 flex items-center gap-1.5";
+    chip.textContent = `${w} · ${file}`;
+    const x = document.createElement("button");
+    x.className = "hover:text-red-400"; x.textContent = "✕";
+    x.addEventListener("click", async () => {
+      try {
+        const r = await kitFetch(`/api/promo-lab/kits/${KIT_ID}/fonts/${w}`, { method: "DELETE" });
+        renderFonts(r.font);
+        labLogMsg(`Fuente del peso ${w} eliminada.`);
+      } catch (e) { labLogMsg(`ERROR: ${e.message}`); }
+    });
+    chip.appendChild(x);
+    fontList.appendChild(chip);
+  });
+}
+
+/* Los <input type=color> solo entienden hex; el motor usa rgb(). */
+const hexARgb = (h) => {
+  const m = /^#?([0-9a-f]{6})$/i.exec(h || "");
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return `rgb(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255})`;
+};
+const rgbAHex = (c) => {
+  const m = /rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/.exec(c || "");
+  if (!m) return /^#[0-9a-f]{6}$/i.test(c || "") ? c : null;
+  return "#" + [1, 2, 3].map((i) => (+m[i]).toString(16).padStart(2, "0")).join("");
+};
+
+async function guardarColores() {
+  const colores = {};
+  if (LAB.colorOn.precio) colores.precio = hexARgb(document.getElementById("colorPrecio").value);
+  if (LAB.colorOn.texto) colores.texto = hexARgb(document.getElementById("colorTexto").value);
+  try {
+    const r = await kitFetch(`/api/promo-lab/kits/${KIT_ID}/colors`, {
+      method: "PUT",
+      body: (() => { const f = new FormData(); f.append("colors", JSON.stringify(colores)); return f; })(),
+    });
+    LAB.kit.colors = r.colors;
+    labLogMsg(Object.keys(r.colors).length
+      ? `Colores del kit: ${Object.entries(r.colors).map(([k, v]) => `${k} ${v}`).join(", ")}. Volvé a generar para verlos.`
+      : "Colores del kit vaciados — se usan los de la plantilla.");
+  } catch (e) { labLogMsg(`ERROR guardando colores: ${e.message}`); }
+}
+
+LAB.kit = { colors: {}, font: {} };
+LAB.colorOn = { precio: false, texto: false };
+
+window.promoKitInit = async function () {
+  try {
+    const kit = await kitFetch(`/api/promo-lab/kits/${KIT_ID}`);
+    LAB.kit = { colors: kit.colors || {}, font: kit.font || {} };
+    renderAssets(kit.assets || []);
+    renderFonts(kit.font);
+    // Reflejar los colores guardados en los selectores
+    ["precio", "texto"].forEach((k) => {
+      const hex = rgbAHex(LAB.kit.colors[k]);
+      if (hex) {
+        const el = document.getElementById(k === "precio" ? "colorPrecio" : "colorTexto");
+        if (el) el.value = hex;
+        LAB.colorOn[k] = true;
+      }
+    });
+  } catch (e) {
+    console.error("No se pudo cargar el kit", e);
+  }
+};
+
+if (assetInput) {
+  assetInput.addEventListener("change", async () => {
+    const files = Array.from(assetInput.files || []);
+    if (!files.length) return;
+    const form = new FormData();
+    files.forEach((f) => form.append("files", f, f.name));
+    form.append("type", assetType ? assetType.value : "callout");
+    try {
+      const r = await kitFetch(`/api/promo-lab/kits/${KIT_ID}/assets`, { method: "POST", body: form });
+      if (r.saved.length) labLogMsg(`✓ ${r.saved.length} imagen(es) subida(s) como ${TIPO_LABEL[assetType.value]}: ${r.saved.join(", ")}`);
+      (r.skipped || []).forEach((s) => labLogMsg(`⚠ Se omitió "${s.filename}": ${s.reason}`));
+      renderAssets(r.assets);
+    } catch (e) {
+      labLogMsg(`ERROR subiendo imágenes: ${e.message}`);
+    } finally { assetInput.value = ""; }
+  });
+}
+
+if (fontInput) {
+  fontInput.addEventListener("change", async () => {
+    const f = fontInput.files[0];
+    if (!f) return;
+    const form = new FormData();
+    form.append("file", f, f.name);
+    form.append("weight", fontWeight ? fontWeight.value : "400");
+    try {
+      const r = await kitFetch(`/api/promo-lab/kits/${KIT_ID}/fonts`, { method: "POST", body: form });
+      LAB.kit.font = r.font;
+      renderFonts(r.font);
+      labLogMsg(`Fuente "${f.name}" cargada como peso ${fontWeight.value}.`);
+    } catch (e) {
+      labLogMsg(`ERROR subiendo la fuente: ${e.message}`);
+    } finally { fontInput.value = ""; }
+  });
+}
+
+["precio", "texto"].forEach((k) => {
+  const input = document.getElementById(k === "precio" ? "colorPrecio" : "colorTexto");
+  const reset = document.getElementById(k === "precio" ? "colorPrecioReset" : "colorTextoReset");
+  if (input) input.addEventListener("change", () => { LAB.colorOn[k] = true; guardarColores(); });
+  if (reset) reset.addEventListener("click", () => { LAB.colorOn[k] = false; guardarColores(); });
+});

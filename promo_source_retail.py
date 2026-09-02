@@ -15,7 +15,7 @@ Tres cosas que este formato necesita y que un JSON genérico no resuelve:
    `PRODUCTO_DESC` en vez de `DESCRIPCION`, etc.
 
 3. **Assets por texto.** El export no trae nombres de archivo sino el texto
-   ("NUEVO", "HEINEKEN"); se resuelven contra la biblioteca (ver promo_assets).
+   ("NUEVO", "HEINEKEN"); se resuelven contra la biblioteca del kit (ver promo_kits).
 
 Los campos de producción física (POP, ESPACIO, VERSION, IMPRENTA, CANTIDAD_*)
 se ignoran a propósito: describen en qué material se imprime la pieza, no qué
@@ -24,7 +24,7 @@ promoción es. Acá solo se genera la promo.
 import collections
 import re
 
-from promo_assets import resolve_asset, _index as _asset_index
+import promo_kits
 from promo_source import make_cell, make_table
 
 # Clave que identifica a este formato dentro del JSON.
@@ -106,7 +106,7 @@ def _descripcion(items):
     return resaltar_unidades(" o ".join(vistos))
 
 
-def to_table(doc, orientation="V"):
+def to_table(doc, orientation="V", kit=promo_kits.DEFAULT_KIT):
     """Export -> Table neutra, una fila por PROMOCION_ID.
 
     Devuelve (table, info) donde `info` reporta qué se agrupó y qué assets
@@ -118,18 +118,23 @@ def to_table(doc, orientation="V"):
     for rec in recs:
         grupos.setdefault(_txt(rec, GROUP_BY) or f"_sin_id_{len(grupos)}", []).append(rec)
 
-    idx = _asset_index()
+    # Índices SEPARADOS por tipo: sin esto, una marca y un callout con el mismo
+    # texto ("NUEVO") colisionan y el resultado depende del orden alfabético.
+    idx_callout = promo_kits.asset_index(kit, "callout")
+    idx_pleca = promo_kits.asset_index(kit, "pleca")
+    idx_marca = promo_kits.asset_index(kit, "marca")
     faltantes = []
 
-    def asset(text):
+    def asset(text, index, que):
         """Texto -> archivo del asset, anotando el faltante si no existe."""
         if not text:
             return ""
-        found = resolve_asset(text, idx)
+        found = promo_kits.resolve(text, index)
         if found:
             return found
-        if text not in faltantes:
-            faltantes.append(text)
+        etiqueta = f"{text} ({que})"
+        if etiqueta not in faltantes:
+            faltantes.append(etiqueta)
         return ""
 
     rows = []
@@ -140,8 +145,15 @@ def to_table(doc, orientation="V"):
         # si existe la placa gráfica para ese texto ("NUEVO" -> CA_NUEVO.svg),
         # se usa la placa y el texto NO se repite abajo. Si no existe, el texto
         # se muestra como frase de apoyo, que es la degradación natural.
+        # La placa puede estar catalogada como callout o como pleca: son dos
+        # tipos distintos de placa de texto y el origen no distingue cuál es.
         texto_apoyo = _txt(p, "TEXTO APOYO")
-        callout = resolve_asset(texto_apoyo, idx) if texto_apoyo else None
+        callout = None
+        if texto_apoyo:
+            callout = (promo_kits.resolve(texto_apoyo, idx_callout)
+                       or promo_kits.resolve(texto_apoyo, idx_pleca))
+            if not callout:
+                asset(texto_apoyo, idx_callout, "placa")   # solo para anotarlo
         frase = "" if callout else texto_apoyo
 
         rows.append([
@@ -153,7 +165,7 @@ def to_table(doc, orientation="V"):
             make_cell(value=_txt(p, "PRECIO")),
             make_cell(value=_txt(p, "DESCUENTO")),
             make_cell(value=_descripcion(items)),
-            make_cell(value=asset(_txt(p, "PROVEEDOR"))),        # BRAND
+            make_cell(value=asset(_txt(p, "PROVEEDOR"), idx_marca, "marca")),  # BRAND
         ])
 
     info = {

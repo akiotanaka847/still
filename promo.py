@@ -33,7 +33,11 @@ router = APIRouter(prefix="/api/promo", tags=["promo"])
 
 PROMO_DIR = Path("static/promo")
 TEMPLATES_DIR = PROMO_DIR / "templates"
-ASSETS_DIR = PROMO_DIR / "assets"
+# La biblioteca de imágenes pasó a vivir dentro del kit "base" (ver
+# promo_kits.py). Se apunta ahí para que este módulo y el de kits compartan
+# una sola biblioteca en vez de dos que se desincronizan — lo que sube el
+# usuario acá aparece allá y viceversa.
+ASSETS_DIR = PROMO_DIR / "kits" / "base" / "assets"
 
 # Tope de capas por PSD: una plantilla real tiene ~6 campos dinámicos + fondo.
 # Es una red de seguridad contra un cliente que mande basura, no un límite
