@@ -1258,6 +1258,25 @@ async function buildSvg(template, mapping, rawExcelFields) {
     };
   }
 
+  /* El dato declara su familia de mecánica y el motor deduce la suya de las
+   * señales. Cuando no coinciden casi siempre es el dato el que viene mal
+   * cargado (una "comunicación de imagen" con multiplicador, por ejemplo), y
+   * hasta ahora eso pasaba en silencio: salía una pieza que no correspondía a
+   * lo que el reporte decía que era. Ahora queda dicho. */
+  function avisarSiContradice(mecanica) {
+    const fam = rawFieldByColumn("PROMO_FAMILIA");
+    if (!fam) return;
+    const esperada = {
+      comunicacion_imagen: ["comunicacion_imagen", "comunicacion_precio_regular"],
+      promopack: ["promopack_suma", "promopack_gratis"],
+      simple: ["simple", "simple_descripcion_larga", "comunicacion_imagen"],
+      multiple: ["simple", "simple_descripcion_larga"],
+    }[fam.value];
+    if (esperada && !esperada.includes(mecanica)) {
+      log(`⚠ El dato declara "${fam.value}" pero se va a dibujar "${mecanica}". Revisá TIPO_MECANICA.`);
+    }
+  }
+
   /* Mientras se verifica que la versión declarada da EXACTAMENTE lo mismo que
    * la escrita a mano, mandan los flujos originales. La bandera permite
    * generar por los dos caminos y compararlos. */
@@ -1269,8 +1288,18 @@ async function buildSvg(template, mapping, rawExcelFields) {
    * selección: decidir CUÁNDO aplican es un problema del dato, y quería que se
    * pudieran ver y revisar antes de atarlas a una regla. */
   const forzada = window.PROMO_MECANICA_FORZADA;
-  if (declarativo && forzada && window.MECANICAS && window.MECANICAS[forzada]) {
-    await renderMecanicaDeclarada(forzada, ctxFlujo());
+
+  /* Mecánica que DECLARA el dato (columna TIPO_MECANICA, resuelta en el
+   * backend). Se usa solo donde la familia decide algo que las señales del
+   * dato no pueden ver — hoy, "comunicación de imagen" con precio, que por
+   * señales parecería una promo simple. Ver mecanica_para_familia(). */
+  const declaradaField = rawFieldByColumn("PROMO_MECANICA");
+  const declarada = declaradaField ? declaradaField.value : null;
+
+  const elegida = forzada || declarada;
+  if (declarativo && elegida && window.MECANICAS && window.MECANICAS[elegida]) {
+    avisarSiContradice(elegida);
+    await renderMecanicaDeclarada(elegida, ctxFlujo());
   } else if (doubleDescData) {
     await renderDoubleDescriptionFlow();
   } else if (segundoPorData) {

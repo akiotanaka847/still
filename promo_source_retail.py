@@ -36,9 +36,11 @@ HEADERS = [
     "Nombre corto", "ORIENTACION", "CALLOUT", "FRASE APOYO",
     "MULTIPLICADOR", "PESOS O PRECIO", "DESCUENTO", "DESCRIPCION", "BRAND",
     "PLECA",
-    # No se dibuja: alimenta la detección de alcohol, que decide qué mecánicas
-    # están permitidas (la guía prohíbe "Compra/Llévate/Gratis" en esas promos).
+    # Ninguna de las dos se dibuja. CATEGORIA alimenta la detección de alcohol
+    # (la guía prohíbe "Compra/Llévate/Gratis" en esas promos) y TIPO_MECANICA
+    # trae la familia que declara el reporte.
     "CATEGORIA",
+    "TIPO_MECANICA",
 ]
 
 
@@ -178,6 +180,7 @@ def to_table(doc, orientation="V", kit=promo_kits.DEFAULT_KIT):
             # un texto suelto, así que no tiene degradación a texto.
             make_cell(value=asset(_txt(p, "PLECA"), idx_pleca, "pleca")),      # PLECA
             make_cell(value=_txt(p, "CATEGORIA")),                             # CATEGORIA
+            make_cell(value=_txt(p, "TIPO_MECANICA")),                         # TIPO_MECANICA
         ])
 
     info = {

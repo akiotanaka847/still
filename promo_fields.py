@@ -33,6 +33,9 @@ from promo_excel import (
     ALCOHOL_COLUMNS,
     ALCOHOL_OUTPUT_FIELD,
     CONNECTOR_PATTERN,
+    FAMILIA_OUTPUT_FIELD,
+    MECANICA_OUTPUT_FIELD,
+    TIPO_MECANICA_COLUMN,
     DESCRIPCION2_COLUMN_NAME,
     DISCOUNT_COLUMN_NAME,
     DOBLE_DESC_OUTPUT_FIELD,
@@ -48,7 +51,9 @@ from promo_excel import (
     SOLO_FRASE_DESC_OUTPUT_FIELD,
     apply_auto_superscript,
     build_multiplier_price_line,
+    familia_de_mecanica,
     looks_like_alcohol,
+    mecanica_para_familia,
     normalize,
     parse_markup_runs,
     parse_percent_value,
@@ -344,6 +349,33 @@ def extract_fields_from_row(headers, cells) -> list:
                 "value": "true",
                 "runs": [],
                 "solo_descripcion": True,
+            })
+
+    # Familia declarada por el dato (TIPO_MECANICA). Va SIEMPRE que venga, aun
+    # cuando no cambie qué se dibuja: el motor la usa para avisar si lo que va a
+    # dibujar contradice lo que el dato dice que es. Ese desacuerdo casi siempre
+    # significa que el dato viene mal cargado, y hoy pasaba en silencio.
+    familia = familia_de_mecanica(
+        cell_text(cells_by_normalized_header.get(normalize(TIPO_MECANICA_COLUMN)))
+    )
+    if familia:
+        fields.append({
+            "column": FAMILIA_OUTPUT_FIELD,
+            "column_normalized": normalize(FAMILIA_OUTPUT_FIELD),
+            "type": "text",
+            "value": familia,
+            "runs": [],
+            "familia": familia,
+        })
+        mecanica = mecanica_para_familia(familia, tiene_precio=bool(cell_text(price_cell)))
+        if mecanica:
+            fields.append({
+                "column": MECANICA_OUTPUT_FIELD,
+                "column_normalized": normalize(MECANICA_OUTPUT_FIELD),
+                "type": "text",
+                "value": mecanica,
+                "runs": [],
+                "mecanica": mecanica,
             })
 
     # Alcohol: la guía prohíbe "Compra", "Llévate" y "Gratis" en estas promos.

@@ -334,6 +334,59 @@ def looks_like_alcohol(*textos) -> bool:
     return any(ALCOHOL_PATTERN.search(strip_accents(t)) for t in textos if t)
 
 
+# ─── Familia de mecánica declarada por el dato ───────────────────────────────
+# La guía define 4 familias y el reporte las trae en TIPO_MECANICA. Hasta ahora
+# el motor deducía la variante mirando las señales del dato (hay precio, hay
+# descuento, hay segunda descripción…). La familia declarada no reemplaza esa
+# deducción: la complementa donde las señales no alcanzan, y sirve de control
+# cuando ambas dicen cosas distintas.
+TIPO_MECANICA_COLUMN = "TIPO_MECANICA"
+MECANICA_OUTPUT_FIELD = "PROMO_MECANICA"
+FAMILIA_OUTPUT_FIELD = "PROMO_FAMILIA"
+
+
+def familia_de_mecanica(texto):
+    """Texto de TIPO_MECANICA -> familia de la guía, o None si no se reconoce."""
+    n = normalize(texto or "")
+    if n.startswith("SIMPLE"):
+        return "simple"
+    if n.startswith("MULTIPLE"):
+        return "multiple"
+    if n.startswith("PROMOPACK"):
+        return "promopack"
+    if n.startswith("COMUNICACION"):
+        return "comunicacion_imagen"
+    return None
+
+
+def mecanica_para_familia(familia, *, tiene_precio):
+    """Mecánica a dibujar cuando la FAMILIA aporta algo que las señales no ven.
+
+    Devuelve None —a propósito— en las familias donde la deducción por señales
+    ya acierta: cambiar lo que funciona sin necesidad es arriesgar de gratis.
+
+      comunicacion_imagen  Único caso donde la familia decide de verdad. Por
+                           señales, "descripción + precio" es una promo simple;
+                           la guía dice que en esta familia se redacta
+                           "a sólo … c/u", que es otra pieza.
+
+      promopack            La familia no distingue sus cuatro formas: "suma de
+                           artículos" y "artículo más precio" tienen las MISMAS
+                           señales (dos descripciones y un precio) y se separan
+                           por la redacción, que el reporte no trae. Sin un dato
+                           que las distinga, adivinar sería peor que seguir con
+                           lo que ya se dibuja.
+
+      simple / multiple    La deducción ya acierta —verificado 88/88 contra
+                           TIPO_MECANICA en los datos reales— y además reconoce
+                           subcasos que la familia ni nombra (solo descripción,
+                           solo frase + descripción).
+    """
+    if familia == "comunicacion_imagen":
+        return "comunicacion_precio_regular" if tiene_precio else "comunicacion_imagen"
+    return None
+
+
 CONNECTOR_PATTERN = re.compile(r"(?:^|\s)[oOóÓ](?:\s|$)")
 SEGUNDO_POR_TRIGGER_PATTERN = re.compile(r"y\s+ll[eé]va(?:te)?\s+el\s+segundo(?:\s+por)?", re.IGNORECASE)
 
