@@ -92,6 +92,11 @@ def _default_kit_json(name="Base"):
         "colors": {},
         # Vacío = usar la tipografía que trae la plantilla.
         "font": {},
+        # Banners fijos que dibujan ciertas variantes. Vacío = los que trae la
+        # plantilla o, si tampoco los declara, los de siempre. Permite que un
+        # cliente cambie su LLÉVATE sin tocar código ni la plantilla.
+        # Claves: fallback, banner_llevate, banner_y_llevate.
+        "system_assets": {},
         "assets": {},   # {archivo: {"type": ...}}
     }
 

@@ -528,6 +528,9 @@ window.promoKitInit = async function () {
   try {
     const kit = await kitFetch(`/api/promo-lab/kits/${KIT_ID}`);
     LAB.kit = { colors: kit.colors || {}, font: kit.font || {} };
+    // Banners fijos declarados por el kit: los lee systemAsset() de promo.js,
+    // que resuelve plantilla -> kit -> valor por defecto.
+    window.PROMO_KIT_ASSETS = kit.system_assets || {};
     renderAssets(kit.assets || []);
     renderFonts(kit.font);
     // Reflejar los colores guardados en los selectores

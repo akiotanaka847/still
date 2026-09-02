@@ -2,6 +2,7 @@
   "name": "Base",
   "colors": {},
   "font": {},
+  "system_assets": {},
   "assets": {
     "CAFIJO_LLEVATE.svg": {
       "type": "pleca"

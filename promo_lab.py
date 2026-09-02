@@ -89,6 +89,7 @@ async def kit_detail(kit_id: str):
         "name": kit.get("name"),
         "colors": kit.get("colors", {}),
         "font": kit.get("font", {}),
+        "system_assets": kit.get("system_assets", {}),
         "assets": _kit_guard(promo_kits.list_assets, kit_id),
     })
 

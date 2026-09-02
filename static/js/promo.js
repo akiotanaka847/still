@@ -282,7 +282,31 @@ async function fetchAssetDataUrl(filename, preserveAspectRatio = "xMidYMid meet"
   return withInnerPreserveAspectRatio(json.data_url, preserveAspectRatio);
 }
 
-const ERROR_ASSET_FILENAME = "CA_ERROR.svg";
+/* ── Assets fijos del motor, declarables ──────────────────────────────────
+   Ciertas variantes de promoción dibujan banners que no vienen de los datos:
+   la variante "doble descripción" pone un LLÉVATE, la de "segundo por" pone
+   un Y LLÉVATE, y cuando falta un asset se dibuja uno de respaldo.
+
+   Los nombres de archivo NO van escritos en el código: son diseño y pueden
+   cambiar. Se resuelven en este orden:
+       plantilla (template.json -> "system_assets")
+    -> kit de marca (window.PROMO_KIT_ASSETS)
+    -> el valor por defecto de acá
+
+   Así, cambiar el banner es editar la plantilla o el kit, sin tocar código. */
+const SYSTEM_ASSET_DEFAULTS = {
+  fallback: "CA_ERROR.svg",
+  banner_llevate: "CAFIJO_LLEVATE.svg",
+  banner_y_llevate: "CAFIJO_Y_LLEVATE.svg",
+};
+
+function systemAsset(key) {
+  const desdePlantilla = (state.template && state.template.system_assets) || {};
+  const desdeKit = window.PROMO_KIT_ASSETS || {};
+  return desdePlantilla[key] || desdeKit[key] || SYSTEM_ASSET_DEFAULTS[key];
+}
+
+const ERROR_ASSET_FILENAME = SYSTEM_ASSET_DEFAULTS.fallback;
 
 /** Para assets DINÁMICOS (los que vienen del Excel: CALLOUT, BRAND) — si el
  *  nombre de archivo que indica el Excel no existe en assets/, en vez de
@@ -297,8 +321,9 @@ async function fetchDynamicAssetDataUrl(filename, preserveAspectRatio = "xMidYMi
   try {
     return await fetchAssetDataUrl(filename, preserveAspectRatio);
   } catch (e) {
-    log(`⚠ No se encontró el asset "${filename}" indicado en el Excel — usando ${ERROR_ASSET_FILENAME} de respaldo.`);
-    return await fetchAssetDataUrl(ERROR_ASSET_FILENAME, preserveAspectRatio);
+    const respaldo = systemAsset("fallback");
+    log(`⚠ No se encontró el asset "${filename}" — usando ${respaldo} de respaldo.`);
+    return await fetchAssetDataUrl(respaldo, preserveAspectRatio);
   }
 }
 
@@ -1264,7 +1289,7 @@ async function buildSvg(template, mapping, rawExcelFields) {
       const priceLineWidth = widthBase * scale;
       const priceLineHeight = paragraphHeight(1, scaledMain, priceText);
 
-      const bannerDataUrl = await fetchAssetDataUrl("CAFIJO_LLEVATE.svg");
+      const bannerDataUrl = await fetchAssetDataUrl(systemAsset("banner_llevate"));
       const natural = await loadImageNaturalSize(bannerDataUrl);
       const bannerBox = callout ? callout.box : { width: cw * 0.6, height: 1300 };
       const disp = containFit(natural.w, natural.h, bannerBox.width, bannerBox.height);
@@ -1274,7 +1299,7 @@ async function buildSvg(template, mapping, rawExcelFields) {
       middleHeight = priceLineHeight + gap + disp.h;
     } else {
       const bannerBox = callout ? callout.box : { width: cw * 0.5, height: 1300 };
-      const bannerDataUrl = await fetchAssetDataUrl("CAFIJO_Y_LLEVATE.svg");
+      const bannerDataUrl = await fetchAssetDataUrl(systemAsset("banner_y_llevate"));
       const natural = await loadImageNaturalSize(bannerDataUrl);
       const targetHeight = bannerBox.height * 0.85;
       const disp = containFit(natural.w, natural.h, bannerBox.width * 0.65, targetHeight);
@@ -1424,7 +1449,7 @@ async function buildSvg(template, mapping, rawExcelFields) {
 
     // --- 3. Medir banner "Y LLÉVATE" + texto fijo "EL SEGUNDO CON" (apilados) ---
     const bannerBox = callout ? callout.box : { width: cw * 0.6, height: 1300 };
-    const bannerDataUrl = await fetchAssetDataUrl("CAFIJO_Y_LLEVATE.svg");
+    const bannerDataUrl = await fetchAssetDataUrl(systemAsset("banner_y_llevate"));
     const bannerNatural = await loadImageNaturalSize(bannerDataUrl);
     const bannerDisp = containFit(bannerNatural.w, bannerNatural.h, bannerBox.width, bannerBox.height);
 
@@ -2087,7 +2112,7 @@ async function buildSvgHorizontal(template, mapping, rawExcelFields) {
           const priceLineWidth = measureTextWidth("+", priceWeight, smallSize) + measureTextWidth(dollarText, priceWeight, smallSize) + measureTextWidth(priceTextVal, priceWeight, mainSize);
           const priceLineHeight = paragraphHeight(1, mainSize, priceTextVal);
 
-          const bannerDataUrl = await fetchAssetDataUrl("CAFIJO_LLEVATE.svg");
+          const bannerDataUrl = await fetchAssetDataUrl(systemAsset("banner_llevate"));
           const natural = await loadImageNaturalSize(bannerDataUrl);
           const disp = containFit(natural.w, natural.h, slot.width, ch * 0.4);
 
@@ -2110,7 +2135,7 @@ async function buildSvgHorizontal(template, mapping, rawExcelFields) {
           trackY(y, y + disp.h);
         } else {
           // banner fijo Y LLÉVATE + "GRATIS" (negrilla), lado a lado.
-          const bannerDataUrl = await fetchAssetDataUrl("CAFIJO_Y_LLEVATE.svg");
+          const bannerDataUrl = await fetchAssetDataUrl(systemAsset("banner_y_llevate"));
           const natural = await loadImageNaturalSize(bannerDataUrl);
           let disp = containFit(natural.w, natural.h, slot.width * 0.65, ch * 0.35);
           const gratisWeight = fraseApoyo ? weightForFontName(fraseApoyo.font_family) : 900;
@@ -2174,7 +2199,7 @@ async function buildSvgHorizontal(template, mapping, rawExcelFields) {
       } else if (type === "desc") {
         renderParagraphSlot(descripcion, slot, 4);
       } else if (type === "second_group") {
-        const bannerDataUrl = await fetchAssetDataUrl("CAFIJO_Y_LLEVATE.svg");
+        const bannerDataUrl = await fetchAssetDataUrl(systemAsset("banner_y_llevate"));
         const natural = await loadImageNaturalSize(bannerDataUrl);
         const disp = containFit(natural.w, natural.h, slot.width, ch * 0.32);
 
