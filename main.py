@@ -113,7 +113,7 @@ USERS_FILE = DATA_DIR / "users.json"
 SECRET_FILE = DATA_DIR / ".secret"
 
 # Prefijos de rutas que requieren sesión iniciada
-PROTECTED_PREFIXES = ("/api/bodegon", "/api/batch", "/api/promo")
+PROTECTED_PREFIXES = ("/api/bodegon", "/api/batch", "/api/promo", "/api/promo-lab")
 
 
 def _get_secret() -> str:
@@ -1177,5 +1177,11 @@ async def batch_download(batch_id: str, request: Request):
 # la misma sesión que el resto (ver PROTECTED_PREFIXES).
 from promo import router as promo_router
 app.include_router(promo_router)
+
+# Módulo experimental de ingesta libre: mismas promos, pero alimentadas desde
+# cualquier origen (.xlsx, .json) en vez de solo Excel. Va aparte del router de
+# arriba a propósito — el módulo de Promos actual no se toca.
+from promo_lab import router as promo_lab_router
+app.include_router(promo_lab_router)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
