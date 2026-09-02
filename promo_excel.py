@@ -346,16 +346,28 @@ FAMILIA_OUTPUT_FIELD = "PROMO_FAMILIA"
 
 
 def familia_de_mecanica(texto):
-    """Texto de TIPO_MECANICA -> familia de la guía, o None si no se reconoce."""
+    """Texto de TIPO_MECANICA -> familia de la guía, o None si no se reconoce.
+
+    Se busca por CONTENIDO y no por prefijo porque el mismo campo viene escrito
+    distinto según el archivo: el JSON trae "Multiple" y el Excel "Compra
+    múltiple". Con prefijo, la segunda forma no se reconocía y esas promos
+    perdían la familia declarada sin que nadie se enterara.
+
+    El orden importa: "comunicación" y "promopack" se prueban primero porque
+    son inequívocas; "múltiple" antes que "simple" porque una mecánica múltiple
+    puede mencionar ambas palabras, y la más específica es la que manda.
+    """
     n = normalize(texto or "")
-    if n.startswith("SIMPLE"):
-        return "simple"
-    if n.startswith("MULTIPLE"):
-        return "multiple"
-    if n.startswith("PROMOPACK"):
-        return "promopack"
-    if n.startswith("COMUNICACION"):
+    if not n:
+        return None
+    if "COMUNICACION" in n:
         return "comunicacion_imagen"
+    if "PROMOPACK" in n:
+        return "promopack"
+    if "MULTIPLE" in n:
+        return "multiple"
+    if "SIMPLE" in n:
+        return "simple"
     return None
 
 
