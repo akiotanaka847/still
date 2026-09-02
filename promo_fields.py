@@ -165,7 +165,17 @@ def compute_pesos_field(multiplier_cell, price_cell, discount_cell,
     if combined:
         return {"mode": "combined", **combined}
 
-    # 4. Solo precio
+    # 4. "NxM" escrito en la columna de PRECIO en vez de la de multiplicador.
+    #    La guía llama a esto "Compra Múltiple (por cantidad)" —"3x2 Electrolit"—
+    #    y es natural escribirlo del lado del precio. Sin esta rama, el paso 5
+    #    le saca los dígitos y "3x2" termina dibujado como "$32": una promo
+    #    distinta, y sin ningún aviso.
+    if price_text:
+        quantity_en_precio = parse_quantity_value(price_text)
+        if quantity_en_precio:
+            return {**quantity_en_precio, "color": price_color}
+
+    # 5. Solo precio
     if price_text:
         return {**parse_price_only(price_text), "color": price_color}
 
