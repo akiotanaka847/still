@@ -178,7 +178,7 @@ if (labBatchBtn) {
         LAB.outputs.push({
           name: nombre,
           png: pngBlob,
-          svg: new Blob([svgString], { type: "image/svg+xml" }),
+          svg: new Blob([svgParaDescargar(svgString)], { type: "image/svg+xml" }),
           psd: psdBlob,
         });
         ok++;
@@ -252,6 +252,10 @@ async function labBuildPsd(svgString, crop, nombre) {
 }
 
 /* ── Descargas ────────────────────────────────────────────────────────── */
+
+/* svgParaDescargar() se define en promo.js (mismo arreglo, mismo bug) y se
+   reusa acá — este archivo se carga después. */
+
 function labDownload(blob, filename) {
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -264,7 +268,7 @@ document.getElementById("labPngBtn")?.addEventListener("click", () => {
 });
 
 document.getElementById("labSvgBtn")?.addEventListener("click", () => {
-  if (LAB.lastSvg) labDownload(new Blob([LAB.lastSvg], { type: "image/svg+xml" }), "promo.svg");
+  if (LAB.lastSvg) labDownload(new Blob([svgParaDescargar(LAB.lastSvg)], { type: "image/svg+xml" }), "promo.svg");
 });
 
 document.getElementById("labPsdBtn")?.addEventListener("click", async (ev) => {

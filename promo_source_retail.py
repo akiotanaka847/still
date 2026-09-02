@@ -22,6 +22,7 @@ se ignoran a propósito: describen en qué material se imprime la pieza, no qué
 promoción es. Acá solo se genera la promo.
 """
 import collections
+import re
 
 from promo_assets import resolve_asset, _index as _asset_index
 from promo_source import make_cell, make_table
@@ -56,6 +57,34 @@ def _txt(record, key):
     return "" if v is None else str(v).strip()
 
 
+# Cantidad + unidad de medida dentro de la descripción: "330 ml", "1.2 lt",
+# "940 ml", "1,5 L". Se resalta el conjunto (número Y unidad), no solo la
+# unidad, porque lo que el cliente compara de un vistazo es el contenido.
+# El separador puede ser espacio o nada ("330ml"), y el decimal punto o coma.
+# "pack" queda FUERA a propósito: es un formato de venta, no una medida, y
+# "18 Pack Lata Tecate" terminaba resaltando "18 Pack" en vez del contenido.
+_UNIDAD_RE = re.compile(
+    r"(\d+(?:[.,]\d+)?)\s*(ml|mls|l|lt|lts|litro|litros|mililitro|mililitros|"
+    r"g|gr|grs|kg|kgs|gramo|gramos|cc|oz)\b",
+    re.IGNORECASE,
+)
+
+
+def resaltar_unidades(texto):
+    """Envuelve cantidad+unidad en marcas de negrilla (`*...*`).
+
+    Se devuelve texto con marcas y no runs ya armados a propósito: así pasa por
+    el mismo `parse_markup_runs` que cualquier otro origen, y no hay una
+    segunda forma de producir formato que pueda desincronizarse.
+
+    Si el texto ya trae marcas de negrilla puestas a mano, no se toca — quien
+    escribió el dato decidió el énfasis y no hay que pisarlo.
+    """
+    if not texto or "*" in texto:
+        return texto
+    return _UNIDAD_RE.sub(lambda m: f"*{m.group(1)} {m.group(2)}*", texto)
+
+
 def _descripcion(items):
     """Descripción de la pieza: los productos que abarca la promoción.
 
@@ -65,13 +94,16 @@ def _descripcion(items):
 
     Cuando la promo abarca varios productos se listan separados por " o ",
     que es como se lee la mecánica ("Tecate Light o Tecate Original").
+
+    La cantidad y la unidad ("330 ml", "1.2 lt") salen en negrilla: es el dato
+    que el cliente compara de un vistazo frente a otra promoción.
     """
     vistos = []
     for it in items:
         p = _txt(it, "PRODUCTO_DESC")
         if p and p not in vistos:
             vistos.append(p)
-    return " o ".join(vistos)
+    return resaltar_unidades(" o ".join(vistos))
 
 
 def to_table(doc, orientation="V"):

@@ -2610,9 +2610,23 @@ downloadPngBtn.addEventListener("click", () => {
   a.click();
 });
 
+/* El SVG se arma con medidas FIJAS en píxeles porque es lo que necesita el
+   rasterizado a PNG. Pero al abrir ese archivo suelto el navegador no lo
+   escala: monta un documento de miles de píxeles de ancho y solo se ve la
+   esquina superior izquierda, casi siempre transparente — parece vacío o
+   roto, aunque el contenido esté perfecto (reporte real del usuario).
+   Para el archivo descargado se pasan a 100%: el viewBox ya define la
+   proporción, así que el dibujo no cambia, solo se adapta a lo que lo abra. */
+function svgParaDescargar(svgString) {
+  return svgString.replace(
+    /^(\s*<svg\b[^>]*?)\swidth="[^"]*"\s+height="[^"]*"/,
+    '$1 width="100%" height="100%"'
+  );
+}
+
 downloadSvgBtn.addEventListener("click", () => {
   if (!state.lastSvgString) return;
-  const blob = new Blob([state.lastSvgString], { type: "image/svg+xml" });
+  const blob = new Blob([svgParaDescargar(state.lastSvgString)], { type: "image/svg+xml" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = "promo_generada.svg";
