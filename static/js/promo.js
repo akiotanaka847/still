@@ -41,7 +41,13 @@ const state = {
   templatesById: {}, // caché de plantillas completas (con fuentes/fondo ya resueltos) por id
 };
 
+/* El motor de armado lo comparten el módulo de Excel y el experimental, y cada
+ * uno tiene su propio panel de log. Quien esté generando puede declarar dónde
+ * quiere que caigan los avisos (window.PROMO_LOG); si nadie lo declara, van al
+ * panel de este módulo. Sin esto, un aviso del motor durante una generación
+ * del módulo experimental se escribe en un panel que no está a la vista. */
 function log(msg) {
+  if (typeof window.PROMO_LOG === "function") return window.PROMO_LOG(msg);
   const time = new Date().toLocaleTimeString();
   logEl.textContent += `[${time}] ${msg}\n`;
   logEl.scrollTop = logEl.scrollHeight;
@@ -284,8 +290,8 @@ async function fetchAssetDataUrl(filename, preserveAspectRatio = "xMidYMid meet"
 
 /* ── Assets fijos del motor, declarables ──────────────────────────────────
    Ciertas variantes de promoción dibujan banners que no vienen de los datos:
-   la variante "doble descripción" pone un LLÉVATE, la de "segundo por" pone
-   un Y LLÉVATE, y cuando falta un asset se dibuja uno de respaldo.
+   la variante "doble descripción" pone un LLÉVATE y la de "segundo por" pone
+   un Y LLÉVATE.
 
    Los nombres de archivo NO van escritos en el código: son diseño y pueden
    cambiar. Se resuelven en este orden:
@@ -295,7 +301,6 @@ async function fetchAssetDataUrl(filename, preserveAspectRatio = "xMidYMid meet"
 
    Así, cambiar el banner es editar la plantilla o el kit, sin tocar código. */
 const SYSTEM_ASSET_DEFAULTS = {
-  fallback: "CA_ERROR.svg",
   banner_llevate: "CAFIJO_LLEVATE.svg",
   banner_y_llevate: "CAFIJO_Y_LLEVATE.svg",
 };
@@ -306,25 +311,49 @@ function systemAsset(key) {
   return desdePlantilla[key] || desdeKit[key] || SYSTEM_ASSET_DEFAULTS[key];
 }
 
-const ERROR_ASSET_FILENAME = SYSTEM_ASSET_DEFAULTS.fallback;
+/* ── Assets DINÁMICOS que el dato nombra pero no existen ──────────────────
+   CALLOUT y BRAND se nombran desde los datos, así que el dato puede pedir un
+   archivo que no está en la biblioteca. Cuando pasa, ese elemento NO se
+   dibuja: la promo sale sin él, exactamente igual que si la celda hubiera
+   venido vacía. Antes se estampaba una imagen de error sobre la pieza, que no
+   es diseño y no puede llegarle al cliente.
 
-/** Para assets DINÁMICOS (los que vienen del Excel: CALLOUT, BRAND) — si el
- *  nombre de archivo que indica el Excel no existe en assets/, en vez de
- *  fallar se usa el asset fijo de error como respaldo, avisando en el log.
- *  No confundir con "la celda viene vacía" (eso ya se salta antes de llegar
- *  acá, vía isPresent — nunca dispara esta función).
- *  `preserveAspectRatio` DEBE coincidir con el que se va a usar en el
- *  <image> que dibuja este asset (ver withInnerPreserveAspectRatio) — por
- *  defecto "xMidYMid meet" (centrado), que es la mayoría de los casos; el
- *  callout alineado a la derecha en horizontal pasa "xMaxYMid meet". */
-async function fetchDynamicAssetDataUrl(filename, preserveAspectRatio = "xMidYMid meet") {
+   Se resuelve ACÁ, antes de armar, y no en cada punto de dibujo, porque el
+   layout decide el reparto de columnas según haya o no callout (ver
+   "slotDefs" en las variantes horizontales). Vaciando el valor, isPresent()
+   da false y los cuatro flujos y las dos orientaciones lo tratan igual, sin
+   dejar reservado un hueco vacío. */
+const DYNAMIC_ASSET_COLUMNS = ["CALLOUT", "BRAND"];
+
+// Un lote son cientos de filas y cada una se arma hasta 3 veces (ver
+// buildSvgWithMaxFill), así que el resultado se recuerda por nombre.
+const assetExistsCache = new Map();
+
+async function assetExists(filename) {
+  if (assetExistsCache.has(filename)) return assetExistsCache.get(filename);
+  let ok = false;
   try {
-    return await fetchAssetDataUrl(filename, preserveAspectRatio);
+    const res = await fetch(`/api/promo/asset?filename=${encodeURIComponent(filename)}`);
+    ok = res.ok;
   } catch (e) {
-    const respaldo = systemAsset("fallback");
-    log(`⚠ No se encontró el asset "${filename}" — usando ${respaldo} de respaldo.`);
-    return await fetchAssetDataUrl(respaldo, preserveAspectRatio);
+    ok = false;
   }
+  assetExistsCache.set(filename, ok);
+  return ok;
+}
+
+async function dropMissingDynamicAssets(mapping) {
+  const out = [];
+  for (const f of mapping) {
+    const nombre = f && f.matched ? String(f.value ?? "").trim() : "";
+    if (nombre && DYNAMIC_ASSET_COLUMNS.includes(f.excel_column) && !(await assetExists(nombre))) {
+      log(`⚠ "${nombre}" no está en la biblioteca — la promo se genera sin ese elemento.`);
+      out.push({ ...f, value: "" });
+    } else {
+      out.push(f);
+    }
+  }
+  return out;
 }
 
 function escapeXml(str) {
@@ -972,6 +1001,9 @@ function builderFor(template) {
 
 async function buildSvgWithMaxFill(template, mapping, rawExcelFields) {
   const build = builderFor(template);
+  // Antes de medir nada: sacar los assets que el dato nombra pero no existen,
+  // para que el layout no reserve lugar para algo que no se va a dibujar.
+  mapping = await dropMissingDynamicAssets(mapping);
   const pass1 = await build(template, mapping, rawExcelFields);
   const cw = template.canvas.width, ch = template.canvas.height;
   if (pass1.crop.width <= 0 || pass1.crop.height <= 0) return pass1;
@@ -1153,7 +1185,7 @@ async function buildSvg(template, mapping, rawExcelFields) {
 
   if (isPresent(callout)) {
     advance();
-    const dataUrl = await fetchDynamicAssetDataUrl(callout.value);
+    const dataUrl = await fetchAssetDataUrl(callout.value);
     const natural = await loadImageNaturalSize(dataUrl);
     const disp = containFit(natural.w, natural.h, callout.box.width, callout.box.height);
     const dispLeft = callout.box.x + (callout.box.width - disp.w) / 2;
@@ -1223,7 +1255,7 @@ async function buildSvg(template, mapping, rawExcelFields) {
   const brand = fieldsByColumn["BRAND"];
   if (isPresent(brand)) {
     advance();
-    const dataUrl = await fetchDynamicAssetDataUrl(brand.value);
+    const dataUrl = await fetchAssetDataUrl(brand.value);
     const natural = await loadImageNaturalSize(dataUrl);
     const disp = containFit(natural.w, natural.h, brand.box.width, brand.box.height);
     const dispLeft = brand.box.x + (brand.box.width - disp.w) / 2;
@@ -1253,7 +1285,7 @@ async function buildSvg(template, mapping, rawExcelFields) {
     // --- 1. Medir CALLOUT (si aplica) ---
     let calloutDataUrl = null, calloutDisp = null;
     if (showCallout) {
-      calloutDataUrl = await fetchDynamicAssetDataUrl(callout.value);
+      calloutDataUrl = await fetchAssetDataUrl(callout.value);
       const natural = await loadImageNaturalSize(calloutDataUrl);
       calloutDisp = containFit(natural.w, natural.h, callout.box.width, callout.box.height);
     }
@@ -1432,7 +1464,7 @@ async function buildSvg(template, mapping, rawExcelFields) {
     // --- 1. Medir CALLOUT (si aplica) ---
     let calloutDataUrl = null, calloutDisp = null;
     if (showCallout) {
-      calloutDataUrl = await fetchDynamicAssetDataUrl(callout.value);
+      calloutDataUrl = await fetchAssetDataUrl(callout.value);
       const natural = await loadImageNaturalSize(calloutDataUrl);
       calloutDisp = containFit(natural.w, natural.h, callout.box.width, callout.box.height);
     }
@@ -1808,7 +1840,7 @@ async function buildSvgHorizontal(template, mapping, rawExcelFields) {
    * posición Y original del PSD — acá no hay una posición de referencia para
    * este layout nuevo, así que se centra en el lienzo). */
   async function renderCalloutSlot(calloutField, slot) {
-    const dataUrl = await fetchDynamicAssetDataUrl(calloutField.value);
+    const dataUrl = await fetchAssetDataUrl(calloutField.value);
     const natural = await loadImageNaturalSize(dataUrl);
     const disp = containFit(natural.w, natural.h, slot.width, ch * 0.55);
     const x = slot.centerX - disp.w / 2;
@@ -1912,7 +1944,7 @@ async function buildSvgHorizontal(template, mapping, rawExcelFields) {
     const rightEdge = (origCallout ? origCallout.x : 0) + maxCalloutWidth;
     const x = rightEdge - width;
     const y = (ch - callout.box.height) / 2;
-    const dataUrl = await fetchDynamicAssetDataUrl(callout.value, "xMaxYMid meet");
+    const dataUrl = await fetchAssetDataUrl(callout.value, "xMaxYMid meet");
     const natural = await loadImageNaturalSize(dataUrl);
     const disp = containFit(natural.w, natural.h, width, callout.box.height);
     const dispLeft = x + width - disp.w;
@@ -1974,7 +2006,7 @@ async function buildSvgHorizontal(template, mapping, rawExcelFields) {
       const brandCenterX = brand.box.x + brand.box.width / 2;
       const width = Math.min(brand.box.width, maxDescripcionWidth);
       const x = brandCenterX - width / 2;
-      const dataUrl = await fetchDynamicAssetDataUrl(brand.value);
+      const dataUrl = await fetchAssetDataUrl(brand.value);
       const natural = await loadImageNaturalSize(dataUrl);
       const disp = containFit(natural.w, natural.h, width, brand.box.height);
       const dispLeft = x + (width - disp.w) / 2;

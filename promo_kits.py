@@ -37,18 +37,16 @@ FONT_EXTS = (".woff2",)
 ASSET_TYPES = ("callout", "pleca", "marca")
 DEFAULT_TYPE = "callout"
 
-# Imágenes que NO son biblioteca del usuario sino parte del motor: el layout
-# las pide por nombre fijo desde el código (static/js/promo.js), así que
-# borrarlas rompe variantes de promoción enteras.
-#   CAFIJO_LLEVATE / CAFIJO_Y_LLEVATE -> banners fijos de las variantes
-#                                        "doble descripción" y "segundo por"
-#   CA_ERROR                          -> imagen de reemplazo cuando falta un asset
-# Se marcan como del sistema para que no aparezcan mezcladas con las del
-# cliente ni se puedan borrar por accidente desde la pantalla.
+# Imágenes que NO son biblioteca del usuario: son los banners que dibujan por
+# su cuenta las variantes "doble descripción" (LLÉVATE) y "segundo por"
+# (Y LLÉVATE). No se nombran desde los datos, los pone el layout, así que
+# borrarlas rompe esas dos variantes.
+# El nombre de archivo se puede cambiar sin tocar código, declarándolo en la
+# plantilla o en el kit (ver SYSTEM_ASSET_DEFAULTS en static/js/promo.js); esta
+# lista es solo para no mezclarlas con las del cliente ni borrarlas sin querer.
 SYSTEM_ASSETS = frozenset({
     "CAFIJO_LLEVATE.svg",
     "CAFIJO_Y_LLEVATE.svg",
-    "CA_ERROR.svg",
 })
 
 # Prefijos con los que la biblioteca nombra las placas. Se usan para adivinar

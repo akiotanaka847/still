@@ -135,13 +135,22 @@ function aplicarColoresDelKit(template) {
 
 /* ── Generar una promo ────────────────────────────────────────────────── */
 async function labRenderRow(fields) {
-  // templateForRow viene de promo.js: respeta la columna ORIENTACION de la
-  // fila y cae a la plantilla del desplegable si no la trae.
-  const template = aplicarColoresDelKit(await templateForRow(fields));
-  const mapping = computeMapping(fields, template.fields);
-  const { svgString, crop } = await buildSvgWithMaxFill(template, mapping, fields);
-  const pngBlob = await renderToPng(svgString, crop.width, crop.height);
-  return { template, svgString, crop, pngBlob };
+  // El motor avisa cosas mientras arma (por ejemplo, que una imagen que pide
+  // el dato no está en la biblioteca). Se redirigen a ESTE panel mientras dura
+  // el armado, y se devuelve el log a su dueño al terminar — si no, los avisos
+  // caen en el panel del módulo de Excel, que acá no se ve.
+  window.PROMO_LOG = labLogMsg;
+  try {
+    // templateForRow viene de promo.js: respeta la columna ORIENTACION de la
+    // fila y cae a la plantilla del desplegable si no la trae.
+    const template = aplicarColoresDelKit(await templateForRow(fields));
+    const mapping = computeMapping(fields, template.fields);
+    const { svgString, crop } = await buildSvgWithMaxFill(template, mapping, fields);
+    const pngBlob = await renderToPng(svgString, crop.width, crop.height);
+    return { template, svgString, crop, pngBlob };
+  } finally {
+    window.PROMO_LOG = null;
+  }
 }
 
 if (labGenerateBtn) {
@@ -388,7 +397,7 @@ function renderAssets(assets) {
   if (!propias.length) {
     const vacio = document.createElement("p");
     vacio.className = "text-[11px] text-gray-500 py-2";
-    vacio.textContent = "Todavía no subiste ninguna imagen. Elegí el tipo arriba y subí tus plecas, callouts y marcas.";
+    vacio.textContent = "Todavía no subiste ninguna imagen. Elegí el tipo arriba y subí tus plecas, callouts y marcas. Si una promo pide una que no está, se genera sin ese elemento.";
     assetList.appendChild(vacio);
   }
 
@@ -440,12 +449,12 @@ function renderAssets(assets) {
     assetList.appendChild(row);
   });
 
-  // Las del sistema van aparte y sin borrar: el motor las pide por nombre
-  // fijo, así que no son biblioteca del cliente sino parte de la plantilla.
+  // Las del sistema van aparte y sin borrar: no las nombran los datos, las
+  // pone el layout, así que no son biblioteca del cliente sino de la plantilla.
   if (sistema.length) {
     const t = document.createElement("p");
     t.className = "text-[10px] text-gray-500 pt-3 pb-1";
-    t.textContent = "Del sistema — las usa el motor para las variantes fijas, no se pueden borrar:";
+    t.textContent = "Banners que dibujan solas las promos de \"lleva y llévate\". No los nombran tus datos, no se borran:";
     assetList.appendChild(t);
     const cont = document.createElement("div");
     cont.className = "flex flex-wrap gap-1.5";
