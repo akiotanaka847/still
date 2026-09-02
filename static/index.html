@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
 <link rel="shortcut icon" href="/static/favicon.ico">
 <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon-180.png">
-<link rel="stylesheet" href="/static/css/tailwind.css?v=8">
+<link rel="stylesheet" href="/static/css/tailwind.css?v=9">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -1127,10 +1127,18 @@
           <h2 class="font-bold text-gray-900 text-base">Plantilla y datos</h2>
         </div>
 
-        <label class="block text-xs font-semibold text-gray-500 mb-1.5">Plantilla</label>
+        <label class="block text-xs font-semibold text-gray-500 mb-1.5">
+          Plantilla <span class="font-normal text-gray-400">— solo si el Excel no la define</span>
+        </label>
         <select id="templateSelect"
-                class="w-full text-sm rounded-xl px-3 py-2.5 mb-4"
+                class="w-full text-sm rounded-xl px-3 py-2.5"
                 style="color-scheme:dark; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); color:#e2e8f0;"></select>
+        <p class="text-[11px] text-gray-500 mt-1.5 mb-4">
+          Si tu Excel trae la columna <strong class="text-gray-600">ORIENTACION</strong> (H o V),
+          <strong class="text-gray-600">manda el Excel</strong> y cada fila usa la plantilla que le
+          corresponde — un mismo archivo puede mezclar verticales y horizontales. Esta selección solo
+          se usa para las filas que no la traigan.
+        </p>
 
         <label class="block text-xs font-semibold text-gray-500 mb-1.5">Excel (.xlsx)</label>
         <input type="file" id="excelInput" accept=".xlsx,.xlsm"
@@ -1196,10 +1204,7 @@
             su .psd al ZIP. Hace el lote bastante más lento (rasteriza una capa por campo, por fila).
           </span>
         </label>
-        <p class="text-[11px] text-gray-500 mt-3">
-          Si el Excel trae la columna <strong class="text-gray-600">ORIENTACION</strong> (H/V), cada fila
-          usa la plantilla que le corresponde — un mismo lote puede mezclar verticales y horizontales.
-        </p>
+
       </div>
 
       <!-- Resultado por lotes -->
