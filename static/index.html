@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
 <link rel="shortcut icon" href="/static/favicon.ico">
 <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon-180.png">
-<link rel="stylesheet" href="/static/css/tailwind.css?v=11">
+<link rel="stylesheet" href="/static/css/tailwind.css?v=12">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -1301,6 +1301,15 @@
           <input type="checkbox" id="labPsdChk" class="mt-0.5 accent-purple-500">
           <span class="text-[11px] text-gray-500">Incluir PSD por capas en el lote (más lento)</span>
         </label>
+
+        <!-- Avance del lote: con muchas promos, sin esto no se distingue
+             "está trabajando" de "se colgó". -->
+        <div id="labProgress" class="mt-4" style="display:none;">
+          <div class="rounded-full overflow-hidden" style="height:6px; background:rgba(255,255,255,.08)">
+            <div id="labProgressBar" class="brand-gradient h-full transition-all" style="width:0%"></div>
+          </div>
+          <p id="labProgressText" class="text-[11px] text-gray-500 mt-1.5"></p>
+        </div>
 
         <!-- Imágenes que el origen pide y no están en la biblioteca -->
         <div id="labFaltantes" class="mt-4 rounded-xl p-3" style="display:none; background:rgba(245,158,11,.10); border:1px solid rgba(252,211,77,.28)">
@@ -3039,6 +3048,6 @@ checkAuth();         // muestra/oculta el login según la sesión
 <script src="/static/js/promo.js?v=4"></script>
 <!-- Ingesta libre (experimental). DEBE ir después de promo.js: reusa sus
      funciones globales de render en vez de reimplementarlas. -->
-<script src="/static/js/promo_lab.js?v=2"></script>
+<script src="/static/js/promo_lab.js?v=3"></script>
 </body>
 </html>

@@ -149,9 +149,16 @@ if (labBatchBtn) {
     LAB.outputs = [];
     const t0 = performance.now();
     let ok = 0, err = 0;
+    const total = LAB.rows.length;
+    labSetProgress(0, total);
 
     for (const row of LAB.rows) {
       const nombre = labRowName(row, LAB.outputs.length + 1);
+      // Ceder el hilo antes de cada fila: sin esto el navegador no repinta
+      // durante el lote y la pantalla parece congelada, que es exactamente lo
+      // que hace pensar que "no generó todas".
+      await new Promise((r) => setTimeout(r, 0));
+      labSetProgress(ok + err, total, nombre);
       try {
         const { svgString, crop, pngBlob } = await labRenderRow(row.fields);
 
@@ -184,9 +191,38 @@ if (labBatchBtn) {
 
     const secs = ((performance.now() - t0) / 1000).toFixed(1);
     labLogMsg(`Lote terminado: ${ok} OK, ${err} con error, en ${secs}s.`);
+    labSetDone(ok, err, total, secs);
     labBatchBtn.disabled = false;
     labGenerateBtn.disabled = false;
   });
+}
+
+/* Avance visible del lote. Con 88 promos, sin esto la única señal es el log y
+   cuesta distinguir "está trabajando" de "se colgó". */
+function labSetProgress(hechas, total, nombre) {
+  const box = document.getElementById("labProgress");
+  const bar = document.getElementById("labProgressBar");
+  const txt = document.getElementById("labProgressText");
+  if (!box) return;
+  box.style.display = "block";
+  const pct = total ? Math.round((hechas / total) * 100) : 0;
+  if (bar) bar.style.width = pct + "%";
+  if (txt) {
+    txt.textContent = nombre
+      ? `Generando ${hechas + 1} de ${total} — ${nombre}`
+      : `Generando ${hechas} de ${total}`;
+  }
+}
+
+function labSetDone(ok, err, total, secs) {
+  const bar = document.getElementById("labProgressBar");
+  const txt = document.getElementById("labProgressText");
+  if (bar) bar.style.width = "100%";
+  if (txt) {
+    txt.textContent = err
+      ? `Listo: ${ok} de ${total} generadas, ${err} con error (${secs}s). Descargá el ZIP.`
+      : `Listo: ${ok} de ${total} generadas en ${secs}s. Descargá el ZIP.`;
+  }
 }
 
 function labRowName(row, fallbackIndex) {
