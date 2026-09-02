@@ -1264,7 +1264,14 @@ async function buildSvg(template, mapping, rawExcelFields) {
   const declarativo = window.PROMO_FLOW_DECLARADO &&
                       typeof renderMecanicaDeclarada === "function";
 
-  if (doubleDescData) {
+  /* Mecánica pedida explícitamente, por encima de la que se deduce del dato.
+   * Existe porque las mecánicas nuevas de la guía todavía no tienen regla de
+   * selección: decidir CUÁNDO aplican es un problema del dato, y quería que se
+   * pudieran ver y revisar antes de atarlas a una regla. */
+  const forzada = window.PROMO_MECANICA_FORZADA;
+  if (declarativo && forzada && window.MECANICAS && window.MECANICAS[forzada]) {
+    await renderMecanicaDeclarada(forzada, ctxFlujo());
+  } else if (doubleDescData) {
     await renderDoubleDescriptionFlow();
   } else if (segundoPorData) {
     await renderSegundoPorFlow();

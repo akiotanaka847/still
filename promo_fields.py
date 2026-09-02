@@ -30,6 +30,8 @@ import json
 import re
 
 from promo_excel import (
+    ALCOHOL_COLUMNS,
+    ALCOHOL_OUTPUT_FIELD,
     CONNECTOR_PATTERN,
     DESCRIPCION2_COLUMN_NAME,
     DISCOUNT_COLUMN_NAME,
@@ -46,6 +48,7 @@ from promo_excel import (
     SOLO_FRASE_DESC_OUTPUT_FIELD,
     apply_auto_superscript,
     build_multiplier_price_line,
+    looks_like_alcohol,
     normalize,
     parse_markup_runs,
     parse_percent_value,
@@ -332,6 +335,22 @@ def extract_fields_from_row(headers, cells) -> list:
                 "runs": [],
                 "solo_descripcion": True,
             })
+
+    # Alcohol: la guía prohíbe "Compra", "Llévate" y "Gratis" en estas promos.
+    # Se marca acá, junto al dato, y el motor decide qué puede dibujar. Va como
+    # campo y no como una decisión tomada de antemano porque la misma señal la
+    # necesitan varias mecánicas, cada una con su alternativa permitida.
+    if looks_like_alcohol(*[
+        cell_text(cells_by_normalized_header.get(normalize(c))) for c in ALCOHOL_COLUMNS
+    ]):
+        fields.append({
+            "column": ALCOHOL_OUTPUT_FIELD,
+            "column_normalized": normalize(ALCOHOL_OUTPUT_FIELD),
+            "type": "text",
+            "value": "true",
+            "runs": [],
+            "alcohol": True,
+        })
 
     return fields
 

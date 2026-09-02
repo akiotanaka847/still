@@ -35,11 +35,43 @@
  * sigue sube: es el mismo comportamiento que ya tienen los flujos a mano.
  */
 
+/** Resuelve el campo de un paso.
+ *
+ *  Lo normal es que exista en la plantilla (CALLOUT, PESOS, DESCRIPCION…). Pero
+ *  algunas mecánicas usan columnas que la plantilla NO declara — "DESCRIPCION 2"
+ *  del promopack, por ejemplo, que no tiene capa propia en el PSD. Esas se leen
+ *  del dato crudo y heredan caja y tipografía de un campo molde, que es lo
+ *  mismo que ya hacen a mano los flujos de doble descripción. */
+function campoDelPaso(paso, ctx) {
+  const directo = ctx.fieldsByColumn[paso.field];
+  if (directo) return directo;
+  const crudo = ctx.rawFieldByColumn(paso.field);
+  const molde = ctx.fieldsByColumn[paso.style_from || "DESCRIPCION"];
+  if (!crudo || !molde) return null;
+  return { ...molde, value: crudo.value, runs: crudo.runs, matched: true };
+}
+
+/** ¿Esta promo es de un producto con alcohol? Lo marca el backend leyendo la
+ *  categoría del dato (ver looks_like_alcohol en promo_excel.py). */
+function esAlcohol(ctx) {
+  return !!ctx.rawFieldByColumn("PROMO_ALCOHOL");
+}
+
+/** La guía prohíbe "Compra", "Llévate" y "Gratis" en promociones con alcohol:
+ *  no se puede redactar incentivando la compra. Un paso marcado así se omite
+ *  cuando la promo es de alcohol, y queda dicho en el log — callarlo sería
+ *  peor, porque quien revisa la pieza no vería por qué le falta algo. */
+function pasoProhibido(paso, ctx) {
+  if (!paso.prohibido_con_alcohol || !esAlcohol(ctx)) return false;
+  log(`⚠ "${paso.text || paso.key}" no se dibuja: la guía lo prohíbe en promociones con alcohol.`);
+  return true;
+}
+
 const BLOQUES = {
   /* Imagen que nombra el dato. Se dibuja dentro de la caja de la plantilla,
    * en modo "contain" (cabe entera, centrada, sin deformar). */
   async asset(paso, ctx) {
-    const f = ctx.fieldsByColumn[paso.field];
+    const f = campoDelPaso(paso, ctx);
     if (!ctx.isPresent(f)) return;
     ctx.advance();
     const dataUrl = await fetchAssetDataUrl(f.value);
@@ -54,7 +86,7 @@ const BLOQUES = {
 
   /* Una sola línea, centrada, encogida hasta caber en el 90% del ancho. */
   async line(paso, ctx) {
-    const f = ctx.fieldsByColumn[paso.field];
+    const f = campoDelPaso(paso, ctx);
     if (!ctx.isPresent(f)) return;
     ctx.advance();
     const weight = weightForFontName(f.font_family);
@@ -76,7 +108,7 @@ const BLOQUES = {
    *   - fit "canvas": usa el alto ENTERO del lienzo. Es la variante
    *     "comunicación de imagen", donde la descripción es lo único que hay. */
   async paragraph(paso, ctx) {
-    const f = ctx.fieldsByColumn[paso.field];
+    const f = campoDelPaso(paso, ctx);
     if (!ctx.isPresent(f)) return;
     const maxLines = paso.maxLines || 4;
     const weight = weightForFontName(f.font_family);
@@ -106,7 +138,7 @@ const BLOQUES = {
   /* Precio o porcentaje. La composición interna ($ chico + número grande, o
    * "NN % desc") vive en renderPesosBlock y no se toca desde acá. */
   async price(paso, ctx) {
-    const f = ctx.fieldsByColumn[paso.field];
+    const f = campoDelPaso(paso, ctx);
     if (!ctx.isPresent(f)) return;
     // El bloque de precio usa una fuente enorme y su fórmula de alto reserva
     // mucho ascenso, lo que hacía ver el espacio previo más grande de lo real;
@@ -123,7 +155,7 @@ const BLOQUES = {
    * (`style_from`) para que respete la plantilla sin declarar medidas acá. */
   async literal(paso, ctx) {
     const texto = paso.text;
-    if (!texto) return;
+    if (!texto || pasoProhibido(paso, ctx)) return;
     const molde = ctx.fieldsByColumn[paso.style_from] || ctx.fieldsByColumn["FRASE APOYO"];
     const fuente = paso.font_family || (molde && molde.font_family) || "WorkSans-Black";
     const tamBase = paso.font_size || (molde && molde.font_size) || 727;
@@ -146,6 +178,7 @@ const BLOQUES = {
    * escribe acá: se resuelve por clave contra la plantilla o el kit, que es lo
    * que permite cambiarlo sin tocar código (ver systemAsset en promo.js). */
   async banner(paso, ctx) {
+    if (pasoProhibido(paso, ctx)) return;
     const archivo = systemAsset(paso.key);
     if (!archivo) return;
     const anchoCaja = paso.width_ratio ? ctx.cw * paso.width_ratio : ctx.cw * 0.9;
@@ -201,6 +234,60 @@ const MECANICAS = {
     nombre: "Comunicación de imagen",
     flow: [
       { kind: "paragraph", field: "DESCRIPCION", maxLines: 20, fit: "canvas" },
+    ],
+  },
+
+  /* ── Mecánicas de la guía que el motor todavía no sabía dibujar ──────────
+   * Se declaran, no se programan: son las mismas seis piezas en otro orden.
+   * Ninguna se elige sola todavía — hay que pedirlas por TIPO_MECANICA o a
+   * mano — porque decidir cuándo aplican es un problema del dato, no del
+   * dibujo, y quería que se pudieran ver antes de atarlas a una regla. */
+
+  /* Guía, "Comunicación de precio regular":
+   *   Descripción de artículo + a sólo + precio + c/u
+   * "A SÓLO" y "c/u" no vienen del dato: los pone la mecánica. */
+  comunicacion_precio_regular: {
+    nombre: "Comunicación de precio regular",
+    flow: [
+      { kind: "literal", text: "A SÓLO", style_from: "FRASE APOYO" },
+      { kind: "price", field: "PESOS", gap: 0.75 },
+      { kind: "literal", text: "c/u", style_from: "FRASE APOYO", gap: 0.4 },
+      { kind: "paragraph", field: "DESCRIPCION", maxLines: 4 },
+      { kind: "asset", field: "BRAND" },
+    ],
+  },
+
+  /* Guía, "Promopack (suma de artículos por precio)":
+   *   Descripción de artículo 1 + "+" + Descripción de artículo 2 + Precio
+   * DESCRIPCION 2 no tiene capa en el PSD: hereda caja y tipografía de
+   * DESCRIPCION (ver campoDelPaso). */
+  promopack_suma: {
+    nombre: "Promopack — suma de artículos por precio",
+    flow: [
+      { kind: "asset", field: "CALLOUT" },
+      { kind: "paragraph", field: "DESCRIPCION", maxLines: 3 },
+      { kind: "literal", text: "+", style_from: "PESOS", gap: 0.5 },
+      { kind: "paragraph", field: "DESCRIPCION 2", style_from: "DESCRIPCION", maxLines: 3 },
+      { kind: "price", field: "PESOS", gap: 0.75 },
+      { kind: "asset", field: "BRAND" },
+    ],
+  },
+
+  /* Guía, "Promopack (Compra artículo = gratis)":
+   *   Texto de apoyo inicial + Descripción + "Llévate Gratis" + Descripción 2
+   * Las tres palabras marcadas caen bajo la prohibición de alcohol: en una
+   * promo de cerveza se omiten y queda avisado en el log. */
+  promopack_gratis: {
+    nombre: "Promopack — compra y llévate gratis",
+    flow: [
+      { kind: "asset", field: "CALLOUT" },
+      { kind: "line", field: "FRASE APOYO" },
+      { kind: "literal", text: "COMPRA", style_from: "FRASE APOYO", prohibido_con_alcohol: true },
+      { kind: "paragraph", field: "DESCRIPCION", maxLines: 3 },
+      { kind: "banner", key: "banner_llevate", width_ratio: 0.6, prohibido_con_alcohol: true },
+      { kind: "literal", text: "GRATIS", style_from: "PESOS", prohibido_con_alcohol: true },
+      { kind: "paragraph", field: "DESCRIPCION 2", style_from: "DESCRIPCION", maxLines: 3 },
+      { kind: "asset", field: "BRAND" },
     ],
   },
 };

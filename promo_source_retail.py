@@ -36,6 +36,9 @@ HEADERS = [
     "Nombre corto", "ORIENTACION", "CALLOUT", "FRASE APOYO",
     "MULTIPLICADOR", "PESOS O PRECIO", "DESCUENTO", "DESCRIPCION", "BRAND",
     "PLECA",
+    # No se dibuja: alimenta la detección de alcohol, que decide qué mecánicas
+    # están permitidas (la guía prohíbe "Compra/Llévate/Gratis" en esas promos).
+    "CATEGORIA",
 ]
 
 
@@ -174,6 +177,7 @@ def to_table(doc, orientation="V", kit=promo_kits.DEFAULT_KIT):
             # ese texto, no se dibuja nada: la pleca es una placa diseñada, no
             # un texto suelto, así que no tiene degradación a texto.
             make_cell(value=asset(_txt(p, "PLECA"), idx_pleca, "pleca")),      # PLECA
+            make_cell(value=_txt(p, "CATEGORIA")),                             # CATEGORIA
         ])
 
     info = {

@@ -296,6 +296,44 @@ SEGUNDO_POR_OUTPUT_FIELD = "PROMO_SEGUNDO_POR"  # nombre sintético para la vari
 SOLO_FRASE_DESC_OUTPUT_FIELD = "PROMO_SOLO_FRASE_DESC"  # variante: solo frase de apoyo + descripción (8 líneas)
 SOLO_DESCRIPCION_OUTPUT_FIELD = "PROMO_SOLO_DESCRIPCION"  # variante: solo descripción (20 líneas, sin callout/marca)
 
+# ─── Productos con alcohol ───────────────────────────────────────────────────
+# La guía de mecánicas prohíbe las palabras "Compra", "Llévate" y "Gratis" en
+# promociones de productos con alcohol: no se puede redactar de forma que
+# incentive la compra. Es cumplimiento, no estilo, así que el motor tiene que
+# saber si una promo es de alcohol ANTES de elegir cómo la dibuja.
+ALCOHOL_OUTPUT_FIELD = "PROMO_ALCOHOL"
+
+# Columnas del origen donde suele venir la señal, en orden de preferencia.
+ALCOHOL_COLUMNS = ("CATEGORIA", "SUPERGRUPO", "SUBCATEGORIA")
+
+# Se buscan como PALABRAS COMPLETAS, no como subcadenas: "ron" aparece dentro
+# de "macarrones" y "vino" dentro de "vinotinto"; buscar sin límites de palabra
+# marcaría como alcohol una promo de pastas.
+ALCOHOL_PATTERN = re.compile(
+    r"\b(cervezas?|vinos?|licores?|tequilas?|whisk(?:y|ey)s?|rones?|ron|vodkas?|"
+    r"ginebras?|mezcales?|mezcal|brandy|alcoholicas?|alcoholes?|alcohol|"
+    r"destilados?|sidras?|espirituosas?)\b",
+    re.IGNORECASE,
+)
+
+
+def strip_accents(text) -> str:
+    """Quita acentos dejando los espacios: "Alcohólicas" -> "Alcoholicas".
+
+    No sirve `normalize()` acá porque además borra los espacios, y sin espacios
+    no hay límites de palabra que respetar.
+    """
+    return "".join(
+        c for c in unicodedata.normalize("NFKD", str(text or ""))
+        if not unicodedata.combining(c)
+    )
+
+
+def looks_like_alcohol(*textos) -> bool:
+    """True si alguno de los textos nombra una categoría con alcohol."""
+    return any(ALCOHOL_PATTERN.search(strip_accents(t)) for t in textos if t)
+
+
 CONNECTOR_PATTERN = re.compile(r"(?:^|\s)[oOóÓ](?:\s|$)")
 SEGUNDO_POR_TRIGGER_PATTERN = re.compile(r"y\s+ll[eé]va(?:te)?\s+el\s+segundo(?:\s+por)?", re.IGNORECASE)
 
