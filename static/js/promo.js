@@ -131,6 +131,14 @@ async function selectTemplate(id) {
  *  tanto el canvas (measureText) como el DOM (medición de alto de párrafo) usen
  *  las métricas reales de Work Sans, no una fuente de reemplazo del sistema. */
 async function loadFontsIntoPage(template) {
+  // Una plantilla sin fuentes propias es un error de empaquetado, no un caso
+  // válido: el texto sale con la tipografía de reemplazo del sistema y la
+  // promo queda mal. Antes pasaba en silencio y el resultado dependía del
+  // orden en que se tocaba el desplegable (si ya se había cargado otra
+  // plantilla, sus fuentes quedaban registradas y esta las "heredaba").
+  if (!Object.keys(template.fonts || {}).length) {
+    log(`⚠ La plantilla "${template.name || template.id}" no trae fuentes propias — el texto puede salir con una tipografía incorrecta.`);
+  }
   const loads = Object.entries(template.fonts || {}).map(([name, dataUrl]) => {
     const weight = weightForFontName(name);
     const face = new FontFace("Work Sans", `url(${dataUrl})`, { weight: String(weight) });
@@ -2750,9 +2758,61 @@ if (downloadZipBtn) {
    página daría 401 mientras el usuario todavía no inició sesión. switchTab()
    llama a promoInit() la primera vez que se abre la pestaña.
    ========================================================================= */
+/* ── Biblioteca de imágenes de marca ──────────────────────────────────────
+   El Excel referencia estas imágenes por NOMBRE DE ARCHIVO (columnas CALLOUT
+   y BRAND). Mostrar la lista evita el error más habitual: escribir en el
+   Excel un nombre que no existe en el servidor, que hace caer la promo en la
+   imagen de respaldo CA_ERROR.svg sin que quede claro por qué. */
+const assetInput = document.getElementById("assetInput");
+const assetList = document.getElementById("assetList");
+const assetCount = document.getElementById("assetCount");
+
+async function refreshAssets() {
+  if (!assetList) return;
+  try {
+    const res = await fetch("/api/promo/assets");
+    const { assets } = await res.json();
+    assetList.innerHTML = "";
+    assets.forEach((name) => {
+      const chip = document.createElement("span");
+      chip.className = "text-[10px] px-2 py-1 rounded-md glass text-gray-500";
+      chip.textContent = name;
+      assetList.appendChild(chip);
+    });
+    if (assetCount) assetCount.textContent = `(${assets.length})`;
+  } catch (e) {
+    console.error("No se pudo listar los assets", e);
+  }
+}
+
+if (assetInput) {
+  assetInput.addEventListener("change", async () => {
+    const files = Array.from(assetInput.files || []);
+    if (!files.length) return;
+    const form = new FormData();
+    files.forEach((f) => form.append("files", f, f.name));
+    try {
+      const res = await fetch("/api/promo/assets", { method: "POST", body: form });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.detail || `Error ${res.status}`);
+      }
+      const { saved, skipped } = await res.json();
+      if (saved.length) log(`✓ ${saved.length} imagen(es) subida(s): ${saved.join(", ")}`);
+      skipped.forEach((s) => log(`⚠ Se omitió "${s.filename}": ${s.reason}`));
+      await refreshAssets();
+    } catch (e) {
+      log(`ERROR subiendo imágenes: ${e.message}`);
+    } finally {
+      assetInput.value = "";
+    }
+  });
+}
+
 let PROMO_READY = false;
 window.promoInit = function () {
   if (PROMO_READY) return;
   PROMO_READY = true;
   loadTemplates();
+  refreshAssets();
 };

@@ -156,6 +156,44 @@ async def list_assets():
     return JSONResponse({"assets": names})
 
 
+ASSET_EXTS = {".png", ".jpg", ".jpeg", ".svg", ".webp"}
+MAX_ASSET_MB = 10
+
+
+@router.post("/assets")
+async def upload_assets(files: list[UploadFile] = File(...)):
+    """Sube imágenes de marca/callout a la biblioteca.
+
+    El Excel referencia estas imágenes POR NOMBRE DE ARCHIVO (columnas CALLOUT
+    y BRAND), así que el nombre se respeta tal cual — solo se sanea. Si el
+    nombre ya existe se sobrescribe: es lo esperado al corregir un logo.
+
+    Nota: la biblioteca es COMPARTIDA por todos los usuarios (una sola carpeta
+    static/promo/assets). Está pendiente decidir con el usuario si debe pasar
+    a ser por-usuario.
+    """
+    ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+    saved, skipped = [], []
+    for up in files:
+        name = Path(up.filename or "").name
+        ext = Path(name).suffix.lower()
+        if not name or ext not in ASSET_EXTS:
+            skipped.append({"filename": name or "(sin nombre)",
+                            "reason": f"formato no soportado ({ext or 'sin extensión'})"})
+            continue
+        data = await up.read()
+        if not data:
+            skipped.append({"filename": name, "reason": "archivo vacío"})
+            continue
+        if len(data) > MAX_ASSET_MB * 1024 * 1024:
+            skipped.append({"filename": name, "reason": f"supera {MAX_ASSET_MB} MB"})
+            continue
+        safe = re.sub(r"[^A-Za-z0-9_\-.]", "_", name)
+        (ASSETS_DIR / safe).write_bytes(data)
+        saved.append(safe)
+    return JSONResponse({"saved": saved, "skipped": skipped})
+
+
 @router.post("/zip")
 async def build_zip(
     files: list[UploadFile] = File(...),
