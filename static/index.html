@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
 <link rel="shortcut icon" href="/static/favicon.ico">
 <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon-180.png">
-<link rel="stylesheet" href="/static/css/tailwind.css?v=10">
+<link rel="stylesheet" href="/static/css/tailwind.css?v=11">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -1301,6 +1301,18 @@
           <input type="checkbox" id="labPsdChk" class="mt-0.5 accent-purple-500">
           <span class="text-[11px] text-gray-500">Incluir PSD por capas en el lote (más lento)</span>
         </label>
+
+        <!-- Imágenes que el origen pide y no están en la biblioteca -->
+        <div id="labFaltantes" class="mt-4 rounded-xl p-3" style="display:none; background:rgba(245,158,11,.10); border:1px solid rgba(252,211,77,.28)">
+          <p class="text-[11px] font-semibold text-amber-300 mb-1.5">
+            Faltan estas imágenes en la biblioteca
+          </p>
+          <p class="text-[10px] text-gray-500 mb-2">
+            Las promos se generan igual, pero sin ese elemento. Subilas arriba, en
+            <strong class="text-gray-400">Imágenes de marca</strong>, con ese mismo nombre.
+          </p>
+          <div id="labFaltantesList" class="flex flex-wrap gap-1.5"></div>
+        </div>
 
         <div id="labLog"
              class="text-[11px] font-mono text-gray-500 rounded-lg p-3 mt-4 max-h-32 overflow-y-auto whitespace-pre-wrap"
@@ -3027,6 +3039,6 @@ checkAuth();         // muestra/oculta el login según la sesión
 <script src="/static/js/promo.js?v=4"></script>
 <!-- Ingesta libre (experimental). DEBE ir después de promo.js: reusa sus
      funciones globales de render en vez de reimplementarlas. -->
-<script src="/static/js/promo_lab.js?v=1"></script>
+<script src="/static/js/promo_lab.js?v=2"></script>
 </body>
 </html>

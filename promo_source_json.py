@@ -74,6 +74,17 @@ def read_json(content: bytes):
     except (UnicodeDecodeError, json.JSONDecodeError) as e:
         raise PromoSourceError(f"No se pudo leer el JSON: {e}")
 
+    # Antes que nada: ¿es el export de un sistema conocido? Si lo es, se
+    # traduce con su perfil en vez de exigir que venga en el formato canónico.
+    # Es lo que permite subir el archivo TAL CUAL sale del sistema de origen.
+    from promo_source_retail import looks_like_retail, to_table as retail_to_table
+    if looks_like_retail(doc):
+        table, info = retail_to_table(doc)
+        # El informe del perfil (cuántos registros se agruparon, qué assets
+        # faltan) viaja con la tabla para poder mostrárselo al usuario.
+        table["info"] = info
+        return table
+
     # Se acepta tanto {"rows": [...]} como una lista suelta de filas, que es lo
     # que manda naturalmente un sistema externo.
     if isinstance(doc, list):

@@ -65,4 +65,7 @@ async def read_one(file: UploadFile = File(None), data: str = Form(None)):
 async def read_batch(file: UploadFile = File(None), data: str = Form(None)):
     """Todas las filas — una promo por fila."""
     table = await _load_table(file, data)
-    return JSONResponse({"source": table["name"], "rows": fields_for_table(table)})
+    resp = {"source": table["name"], "rows": fields_for_table(table)}
+    if table.get("info"):
+        resp["info"] = table["info"]   # agrupación y assets faltantes del perfil
+    return JSONResponse(resp)

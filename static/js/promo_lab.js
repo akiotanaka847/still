@@ -60,6 +60,19 @@ if (labInput) {
       labStatus.textContent = `✓ ${json.rows.length} fila(s)`;
       if (labRowCount) labRowCount.textContent = `${json.rows.length} promo(s) detectada(s)`;
       labLogMsg(`Origen leído: ${file.name} — ${json.rows.length} fila(s).`);
+
+      // Informe del perfil de origen: cuántos registros se agruparon y, sobre
+      // todo, qué imágenes faltan — esa lista es accionable, dice exactamente
+      // qué subir para que las promos salgan completas.
+      const info = json.info;
+      if (info) {
+        if (info.registros && info.promociones && info.registros !== info.promociones) {
+          labLogMsg(`Se agruparon ${info.registros} registros en ${info.promociones} promociones (varios productos comparten promoción).`);
+        }
+        renderFaltantes(info.assets_faltantes || []);
+      } else {
+        renderFaltantes([]);
+      }
       labGenerateBtn.disabled = false;
       labBatchBtn.disabled = false;
     } catch (e) {
@@ -70,6 +83,28 @@ if (labInput) {
       labBatchBtn.disabled = true;
     }
   });
+}
+
+/* Imágenes que el origen pide y no están en la biblioteca. La promo se genera
+   igual (sin ese elemento), así que esto no es un error: es la lista de lo que
+   falta subir para que salgan completas. */
+function renderFaltantes(faltantes) {
+  const box = document.getElementById("labFaltantes");
+  const list = document.getElementById("labFaltantesList");
+  if (!box || !list) return;
+  if (!faltantes.length) {
+    box.style.display = "none";
+    return;
+  }
+  list.innerHTML = "";
+  faltantes.forEach((t) => {
+    const chip = document.createElement("span");
+    chip.className = "text-[10px] px-2 py-1 rounded-md glass text-amber-300";
+    chip.textContent = t;
+    list.appendChild(chip);
+  });
+  box.style.display = "block";
+  labLogMsg(`⚠ Faltan ${faltantes.length} imagen(es) en la biblioteca: ${faltantes.join(", ")}`);
 }
 
 /* ── Generar una promo ────────────────────────────────────────────────── */
