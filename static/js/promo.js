@@ -278,14 +278,39 @@ function withInnerPreserveAspectRatio(dataUrl, preserveAspectRatio) {
   }
 }
 
-async function fetchAssetDataUrl(filename, preserveAspectRatio = "xMidYMid meet") {
-  const res = await fetch(`/api/promo/asset?filename=${encodeURIComponent(filename)}`);
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.detail || `No se pudo resolver el asset ${filename}`);
+/* Un mismo asset se pide varias veces: se comprueba que exista antes de armar
+ * y después se dibuja, y en un lote eso se repite fila a fila. Se recuerda la
+ * respuesta CRUDA del servidor por nombre — el ajuste de preserveAspectRatio
+ * se aplica después, porque cambia según dónde se dibuje el asset.
+ * Se guarda la PROMESA, no el resultado: así dos pedidos simultáneos del mismo
+ * archivo comparten una sola petición en vez de disparar dos. */
+const assetRawCache = new Map();
+
+function fetchAssetRaw(filename) {
+  if (!assetRawCache.has(filename)) {
+    assetRawCache.set(filename, (async () => {
+      const res = await fetch(`/api/promo/asset?filename=${encodeURIComponent(filename)}`);
+      if (!res.ok) {
+        let detail = "";
+        try { detail = (await res.json()).detail; } catch (e) { /* respuesta sin JSON */ }
+        throw new Error(detail || `No se pudo resolver el asset ${filename}`);
+      }
+      return (await res.json()).data_url;
+    })());
   }
-  const json = await res.json();
-  return withInnerPreserveAspectRatio(json.data_url, preserveAspectRatio);
+  return assetRawCache.get(filename);
+}
+
+/** Olvidar lo recordado. Obligatorio al subir o borrar imágenes: si no, una
+ *  imagen recién subida seguiría figurando como inexistente durante toda la
+ *  sesión, y la promo se generaría sin ella. */
+function promoAssetCacheClear() {
+  assetRawCache.clear();
+  assetExistsCache.clear();
+}
+
+async function fetchAssetDataUrl(filename, preserveAspectRatio = "xMidYMid meet") {
+  return withInnerPreserveAspectRatio(await fetchAssetRaw(filename), preserveAspectRatio);
 }
 
 /* ── Assets fijos del motor, declarables ──────────────────────────────────
@@ -331,10 +356,11 @@ const assetExistsCache = new Map();
 
 async function assetExists(filename) {
   if (assetExistsCache.has(filename)) return assetExistsCache.get(filename);
-  let ok = false;
+  // Comprobar es traerlo: se reusa la misma petición que después lo dibuja,
+  // en vez de pedir el archivo dos veces.
+  let ok = true;
   try {
-    const res = await fetch(`/api/promo/asset?filename=${encodeURIComponent(filename)}`);
-    ok = res.ok;
+    await fetchAssetRaw(filename);
   } catch (e) {
     ok = false;
   }
@@ -354,6 +380,77 @@ async function dropMissingDynamicAssets(mapping) {
     }
   }
   return out;
+}
+
+/* ── Pleca: banda opcional, arriba o abajo de la promo ────────────────────
+   La pleca es una placa DISEÑADA que el dato nombra por TEXTO en la columna
+   PLECA ("Edición Especial", "¡Combínalos como quieras! | Ahorra desde") y que
+   se resuelve contra las imágenes que el usuario subió con el tipo "pleca".
+
+   El PSD no trae una capa para ella, así que su lugar no viene del diseño: lo
+   elige el usuario. Por eso NO se inserta en el flujo de armado sino que se
+   dibuja como un paso aparte, al final, anclada al contenido ya medido. Esa
+   decisión es lo que hace que funcione igual en las dos orientaciones y en las
+   cuatro variantes especiales sin tocar ninguna de ellas.
+
+   Si el dato no trae pleca, o nombra una que no se subió, no se dibuja nada.
+   Es una placa, no un texto: no tiene degradación a texto como FRASE APOYO. */
+const PLECA_ALTO_MAXIMO = 0.22;  // fracción del alto del lienzo: no debe dominar la pieza
+
+function plecaPosition() {
+  const p = String(window.PROMO_PLECA_POSITION || "").toLowerCase();
+  return p === "abajo" ? "abajo" : "arriba";
+}
+
+/** Devuelve el <image> de la pleca y cuánto hay que correr el contenido para
+ *  hacerle lugar, o null si esta promo no lleva.
+ *  `content` es el bbox de lo ya dibujado. El desplazamiento (dy) existe
+ *  porque el contenido puede estar pegado al borde (el CALLOUT arranca en y=0):
+ *  sin correrlo, la banda quedaría en coordenada negativa y el recorte final,
+ *  que se acota al lienzo, la cortaría. */
+async function plecaBand(rawFieldByColumn, cw, ch, gap, content) {
+  const f = rawFieldByColumn("PLECA");
+  const nombre = f && f.value ? String(f.value).trim() : "";
+  if (!nombre || content.top === null) return null;
+  if (!(await assetExists(nombre))) {
+    log(`⚠ "${nombre}" no está en la biblioteca — la promo se genera sin pleca.`);
+    return null;
+  }
+
+  const dataUrl = await fetchAssetDataUrl(nombre);
+  const natural = await loadImageNaturalSize(dataUrl);
+  const anchoContenido = content.right - content.left;
+
+  // El alto sale de la proporción real de la imagen a lo ancho del contenido,
+  // pero acotado por dos límites: que no domine la pieza, y que quepa en el
+  // aire que queda libre en el lienzo.
+  const libre = ch - (content.bottom - content.top) - gap;
+  let alto = Math.min(anchoContenido * (natural.h / natural.w), ch * PLECA_ALTO_MAXIMO, libre);
+  if (alto <= 0) {
+    log(`⚠ No queda espacio para la pleca "${nombre}" — la promo se genera sin ella.`);
+    return null;
+  }
+  let ancho = Math.min(anchoContenido, alto * (natural.w / natural.h));
+
+  const arriba = plecaPosition() === "arriba";
+  let dy = 0;
+  if (arriba) {
+    // Correr el contenido hacia abajo lo justo para que la banda entre arriba.
+    dy = Math.max(0, alto + gap - content.top);
+  } else {
+    // Correrlo hacia arriba solo si la banda no entra abajo, y nunca tanto
+    // como para sacar el contenido por el techo del lienzo.
+    const sobra = content.bottom + gap + alto - ch;
+    dy = -Math.min(Math.max(0, sobra), content.top);
+  }
+
+  const top = arriba ? content.top + dy - gap - alto : content.bottom + dy + gap;
+  const x = content.left + (anchoContenido - ancho) / 2;
+  return {
+    svg: `<image href="${dataUrl}" xlink:href="${dataUrl}" x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${ancho.toFixed(1)}" height="${alto.toFixed(1)}" preserveAspectRatio="xMidYMid meet"/>`,
+    dy,
+    left: x, right: x + ancho, top, bottom: top + alto,
+  };
 }
 
 function escapeXml(str) {
@@ -1625,7 +1722,22 @@ async function buildSvg(template, mapping, rawExcelFields) {
   } // fin renderSegundoPorFlow
 
   parts.push(`<image href="${template.background_data_url}" xlink:href="${template.background_data_url}" x="0" y="0" width="${cw}" height="${ch}"/>`);
-  parts.push(...bodyParts);
+
+  // La pleca se resuelve con el contenido ya medido, y puede pedir correrlo
+  // en bloque para hacerse lugar (ver plecaBand).
+  const pleca = await plecaBand(rawFieldByColumn, cw, ch, gap,
+    { left: contentLeft, right: contentRight, top: contentTop, bottom: contentBottom });
+  if (pleca) {
+    parts.push(pleca.dy
+      ? `<g transform="translate(0,${pleca.dy.toFixed(1)})">\n${bodyParts.join("\n")}\n</g>`
+      : bodyParts.join("\n"));
+    parts.push(pleca.svg);
+    contentTop = Math.min(contentTop + pleca.dy, pleca.top);
+    contentBottom = Math.max(contentBottom + pleca.dy, pleca.bottom);
+    trackX(pleca.left, pleca.right);
+  } else {
+    parts.push(...bodyParts);
+  }
 
   // Recorte al contenido real, con un pequeño margen de aire
   const PAD = Math.round(gap * 0.3);
@@ -2325,7 +2437,21 @@ async function buildSvgHorizontal(template, mapping, rawExcelFields) {
   }
 
   parts.push(`<image href="${template.background_data_url}" xlink:href="${template.background_data_url}" x="0" y="0" width="${cw}" height="${ch}"/>`);
-  parts.push(...bodyParts);
+
+  // Pleca: mismo paso aparte que en la vertical, con el mismo helper.
+  const pleca = await plecaBand(rawFieldByColumn, cw, ch, gap,
+    { left: contentLeft, right: contentRight, top: contentTop, bottom: contentBottom });
+  if (pleca) {
+    parts.push(pleca.dy
+      ? `<g transform="translate(0,${pleca.dy.toFixed(1)})">\n${bodyParts.join("\n")}\n</g>`
+      : bodyParts.join("\n"));
+    parts.push(pleca.svg);
+    contentTop = Math.min(contentTop + pleca.dy, pleca.top);
+    contentBottom = Math.max(contentBottom + pleca.dy, pleca.bottom);
+    trackX(pleca.left, pleca.right);
+  } else {
+    parts.push(...bodyParts);
+  }
 
   // Recorte al contenido real, con un pequeño margen de aire (mismo criterio
   // que buildSvg).

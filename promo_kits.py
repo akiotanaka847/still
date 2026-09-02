@@ -37,6 +37,10 @@ FONT_EXTS = (".woff2",)
 ASSET_TYPES = ("callout", "pleca", "marca")
 DEFAULT_TYPE = "callout"
 
+# Lugares posibles para la banda de pleca dentro de la promo.
+PLECA_POSITIONS = ("arriba", "abajo")
+DEFAULT_PLECA_POSITION = "arriba"
+
 # Imágenes que NO son biblioteca del usuario: son los banners que dibujan por
 # su cuenta las variantes "doble descripción" (LLÉVATE) y "segundo por"
 # (Y LLÉVATE). No se nombran desde los datos, los pone el layout, así que
@@ -93,8 +97,11 @@ def _default_kit_json(name="Base"):
         # Banners fijos que dibujan ciertas variantes. Vacío = los que trae la
         # plantilla o, si tampoco los declara, los de siempre. Permite que un
         # cliente cambie su LLÉVATE sin tocar código ni la plantilla.
-        # Claves: fallback, banner_llevate, banner_y_llevate.
+        # Claves: banner_llevate, banner_y_llevate.
         "system_assets": {},
+        # Dónde va la banda de pleca: "arriba" o "abajo". El PSD no trae capa
+        # para ella, así que el lugar no lo define el diseño sino el usuario.
+        "pleca_position": DEFAULT_PLECA_POSITION,
         "assets": {},   # {archivo: {"type": ...}}
     }
 
@@ -286,6 +293,19 @@ def set_colors(kit_id, colors) -> dict:
     kit["colors"] = limpio
     write_kit(kit_id, kit)
     return limpio
+
+
+def set_pleca_position(kit_id, position) -> str:
+    pos = str(position or "").strip().lower()
+    if pos not in PLECA_POSITIONS:
+        raise PromoKitError(
+            f"Posición de pleca inválida: {position!r}. "
+            f"Válidas: {', '.join(PLECA_POSITIONS)}"
+        )
+    kit = read_kit(kit_id)
+    kit["pleca_position"] = pos
+    write_kit(kit_id, kit)
+    return pos
 
 
 def save_font(kit_id, filename, content, weight) -> str:

@@ -3,6 +3,7 @@
   "colors": {},
   "font": {},
   "system_assets": {},
+  "pleca_position": "arriba",
   "assets": {
     "CAFIJO_LLEVATE.svg": {
       "type": "pleca"
@@ -11,6 +12,9 @@
       "type": "pleca"
     },
     "SPIN_PREMIA.png": {
+      "type": "pleca"
+    },
+    "CA_TUELIGES__2_.png": {
       "type": "callout"
     }
   }

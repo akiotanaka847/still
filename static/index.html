@@ -1189,6 +1189,16 @@
             <option value="pleca">Pleca</option>
             <option value="marca">Marca</option>
           </select>
+
+          <!-- El PSD no trae capa para la pleca, así que su lugar no lo define
+               el diseño: lo elige el usuario y se guarda en el kit. -->
+          <label class="text-[11px] font-semibold text-gray-500 ml-2">La pleca va</label>
+          <select id="plecaPos"
+                  class="text-xs rounded-lg px-2 py-1.5"
+                  style="color-scheme:dark; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); color:#e2e8f0;">
+            <option value="arriba">Arriba</option>
+            <option value="abajo">Abajo</option>
+          </select>
         </div>
         <input type="file" id="assetInput" accept=".svg,.png,.jpg,.jpeg,.webp" multiple
                class="w-full text-sm rounded-xl px-3 py-2.5 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white"
@@ -3123,9 +3133,9 @@ checkAuth();         // muestra/oculta el login según la sesión
 <!-- Módulo de Promos: va en archivo aparte y no inline como el resto porque
      son ~2600 líneas portadas de otro repo (motor de plantillas SVG), y
      mantenerlas separadas permite resincronizar con el upstream. -->
-<script src="/static/js/promo.js?v=9"></script>
+<script src="/static/js/promo.js?v=11"></script>
 <!-- Ingesta libre (experimental). DEBE ir después de promo.js: reusa sus
      funciones globales de render en vez de reimplementarlas. -->
-<script src="/static/js/promo_lab.js?v=10"></script>
+<script src="/static/js/promo_lab.js?v=12"></script>
 </body>
 </html>

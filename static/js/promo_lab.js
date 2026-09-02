@@ -365,6 +365,22 @@ const KIT_ID = "base";   // por ahora un solo kit; el modelo ya soporta varios
 
 const assetInput = document.getElementById("assetInput");
 const assetType = document.getElementById("assetType");
+const plecaPos = document.getElementById("plecaPos");
+
+if (plecaPos) {
+  plecaPos.addEventListener("change", async () => {
+    try {
+      const fd = new FormData();
+      fd.append("position", plecaPos.value);
+      const r = await kitFetch(`/api/promo-lab/kits/${KIT_ID}/pleca-position`,
+                               { method: "PUT", body: fd });
+      window.PROMO_PLECA_POSITION = r.pleca_position;
+      labLogMsg(`La pleca ahora va ${r.pleca_position} de la promo.`);
+    } catch (e) {
+      labLogMsg(`ERROR guardando la posición de la pleca: ${e.message}`);
+    }
+  });
+}
 const assetList = document.getElementById("assetList");
 const assetCount = document.getElementById("assetCount");
 const fontInput = document.getElementById("fontInput");
@@ -439,6 +455,7 @@ function renderAssets(assets) {
         const r = await kitFetch(
           `/api/promo-lab/kits/${KIT_ID}/assets/${encodeURIComponent(a.file)}`,
           { method: "DELETE" });
+        promoAssetCacheClear();   // ver el mismo motivo en la subida
         renderAssets(r.assets);
         if (assetCount) assetCount.textContent = `(${r.assets.length})`;
         labLogMsg(`"${a.file}" borrado.`);
@@ -540,6 +557,9 @@ window.promoKitInit = async function () {
     // Banners fijos declarados por el kit: los lee systemAsset() de promo.js,
     // que resuelve plantilla -> kit -> valor por defecto.
     window.PROMO_KIT_ASSETS = kit.system_assets || {};
+    // Dónde va la banda de pleca: la lee plecaBand() de promo.js al armar.
+    window.PROMO_PLECA_POSITION = kit.pleca_position || "arriba";
+    if (plecaPos) plecaPos.value = window.PROMO_PLECA_POSITION;
     renderAssets(kit.assets || []);
     renderFonts(kit.font);
     // Reflejar los colores guardados en los selectores
@@ -567,6 +587,9 @@ if (assetInput) {
       const r = await kitFetch(`/api/promo-lab/kits/${KIT_ID}/assets`, { method: "POST", body: form });
       if (r.saved.length) labLogMsg(`✓ ${r.saved.length} imagen(es) subida(s) como ${TIPO_LABEL[assetType.value]}: ${r.saved.join(", ")}`);
       (r.skipped || []).forEach((s) => labLogMsg(`⚠ Se omitió "${s.filename}": ${s.reason}`));
+      // Cambió lo que hay en la biblioteca: el motor tiene que volver a
+      // preguntar, o una imagen recién subida seguiría figurando como ausente.
+      promoAssetCacheClear();
       renderAssets(r.assets);
     } catch (e) {
       labLogMsg(`ERROR subiendo imágenes: ${e.message}`);

@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 import promo_kits
 import promo_source_excel  # noqa: F401 — registra el lector .xlsx
 import promo_source_json   # noqa: F401 — registra el lector .json
+from promo_excel import normalize
 from promo_kits import PromoKitError
 from promo_fields import extract_fields_from_row, fields_for_table
 from promo_source import PromoSourceError, read_table, supported_extensions
@@ -42,11 +43,51 @@ async def _load_table(file: UploadFile = None, data: str = None, filename: str =
         raise HTTPException(400, "El contenido llegó vacío")
 
     try:
-        return read_table(content, name)
+        table = read_table(content, name)
     except PromoSourceError as e:
         raise HTTPException(400, str(e))
     except Exception as e:
         raise HTTPException(400, f"No se pudo leer el archivo: {e}")
+
+    _resolver_plecas(table)
+    return table
+
+
+def _resolver_plecas(table, kit=promo_kits.DEFAULT_KIT) -> None:
+    """Traduce el TEXTO de la columna PLECA al archivo que el usuario subió.
+
+    En los datos reales esa columna no trae un nombre de archivo sino el texto
+    de la placa ("Edición Especial", "¡Combínalos como quieras! | Ahorra
+    desde"), igual que TEXTO APOYO trae "NUEVO". El perfil retail ya lo
+    resuelve al armar su tabla, pero un Excel o un JSON genérico con esa misma
+    columna llegan hasta acá con el texto crudo, y el motor buscaría un archivo
+    llamado así, que obviamente no existe.
+
+    Se hace acá, sobre la tabla ya leída, para que valga para CUALQUIER origen
+    —el de hoy y los que vengan— en vez de repetir la traducción en cada
+    adaptador. Si el texto no tiene imagen subida, queda vacío: la pleca es una
+    placa diseñada y no degrada a texto.
+    """
+    columnas = [normalize(h) for h in table.get("headers", [])]
+    if "PLECA" not in columnas:
+        return
+    i = columnas.index("PLECA")
+
+    try:
+        indice = promo_kits.asset_index(kit, "pleca")
+        ya_son_archivos = {a["file"] for a in promo_kits.list_assets(kit)}
+    except Exception:
+        return   # sin kit legible, se deja el dato como vino
+
+    for row in table.get("rows", []):
+        if i >= len(row) or not row[i]:
+            continue
+        texto = str(row[i].get("value") or "").strip()
+        # El perfil retail ya entrega el nombre del archivo resuelto: no
+        # volver a traducirlo (un nombre de archivo no matchea como texto).
+        if not texto or texto in ya_son_archivos:
+            continue
+        row[i]["value"] = promo_kits.resolve(texto, indice) or ""
 
 
 # ─── Kits de marca ───────────────────────────────────────────────────────────
@@ -90,8 +131,18 @@ async def kit_detail(kit_id: str):
         "colors": kit.get("colors", {}),
         "font": kit.get("font", {}),
         "system_assets": kit.get("system_assets", {}),
+        "pleca_position": kit.get("pleca_position", promo_kits.DEFAULT_PLECA_POSITION),
+        "pleca_positions": list(promo_kits.PLECA_POSITIONS),
         "assets": _kit_guard(promo_kits.list_assets, kit_id),
     })
+
+
+@router.put("/kits/{kit_id}/pleca-position")
+async def kit_set_pleca_position(kit_id: str, position: str = Form(...)):
+    """Dónde va la banda de pleca. El PSD no define un lugar para ella, así que
+    lo elige el usuario desde la pantalla."""
+    pos = _kit_guard(promo_kits.set_pleca_position, kit_id, position)
+    return JSONResponse({"pleca_position": pos})
 
 
 @router.post("/kits/{kit_id}/assets")

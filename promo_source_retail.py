@@ -35,6 +35,7 @@ GROUP_BY = "PROMOCION_ID"
 HEADERS = [
     "Nombre corto", "ORIENTACION", "CALLOUT", "FRASE APOYO",
     "MULTIPLICADOR", "PESOS O PRECIO", "DESCUENTO", "DESCRIPCION", "BRAND",
+    "PLECA",
 ]
 
 
@@ -166,6 +167,13 @@ def to_table(doc, orientation="V", kit=promo_kits.DEFAULT_KIT):
             make_cell(value=_txt(p, "DESCUENTO")),
             make_cell(value=_descripcion(items)),
             make_cell(value=asset(_txt(p, "PROVEEDOR"), idx_marca, "marca")),  # BRAND
+            # La columna PLECA trae un TEXTO, no un nombre de archivo (visto en
+            # los datos reales: "¡Combínalos como quieras! | Ahorra desde",
+            # "Edición Especial"), igual que TEXTO APOYO trae "NUEVO". Se busca
+            # entre las imágenes catalogadas como pleca. Si no hay imagen para
+            # ese texto, no se dibuja nada: la pleca es una placa diseñada, no
+            # un texto suelto, así que no tiene degradación a texto.
+            make_cell(value=asset(_txt(p, "PLECA"), idx_pleca, "pleca")),      # PLECA
         ])
 
     info = {
