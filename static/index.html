@@ -724,9 +724,7 @@
              amontonamiento que reportó el usuario. -->
         <div id="ai-gen-block" class="mb-5 glass rounded-2xl p-4">
           <div class="flex items-center gap-2 mb-3">
-            <span class="text-purple-600 text-sm">🧪</span>
             <p class="text-sm font-bold text-purple-800">Generación IA</p>
-            <span class="text-[10px] font-semibold text-purple-400 bg-purple-100 px-1.5 py-0.5 rounded-full">Experimental</span>
           </div>
           <!-- Aviso de costo/límite. Va acá dentro y no como tarjeta aparte:
                es una nota sobre ESTE control, no una sección. Lo llena
@@ -2163,11 +2161,10 @@ function bodUpdateAIGenNotice() {
       cantidad ya aparecen errores sueltos en las etiquetas. Probado bueno
       hasta 45.`;
     el.classList.remove('hidden');
-  } else if (n > 0) {
-    el.className = 'text-xs mb-3 max-w-3xl leading-relaxed text-gray-500';
-    el.textContent = `Tarda 3–5 min y consume una llamada de imagen. Máximo ${AI_GEN_MAX} productos.`;
-    el.classList.remove('hidden');
   } else {
+    // Por debajo de 31 productos no se avisa nada: el usuario pidio que este
+    // bloque muestre solo su titulo. El aviso queda unicamente donde hay
+    // riesgo real de gastar de mas — ambar de 31 a 45, rojo por encima de 45.
     el.classList.add('hidden');
   }
 }
