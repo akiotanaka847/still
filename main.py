@@ -420,7 +420,10 @@ def _visual_ai_images(images: list, order: list, sizes: dict) -> list:
         except (TypeError, ValueError):
             scale = 1.0
         ratio = max(1, float(img.get("width", 1))) / max(1, float(img.get("height", 1)))
-        min_scale = 0.62 if ratio > 1.35 else 0.78
+        # Pisos de LEGIBILIDAD, no de uniformidad: antes eran 0.78/0.62 y
+        # anulaban la escala real (un envase de 37 g salía igual que uno de
+        # 473 ml). Ver ai_proposal.SIZE_FLOOR — deben moverse juntos.
+        min_scale = 0.40 if ratio > 1.35 else 0.45
         scale = max(min_scale, min(1.0, scale))
         if ratio > 1.35:
             # Una bolsa horizontal puede ocupar tres veces el ancho de una
