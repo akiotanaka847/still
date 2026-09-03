@@ -26,34 +26,32 @@ from PIL import Image
 from renderer import _content_bbox
 
 # Tope propio, NO de la API: `images.edit` acepta 60 archivos sin quejarse.
-# El límite es de CALIDAD, y se midió generando con productos reales del
-# catálogo CON LOS AJUSTES DE ESTA FUNCIÓN (1536x1024, quality="high"), que es
-# lo que importa — ver tests/bodegon/README.md:
+# El limite es de CALIDAD, y se midio generando con productos reales del
+# catalogo CON LOS AJUSTES DE ESTA FUNCION (1536x1024, quality="high"), que es
+# lo unico que vale — ver tests/bodegon/README.md:
 #
-#   n=14  fidelidad excelente. Etiquetas nítidas, incluso los sellos "EXCESO
-#         CALORÍAS/AZÚCARES" mexicanos correctos.
-#   n=20  excelente. "Havana Club 7 AÑOS", "Casillero del Diablo / CONCHA Y
-#         TORO", "TRES GENERACIONES AÑEJO CRISTALINO", "CONT. NETO 124 g".
-#   n=30  muy bueno. Un solo error de marca visible ("GEEGO PARMESANO Y
-#         HIERRAS" por "QUESO PARMESANO Y HIERBAS").
-#   n=45  bueno. Composición coherente y la mayoría de marcas correctas:
-#         "Electrolit SUERO REHIDRATANTE SABOR UVA 1000 mL", "Ron ABUELO
-#         AÑEJO RESERVA ESPECIAL 33% GRATIS", "Contenido Neto 37 g".
-#   n=60  COLAPSO TOTAL, en la única muestra que se pudo tomar: el modelo
-#         descarta el pedido entero y devuelve una imagen ajena — una foto de
-#         cumpleaños familiar, sin un solo producto ni transparencia. NO es
-#         degradación gradual, y no se pudo repetir para confirmar si es
-#         reproducible o fue un caso aislado.
+#   n=14  excelente. Sellos "EXCESO CALORIAS/AZUCARES" mexicanos correctos.
+#   n=20  excelente. "Havana Club 7 ANOS", "TRES GENERACIONES ANEJO CRISTALINO".
+#   n=30  muy bueno. Un solo error de marca visible.
+#   n=45  bueno. "Ron ABUELO ANEJO RESERVA ESPECIAL 33% GRATIS".
+#   n=52  bueno. "TEQUILA HACIENDA & TEPA RESERVA CRISTALINO", "Proximo by
+#         MARQUES DE RISCAL RIOJA", "Jim Beam Kentucky Straight BOURBON",
+#         "OREO with Coca-Cola POPPING CANDY". <- tope actual
+#   n=60  COLAPSO, REPRODUCIDO 2 DE 2: el modelo descarta el pedido entero y
+#         devuelve una imagen de stock ajena, sin un solo producto ni
+#         transparencia (1a muestra: fiesta de cumpleanos familiar; 2a: una
+#         persona en una oficina). NO es degradacion gradual: es abandono.
 #
-# CUIDADO al bajar la calidad: una primera medición a 1024x1024 quality="low"
-# daba n=30 como inservible ("Modelox", "Bobelia", "ALMENDDA", "Pneds") y llevó
-# a fijar el tope en 20. Con los ajustes reales n=30 y hasta n=45 están bien:
-# el tope depende de la calidad pedida, no solo de la cantidad.
+# El acantilado esta entre 53 y 59, sin acotar mas fino. 52 es el maximo
+# VERIFICADO bueno.
 #
-# 45 es el máximo VERIFICADO como usable. El tramo 46-59 no está probado.
-# Para lotes mayores no hay que subir este número: hay que agrupar y generar
+# CUIDADO al medir con calidad baja: a 1024x1024 quality="low" el n=30 parecia
+# inservible ("Modelox", "Bobelia", "ALMENDDA") y por eso el tope habia quedado
+# en 20, menos de la mitad de lo posible. Medir SIEMPRE con --alta.
+#
+# Para lotes mayores no hay que subir este numero: hay que agrupar y generar
 # por grupo (ver ROADMAP_PLATAFORMA.md, "grupos por CSV").
-MAX_PRODUCTS_FOR_GENERATION = 45
+MAX_PRODUCTS_FOR_GENERATION = 52
 MAX_CUSTOM_PROMPT_LEN = 300
 
 

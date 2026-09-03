@@ -63,15 +63,20 @@ enseñó algo que casi llevó a fijarlo mal.
 | n | resultado |
 |---|---|
 | 14 | excelente. Etiquetas nítidas, sellos "EXCESO CALORÍAS/AZÚCARES" correctos |
-| 20 | excelente. "Havana Club 7 AÑOS", "TRES GENERACIONES AÑEJO CRISTALINO", "CONT. NETO 124 g" |
+| 20 | excelente. "Havana Club 7 AÑOS", "TRES GENERACIONES AÑEJO CRISTALINO" |
 | 30 | muy bueno. Un solo error visible: "GEEGO PARMESANO Y HIERRAS" |
-| 45 | bueno. Coherente y con la mayoría de marcas correctas: "Electrolit SUERO REHIDRATANTE SABOR UVA 1000 mL", "Ron ABUELO AÑEJO RESERVA ESPECIAL 33% GRATIS" |
-| 60 | **colapso total** — devolvió una foto de cumpleaños familiar, sin un solo producto |
+| 45 | bueno. "Ron ABUELO AÑEJO RESERVA ESPECIAL 33% GRATIS" |
+| **52** | **bueno.** "TEQUILA HACIENDA & TEPA RESERVA CRISTALINO", "Próximo by MARQUÉS DE RISCAL RIOJA", "Jim Beam Kentucky Straight BOURBON", "OREO with Coca-Cola POPPING CANDY" ← **tope actual** |
+| 60 | **colapso, reproducido 2 de 2** |
 
-**El tope quedó en 45**, el máximo verificado. El tramo 46-59 **no está
-probado**, y el colapso de 60 tiene **una sola muestra**: no se pudo repetir
-(se agotaron los créditos de la cuenta de OpenAI haciendo estas pruebas), así
-que no se sabe si es reproducible o fue un caso aislado.
+**El colapso a 60 es reproducible.** Dos muestras independientes con los ajustes
+de producción, y las dos devolvieron una imagen de stock sin un solo producto:
+la primera una fiesta de cumpleaños familiar, la segunda una persona en una
+oficina. Transparencia 0% y 2%, cuando lo normal ronda el 25-35%. No es
+degradación gradual: el modelo **descarta el pedido entero**.
+
+Así que el acantilado existe y está **entre 53 y 59**, sin acotar más fino. 52
+es el máximo verificado bueno, y ahí quedó el tope.
 
 La lección de proceso: **medir con los ajustes de producción, no con los
 baratos.** Bajar la calidad para gastar menos hizo parecer inservible un caso
