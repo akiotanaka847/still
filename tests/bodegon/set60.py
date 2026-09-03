@@ -7,6 +7,7 @@ invalidaría cualquier medición de "¿aguanta 60?".
 """
 import glob
 import os
+import re
 from pathlib import Path
 
 from PIL import Image
@@ -17,6 +18,14 @@ RAIZ = Path(__file__).resolve().parents[2]
 SESSIONS = str(RAIZ / "sessions" / "*" / "products" / "*")
 EXTS = (".png", ".jpg", ".jpeg")
 
+# Las sesiones guardan en products/ algunas imágenes que NO son un producto:
+# bodegones YA COMPUESTOS que alguien volvió a subir. Cuentan como SKU por
+# nombre de archivo pero son composiciones enteras —una llegaba a 3504x3362 y
+# traía su burbuja de zoom dibujada— así que ensucian dos cosas: la razón
+# ancho/alto media que decide el reparto de filas, y cualquier inspección
+# visual del resultado. Se excluyen.
+NO_PRODUCTO = re.compile(r"bodeg[oó]n|composici|output", re.I)
+
 
 def catalogo() -> list:
     """[{name, filepath, width, height, bytes}] de SKUs únicos, mayor primero."""
@@ -25,6 +34,8 @@ def catalogo() -> list:
         if not fp.lower().endswith(EXTS):
             continue
         sku = os.path.basename(fp)
+        if NO_PRODUCTO.search(sku):
+            continue
         sz = os.path.getsize(fp)
         if sku not in mejor or sz > mejor[sku][1]:
             mejor[sku] = (fp, sz)

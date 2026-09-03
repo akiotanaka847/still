@@ -30,7 +30,10 @@ STUDIO_BACKGROUND_STYLES = {
 # la vista previa/miniaturas sean instantáneas) — pero el PNG final no debe
 # quedarse en esa resolución si el usuario subió fotos de mayor calidad.
 MAX_EXPORT_SCALE = 2.0   # no upscalear más que esto aunque el original sea gigante
-MAX_CANVAS_DIM = 4000    # tope duro del lado mayor del canvas final (peso/tiempo de render)
+# Vive en layout.py: es quien calcula la geometría del lienzo y necesita saber
+# el tope para elegir el reparto de filas. Se re-exporta acá porque este módulo
+# es el que lo APLICA y varios sitios lo importan de acá.
+from layout import MAX_CANVAS_DIM   # noqa: E402 — tope del lado mayor del canvas final
 
 
 def _compute_export_scale(layout: dict) -> float:

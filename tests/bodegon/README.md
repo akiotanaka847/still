@@ -77,46 +77,66 @@ un bodegón por grupo).
 ## Escala del camino determinista (2026-09-03)
 
 La pregunta era si los productos podían encoger con gracia al crecer la
-cantidad, en vez de tener un tope. En el camino determinista **sí**, y por una
-razón que no aplica a la generativa: los productos son **fotos reales pegadas**,
-no redibujadas, así que reducirlas pierde tamaño pero **no nitidez**.
+cantidad. En el camino determinista **sí**, y por una razón que no aplica a la
+generativa: los productos son **fotos reales pegadas**, no redibujadas.
+`_process_item_image` carga el original, lo recorta y hace **un solo** resize
+LANCZOS al tamaño final, así que reducir pierde tamaño pero **no nitidez**.
 
-Al medirlo aparecieron dos cosas rotas:
+Medido con el catálogo real, a 60 productos se **reduce** en 57 de 60 casos
+(mediana 3.3x) y los 3 que se amplían quedan en 0.89x, casi 1:1. Verificado
+mirando recortes a escala 1:1: sellos "EXCESO CALORÍAS", "CONTIENE 12 BOTELLAS
+355 ml" y el texto diminuto de un pañal, todos legibles.
 
-**Las filas estaban fijas en 3** a partir de 16 productos, y `aspect_w`/
-`aspect_h` se asignaban pero **nunca se leían** — parámetros muertos. Como el
-canvas es exacto al contenido, 3 filas de N crecen solo a lo ancho: 60
-productos daban `12510x2975`, una tira de 4.2:1.
+### Tres cosas estaban rotas
+
+**Las filas estaban fijas** (1 hasta 6, 2 hasta 15, 3 en adelante) y
+`aspect_w`/`aspect_h` se asignaban pero **nunca se leían** — parámetros
+muertos. Como el canvas es exacto al contenido, 3 filas de N crecen solo a lo
+ancho: 60 productos daban `12510x2975`, una tira de 4.2:1.
 
 **`MAX_CANVAS_DIM` no era un tope.** Decía ser "tope duro del lado mayor del
-canvas final", pero `_compute_export_scale` terminaba en `max(1.0, scale)`, así
-que solo limitaba hacia ARRIBA: con un lienzo lógico ya mayor a 4000 px
-calculaba la reducción correcta y acto seguido la descartaba. Un bodegón de 60
-productos salía a 38 MP.
+canvas final", pero `_compute_export_scale` terminaba en `max(1.0, scale)`:
+solo limitaba HACIA ARRIBA. Con un lienzo ya mayor a 4000 px calculaba la
+reducción correcta y acto seguido la descartaba. 60 productos salían a 38 MP.
 
-### Resultado
+**El defecto también estaba en los sets chicos**, y eso no se había visto: con
+envases anchos (bolsas, six-packs) una hilera de 6 daba una tira de **9.97:1**
+y el producto salía a 375 px pudiendo salir a 902.
 
-Las filas ahora se eligen para **maximizar el tamaño del producto** dentro del
-tope: con el lado mayor topado, el producto sale más grande cuando el lienzo se
-acerca al cuadrado. El piso de aspecto 1.0 evita que la pieza salga más alta
-que ancha.
+### La regla que quedó
 
-| n | filas antes → ahora | salida | aspecto | alto/producto | ganancia |
+Una sola, para todo n: **si el reparto de siempre cabe bajo el tope, se
+respeta**. Eso preserva la estética deliberada de los sets chicos (una hilera
+es la composición clásica; optimizar por tamaño elegía 2 filas con 6 productos
+—84% más grandes y peor pieza—) y evita mover casos que no estaban rotos.
+
+Cuando no cabe, se elige el reparto que **maximiza el tamaño del producto**:
+con el lado mayor topado, gana el que acerca el lienzo al cuadrado. Se mide con
+el **empaquetado real**, no estimando: la estimación "productos por fila x
+razón media" erraba porque las filas se balancean por ancho y los productos van
+de 0.23 a 2.80 de razón, y por ese error se elegían repartos peores que el
+anterior en sets de 16 y 25.
+
+### Resultado, catálogo real
+
+| n | filas | salida | aspecto | alto/producto | vs. antes |
 |---|---|---|---|---|---|
-| 6 | 1 → 1 | 4000×1254 | 3.19 | 1078 px | igual |
-| 14 | 2 → 2 | 4000×2089 | 1.91 | 900 px | igual |
-| 16 | 3 → 3 | 4000×3057 | 1.31 | 869 px | igual |
-| 20 | 3 → 3 | 4000×2864 | 1.40 | 815 px | igual |
-| 30 | 3 → **4** | 3999×3299 | 1.21 | 701 px | **+32%** |
-| 40 | 3 → **5** | 4000×3395 | 1.18 | 564 px | **+58%** |
-| 60 | 3 → **6** | 4000×3546 | 1.13 | 503 px | **+87%** |
+| 6 | 1 | 4000×1009 | 3.96 | 886 px | igual |
+| 14 | 2 | 4000×2497 | 1.60 | 1104 px | igual |
+| 20 | 3 | 3874×4000 | 0.97 | 1184 px | igual |
+| 25 | 3 | 4000×3116 | 1.28 | 903 px | igual |
+| 30 | **4** | 4000×3855 | 1.04 | 830 px | **+34%** |
+| 40 | **5** | 3681×4000 | 0.92 | 688 px | **+46%** |
+| 60 | **6** | 3979×3965 | 0.99 | 572 px | **+95%** |
 
-Todo `n ≤ 20` conserva el reparto que ya tenía: la mejora es solo donde antes
-degradaba. Verificado renderizando 60 productos reales (PNG 14.2 MP y PSD de 61
-capas, ambos 4000×3546) y sobre las 30 estrategias × 7 cantidades = 210
-combinaciones.
+**Peor caso: +0%.** No hay ninguna regresión. Y desapareció el escalón entre 15
+y 16 productos, que con envases anchos duplicaba el tamaño (313 → 599 px)
+porque recién ahí entraba el cálculo.
 
 De paso, `aspect_w`/`aspect_h` dejaron de ser código muerto: el control que el
 frontend ya enviaba ahora decide el reparto (5:1 → 3 filas, 1:1 → 6 filas).
 
-`tests/test_escala_salida.py` lo blinda en la suite automática.
+`tests/test_escala_salida.py` lo blinda con 141 casos sobre tres mezclas de
+proporciones. La primera versión usaba productos sintéticos todos de razón 0.5
+y por eso **no detectó** las regresiones de 16, 20 y 25: la razón media cambia
+con la mezcla y es justo lo que hace cambiar la decisión.
