@@ -25,26 +25,35 @@ from PIL import Image
 
 from renderer import _content_bbox
 
-# Tope propio, NO de la API: `images.edit` acepta 60 archivos sin quejarse
-# (verificado 2026-09-03). El límite es de CALIDAD, y se midió generando con
-# productos reales del catálogo — ver tests/bodegon/generativa_60.py:
+# Tope propio, NO de la API: `images.edit` acepta 60 archivos sin quejarse.
+# El límite es de CALIDAD, y se midió generando con productos reales del
+# catálogo CON LOS AJUSTES DE ESTA FUNCIÓN (1536x1024, quality="high"), que es
+# lo que importa — ver tests/bodegon/README.md:
 #
 #   n=14  fidelidad excelente. Etiquetas nítidas, incluso los sellos "EXCESO
-#         CALORÍAS/AZÚCARES" mexicanos correctos. Fondo transparente al 37%.
-#   n=20  usable. Composición buena, pero empiezan las marcas degradadas
-#         ("LMENDRA" por "ALMENDRA") e inventadas en la fila de atrás.
-#   n=30  la composición aún se sostiene, la fidelidad NO: "Modelox",
-#         "Bobelia", "ALMENDDA", "Pneds". Ya no sirve para catálogo.
-#   n=60  COLAPSO TOTAL. El modelo descarta el pedido entero y devuelve una
-#         imagen ajena — en la prueba, una foto de cumpleaños familiar sin un
-#         solo producto y sin transparencia. No es degradación gradual.
+#         CALORÍAS/AZÚCARES" mexicanos correctos.
+#   n=20  excelente. "Havana Club 7 AÑOS", "Casillero del Diablo / CONCHA Y
+#         TORO", "TRES GENERACIONES AÑEJO CRISTALINO", "CONT. NETO 124 g".
+#   n=30  muy bueno. Un solo error de marca visible ("GEEGO PARMESANO Y
+#         HIERRAS" por "QUESO PARMESANO Y HIERBAS").
+#   n=45  bueno. Composición coherente y la mayoría de marcas correctas:
+#         "Electrolit SUERO REHIDRATANTE SABOR UVA 1000 mL", "Ron ABUELO
+#         AÑEJO RESERVA ESPECIAL 33% GRATIS", "Contenido Neto 37 g".
+#   n=60  COLAPSO TOTAL, en la única muestra que se pudo tomar: el modelo
+#         descarta el pedido entero y devuelve una imagen ajena — una foto de
+#         cumpleaños familiar, sin un solo producto ni transparencia. NO es
+#         degradación gradual, y no se pudo repetir para confirmar si es
+#         reproducible o fue un caso aislado.
 #
-# El 20 es el techo de lo verificado como usable. Bajarlo a 16 recupera el
-# criterio de "fidelidad casi perfecta"; subirlo no está respaldado por nada.
+# CUIDADO al bajar la calidad: una primera medición a 1024x1024 quality="low"
+# daba n=30 como inservible ("Modelox", "Bobelia", "ALMENDDA", "Pneds") y llevó
+# a fijar el tope en 20. Con los ajustes reales n=30 y hasta n=45 están bien:
+# el tope depende de la calidad pedida, no solo de la cantidad.
 #
-# Para lotes más grandes NO hay que subir este número: hay que agrupar y
-# generar por grupo (ver ROADMAP_PLATAFORMA.md, "grupos por CSV").
-MAX_PRODUCTS_FOR_GENERATION = 20
+# 45 es el máximo VERIFICADO como usable. El tramo 46-59 no está probado.
+# Para lotes mayores no hay que subir este número: hay que agrupar y generar
+# por grupo (ver ROADMAP_PLATAFORMA.md, "grupos por CSV").
+MAX_PRODUCTS_FOR_GENERATION = 45
 MAX_CUSTOM_PROMPT_LEN = 300
 
 

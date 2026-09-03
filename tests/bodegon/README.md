@@ -48,29 +48,39 @@ Groq devolviera 400 para cualquier bodegón de 4+ productos, o sea para todos.
 Corregido a 3. Pero incluso corregido, el tier gratuito tope **8000 TPM** revienta
 con 413 a partir de ~6 productos. Groq queda para pruebas, no para uso real.
 
-### Generativa — 60 no es un límite de tuning, es un muro
+### Generativa — el tope depende de la CALIDAD pedida, no solo de la cantidad
 
-`images.edit` **acepta 60 archivos** sin quejarse (146 s en calidad baja). El
-tope de 16 en el código era propio, no de la API. El límite real es de calidad:
+`images.edit` **acepta 60 archivos** sin quejarse. El tope de 16 en el código
+era propio, no de la API. El límite real es de fidelidad de etiqueta, y medirlo
+enseñó algo que casi llevó a fijarlo mal.
+
+**Primera medición, a 1024x1024 `quality="low"`:** n=30 salía inservible
+("Modelox", "Bobelia", "ALMENDDA", "Pneds"). Con eso se fijó el tope en 20.
+
+**Segunda medición, con los ajustes REALES de la función** (1536x1024,
+`quality="high"` — lo que usa la app):
 
 | n | resultado |
 |---|---|
-| 14 | fidelidad excelente — etiquetas nítidas, sellos "EXCESO CALORÍAS" correctos, 37% transparente |
-| 20 | usable — composición buena, empiezan marcas degradadas ("LMENDRA") e inventadas al fondo |
-| 30 | composición se sostiene, fidelidad no: "Modelox", "Bobelia", "ALMENDDA", "Pneds" |
-| **60** | **colapso total** — devolvió una foto de cumpleaños familiar, sin un solo producto |
+| 14 | excelente. Etiquetas nítidas, sellos "EXCESO CALORÍAS/AZÚCARES" correctos |
+| 20 | excelente. "Havana Club 7 AÑOS", "TRES GENERACIONES AÑEJO CRISTALINO", "CONT. NETO 124 g" |
+| 30 | muy bueno. Un solo error visible: "GEEGO PARMESANO Y HIERRAS" |
+| 45 | bueno. Coherente y con la mayoría de marcas correctas: "Electrolit SUERO REHIDRATANTE SABOR UVA 1000 mL", "Ron ABUELO AÑEJO RESERVA ESPECIAL 33% GRATIS" |
+| 60 | **colapso total** — devolvió una foto de cumpleaños familiar, sin un solo producto |
+
+**El tope quedó en 45**, el máximo verificado. El tramo 46-59 **no está
+probado**, y el colapso de 60 tiene **una sola muestra**: no se pudo repetir
+(se agotaron los créditos de la cuenta de OpenAI haciendo estas pruebas), así
+que no se sabe si es reproducible o fue un caso aislado.
+
+La lección de proceso: **medir con los ajustes de producción, no con los
+baratos.** Bajar la calidad para gastar menos hizo parecer inservible un caso
+que sí sirve, y estuvo a punto de dejar el tope en la mitad de lo posible.
 
 El colapso a 60 **no es degradación gradual**: el modelo descarta el pedido
 entero. Y el código lo habría servido como bodegón — no hay ninguna validación
-de que la salida tenga que ver con la entrada.
-
-La aritmética explica el muro: a 60 productos en 1536×1024 cada uno cae en
-~161 px de lado, 0,23× del área que tiene en el caso verificado de 14. Una
-etiqueta necesita ~40 px de alto solo para leerse.
-
-**Para lotes grandes no hay que subir el tope: hay que agrupar y generar por
-grupo**, que es lo que ya decidió `ROADMAP_PLATAFORMA.md` ("grupos por CSV",
-un bodegón por grupo).
+de que la salida tenga que ver con la entrada. Ese sigue siendo un riesgo
+abierto.
 
 ---
 
