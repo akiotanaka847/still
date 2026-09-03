@@ -26,10 +26,15 @@ except ImportError:
     PIL_AVAILABLE = False
 
 
+# Solo plantillas que RESPETAN la escala por producto. Quedan fuera "cascada"
+# y "profundidad_grad" porque reescalan según la POSICIÓN en la fila (crecer en
+# diagonal / decrecer hacia los lados): con ellas un envase de 37 g terminaba
+# más grande que uno de 124 g solo por haber caído al final de la secuencia,
+# anulando la escala real. Verificado con render real (2026-09-01).
 LAYOUT_STYLE_POOLS = {
-    "dynamic": ("impacto", "cruce", "cascada"),
-    "elegant": ("profundidad", "profundidad_grad", "fila_recta"),
-    "editorial": ("radial", "flotante", "cascada"),
+    "dynamic": ("impacto", "cruce", "inclinado_derecha"),
+    "elegant": ("profundidad", "fila_recta", "flotante"),
+    "editorial": ("radial", "flotante", "cruce"),
 }
 LAYOUT_STYLE_DEFAULTS = {
     "dynamic": "impacto",
@@ -110,9 +115,13 @@ Criterios de evaluación:
 Productos y siluetas aproximadas:
 {product_brief}
 
-ESCALA DE PRESENTACIÓN (muy importante): asigna a cada producto una escala visual entre 0.75
-y 1.0. No intentes reproducir su tamaño físico real: esto es una pieza publicitaria y todos
-deben ser reconocibles. Usa 1.0 para el héroe y diferencias moderadas para los acompañantes.
+ESCALA DE PRESENTACIÓN (muy importante): asigna a cada producto una escala visual entre 0.45
+y 1.0 que REFLEJE SU TAMAÑO FÍSICO REAL, deducido del envase y del contenido neto que se lee
+en la etiqueta. Una lata mini de 37 g NO puede verse igual de grande que un tubo de 124 g ni
+que una lata de 473 ml: si los muestras iguales, la composición se ve falsa. Usa 1.0 para el
+producto físicamente más grande y baja proporcionalmente el resto (por ejemplo, un envase que
+mide la mitad de alto que el mayor va cerca de 0.5). El piso de 0.45 existe solo para que
+ningún producto quede ilegible, no para achatar las diferencias reales.
 
 ZOOM DE DETALLE: además, mirando específicamente el producto "héroe", identifica una zona
 pequeña con contenido interesante para un close-up ampliado (un logo, un sello, texto
@@ -141,7 +150,7 @@ Responde ÚNICAMENTE con este JSON (sin texto adicional, sin markdown):
 {{
   "order": [lista con los {len(names)} nombres exactos en el orden sugerido],
   "hero": "nombre del producto más prominente",
-  "sizes": {{"NOMBRE_EXACTO": escala_visual_0.75_a_1.0, ...}} para los {len(names)} productos,
+  "sizes": {{"NOMBRE_EXACTO": escala_segun_tamano_real_0.45_a_1.0, ...}} para los {len(names)} productos,
   "layouts": {{"dynamic":"impacto", "elegant":"profundidad", "editorial":"radial"}},
   "detail_crop": {{"x": 0.0_a_1.0, "y": 0.0_a_1.0, "w": 0.0_a_1.0, "h": 0.0_a_1.0}},
   "reasoning": "explicación de 1-2 oraciones en español que mencione el orden y los tamaños"
@@ -165,9 +174,33 @@ def _parse_result(raw: str, names: list) -> dict:
     valid = set(names)
     raw_order = result.get("order")
     raw_order = raw_order if isinstance(raw_order, list) else []
-    result["order"] = [n for n in raw_order if n in valid]
-    missing = [n for n in names if n not in set(result["order"])]
+    # Deduplicar: con lotes grandes la IA repite nombres (visto de verdad —
+    # 62 entradas para 60 productos, gpt-5.1, 2026-09-03). Sin esto el
+    # duplicado sobrevivía hasta _visual_ai_images, que tampoco deduplica, y
+    # el producto repetido se COMPONÍA DOS VECES en el bodegón.
+    vistos = set()
+    result["order"] = [n for n in raw_order
+                       if n in valid and not (n in vistos or vistos.add(n))]
+    missing = [n for n in names if n not in vistos]
     result["order"].extend(missing)
+
+    # Cobertura: cuántos productos decidió la IA de VERDAD, antes de que las
+    # líneas de arriba y _normalize_sizes rellenen el resto con valores por
+    # defecto. Sin esto el relleno es invisible: con 60 productos y una IA que
+    # solo alcanzó a opinar sobre 20, la propuesta salía "completa" y nada
+    # decía que dos tercios de la dirección de arte los puso el código.
+    # Medido 2026-09-03: gpt-5.1 cubre 60/60, pero eso depende del proveedor
+    # y del tamaño del lote, así que se informa siempre en vez de asumirlo.
+    sizes_ia = result.get("sizes")
+    sizes_ia = sizes_ia if isinstance(sizes_ia, dict) else {}
+    upper = {str(k).upper() for k in sizes_ia}
+    con_tamano = sum(1 for n in names if n in sizes_ia or n.upper() in upper)
+    result["coverage"] = {
+        "total": len(names),
+        "ordered_by_ai": len(result["order"]) - len(missing),
+        "sized_by_ai": con_tamano,
+        "filled_by_code": len(names) - con_tamano,
+    }
     result.setdefault("hero", result["order"][0] if result["order"] else "")
     if result["hero"] not in names:
         result["hero"] = result["order"][0] if result["order"] else ""
@@ -396,8 +429,16 @@ def _normalize_detail_crop(crop):
     return {"x": round(x, 3), "y": round(y, 3), "w": round(w, 3), "h": round(h, 3)}
 
 
+SIZE_FLOOR = 0.45   # piso de legibilidad: por debajo la etiqueta deja de leerse
+
+
 def _normalize_sizes(sizes: dict, names: list) -> dict:
-    """Convierte escalas de IA en jerarquía publicitaria moderada y legible."""
+    """Escala relativa al producto más grande, respetando proporciones reales.
+
+    Mapea a [SIZE_FLOOR, 1.0] en vez de a un rango angosto: comprimir todo
+    cerca de 1.0 hacía que un envase de 37 g se viera igual que uno de 473 ml
+    y la composición se leyera falsa (reporte real del usuario, 2026-09-01).
+    El piso es solo de legibilidad, no un achatamiento de las diferencias."""
     sizes = sizes if isinstance(sizes, dict) else {}
     raw = {}
     for n in names:
@@ -419,7 +460,7 @@ def _normalize_sizes(sizes: dict, names: list) -> dict:
     for n in names:
         v = raw[n] if raw[n] else 0.88 * mx
         normalized = max(0.0, min(1.0, v / mx))
-        out[n] = round(0.78 + 0.22 * normalized, 3)
+        out[n] = round(SIZE_FLOOR + (1.0 - SIZE_FLOOR) * normalized, 3)
     return out
 
 
@@ -516,7 +557,12 @@ def _analyze_claude(images: list, api_key: str) -> dict:
 # ─── Backend: Groq (Qwen3, visión) ─────────────────────────────────────────────
 # llama-4-scout (deprecado por Groq el 17/07/2026) fue reemplazado por qwen3.6-27b,
 # que soporta hasta 5 imágenes por petición.
-GROQ_MAX_IMAGES = 5
+# qwen/qwen3.6-27b acepta 3 imágenes, no 5. Con 5 la API devuelve 400 "Too many
+# images provided" y Groq quedaba ROTO para cualquier bodegón de 4+ productos —
+# o sea para todos los reales. Se colaba porque el tope venía de llama-4-scout,
+# el modelo anterior (deprecado por Groq el 17/07/2026): al cambiar de modelo
+# cambió el límite y este número se quedó. Verificado 2026-09-03: 3 pasa, 4 falla.
+GROQ_MAX_IMAGES = 3
 
 
 def _analyze_groq(images: list, api_key: str) -> dict:

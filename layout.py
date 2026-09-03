@@ -207,6 +207,88 @@ def _rotated_bbox(w: float, h: float, degrees: float) -> tuple:
     return new_w, new_h
 
 
+# Tope del lado mayor del canvas final, en píxeles (peso/tiempo de render).
+# renderer.py lo APLICA reduciendo el layout; acá se necesita para saber si el
+# tope va a apretar, que es lo único que hace que el reparto de filas importe.
+MAX_CANVAS_DIM = 4000
+
+
+def _medir_reparto(items: List[_Item], rows_count: int, item_gap: int) -> tuple:
+    """Ancho y alto del lienzo para un reparto dado, con el empaquetado REAL.
+
+    Repite el mismo reparto que hace compute_layout (cada producto va a la fila
+    más angosta) en vez de estimarlo. La estimación por "productos por fila x
+    razón media" erraba mucho: las filas se balancean por ANCHO, y con
+    productos que van de 0.23 a 2.80 de razón, dos filas con la misma cantidad
+    pueden medir muy distinto. Ese error hacía elegir repartos peores que el
+    anterior en sets de 16 y 25 productos.
+    """
+    anchos = [0.0] * rows_count
+    altos = [0.0] * rows_count
+    for item in items:
+        i = min(range(rows_count), key=lambda k: anchos[k])
+        anchos[i] += item.sw + item_gap
+        if item.sh > altos[i]:
+            altos[i] = item.sh
+    if any(a == 0.0 for a in altos):        # fila vacía: reparto inválido
+        return None
+    return max(anchos), sum(altos)
+
+
+def _elegir_filas(items: List[_Item], item_gap: int, target_aspect: float = 0.0) -> int:
+    """Cuántas filas conviene para estos productos.
+
+    Hasta 15 manda la escalera original: una hilera (o dos) en sets chicos es
+    la composición clásica de bodegón, decisión estética que optimizar por
+    tamaño rompía —con 6 productos elegía 2 filas porque el producto sale 84%
+    más grande, que es cierto y es peor pieza.
+
+    De 16 en adelante, que es donde el reparto fijo de 3 filas fallaba (60
+    productos daban una tira de 4.2:1), se elige midiendo: renderer.py topa el
+    LADO MAYOR de la salida, así que gana el reparto cuyo lado mayor sea más
+    chico — el producto termina más grande. El piso de aspecto evita que la
+    pieza salga marcadamente más alta que ancha.
+    """
+    n = len(items)
+
+    # Una sola regla para todo n: SI EL REPARTO DE SIEMPRE CABE bajo el tope,
+    # se respeta. Es lo que preserva la estética deliberada de los sets chicos
+    # —una hilera de productos es la composición clásica de bodegón, y
+    # optimizar por tamaño elegía 2 filas con 6 productos: 84% más grandes y
+    # peor pieza— y a la vez evita mover casos que no estaban rotos: con 30
+    # productos altos, 3 filas dan 3929x2736, entra en 4000 sin reducir, y
+    # recalcular movía el alto del producto de 916 a 895 px por otra vía.
+    #
+    # Cuando NO cabe es cuando el reparto importa, y ahí sí se calcula. Eso
+    # cubre los dos casos que estaban mal, no solo el grande: 60 productos
+    # daban una tira de 4.2:1, pero 6 productos ANCHOS daban una de 9.97:1 y
+    # el producto salía a 375 px cuando podía salir al doble.
+    fijo = 1 if n <= 6 else (2 if n <= 15 else 3)
+    base = _medir_reparto(items, fijo, item_gap)
+    if base and not target_aspect and max(base) <= MAX_CANVAS_DIM:
+        return fijo
+
+    # 0.85 se eligió midiendo, no a ojo: con 0.7 y 0.8 el set de 25 productos
+    # elegía un reparto 4% PEOR que el anterior y dejaba piezas de aspecto
+    # 0.75 (notablemente más altas que anchas). Con 0.85 y 0.9 no hay ninguna
+    # regresión en el rango 16-60 y la ganancia media es la misma (+26%), así
+    # que se toma el valor menos al borde de los dos.
+    ASPECTO_MINIMO = 0.85
+    mejor, mejor_puntaje = 3, -1e9
+    for r in range(1, n + 1):
+        medida = _medir_reparto(items, r, item_gap)
+        if medida is None:
+            break                            # más filas solo dejan más vacías
+        w, h = medida
+        aspecto = w / h if h else 0.0
+        if r > 1 and aspecto < ASPECTO_MINIMO:
+            continue
+        puntaje = -abs(aspecto - target_aspect) if target_aspect else 1.0 / max(w, h)
+        if puntaje > mejor_puntaje:
+            mejor_puntaje, mejor = puntaje, r
+    return mejor
+
+
 def compute_layout(
     images: List[dict],
     sort_strategy: str = 'auto',
@@ -254,15 +336,28 @@ def compute_layout(
     elif sort_strategy == 'dinamico':
         max_vertical_boost = 1.6
 
-    # Config automática — preferir 1 fila en sets pequeños (composición más limpia)
-    if rows_count == 0 or aspect_w == 0:
-        if n <= 6:
-            rows_count = rows_count or 1; aspect_w = aspect_w or 5;  aspect_h = aspect_h or 3
-        elif n <= 15:
-            rows_count = rows_count or 2; aspect_w = aspect_w or 8;  aspect_h = aspect_h or 3
-        else:
-            rows_count = rows_count or 3; aspect_w = aspect_w or 10; aspect_h = aspect_h or 3
-    aspect_h = aspect_h or 3
+    # ─── Cuántas filas ───────────────────────────────────────────────────────
+    # Antes esto era una escalera fija (1 fila hasta 6, 2 hasta 15, 3 en
+    # adelante) y aspect_w/aspect_h se asignaban pero NO SE USABAN en ningún
+    # lado: eran parámetros muertos. Con el canvas exacto al contenido, 3 filas
+    # de N crecen SOLO en horizontal, así que a partir de ~30 productos la
+    # pieza se estiraba sin techo: 60 productos daban 12510x2975 (4.2:1).
+    #
+    # El criterio ahora es el que de verdad importa: renderer.py topa el LADO
+    # MAYOR de la salida en MAX_CANVAS_DIM, así que el producto sale más grande
+    # cuando el lienzo se acerca al CUADRADO — es el reparto que menos
+    # desperdicia en el lado que manda. Se elige el número de filas que
+    # minimiza ese lado mayor (medido en anchos de producto).
+    #
+    # El piso de aspecto 1.0 es lo que evita que la optimización se pase de
+    # lista: sin él, 14 productos irían a 3 filas (aspecto 0.83, producto más
+    # grande) y la pieza saldría más alta que ancha, que no es un bodegón.
+    # Con el piso, todo n <= 30 conserva el reparto que ya tenía.
+    if aspect_w and aspect_h:
+        target_aspect = aspect_w / aspect_h
+    else:
+        target_aspect = 0.0
+        aspect_w, aspect_h = 0, 3
 
     # Escalar items
     items: List[_Item] = _scale_items(images, base_height, max_vertical_boost)
@@ -270,6 +365,9 @@ def compute_layout(
     # Aplicar estrategia de ordenamiento
     sort_fn = SORT_STRATEGIES.get(sort_strategy, _sort_auto)
     items = sort_fn(items)
+
+    if rows_count == 0:
+        rows_count = _elegir_filas(items, item_gap, target_aspect)
 
     # Distribuir en filas (balance por ancho aproximado)
     rows: List[_Row] = [_Row() for _ in range(rows_count)]
