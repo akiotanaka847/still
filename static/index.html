@@ -728,6 +728,10 @@
             <p class="text-sm font-bold text-purple-800">Generación IA</p>
             <span class="text-[10px] font-semibold text-purple-400 bg-purple-100 px-1.5 py-0.5 rounded-full">Experimental</span>
           </div>
+          <!-- Aviso de costo/límite. Va acá dentro y no como tarjeta aparte:
+               es una nota sobre ESTE control, no una sección. Lo llena
+               bodUpdateAIGenNotice() con la cantidad de productos actual. -->
+          <p id="ai-gen-notice" class="hidden text-xs mb-3 max-w-3xl leading-relaxed"></p>
           <div class="flex items-center gap-2 mb-3 max-w-3xl">
             <input id="ai-gen-input" type="text" maxlength="300"
                    style="color-scheme: light; -webkit-appearance: none; appearance: none; color: #111827; background-color: #fff;"
@@ -2172,6 +2176,7 @@ function trimImage(img) {
 function renderThumbs() {
   const grid=document.getElementById('bod-thumb-grid'), wrap=document.getElementById('bod-thumbs');
   document.getElementById('bod-prod-count').textContent = BOD_FILES.length;
+  bodUpdateAIGenNotice();
   grid.innerHTML = '';
   if (!BOD_FILES.length) { wrap.classList.add('hidden'); return; }
   wrap.classList.remove('hidden');
@@ -2458,7 +2463,62 @@ async function bodGenerateCustomAI() {
   }
 }
 
+// Tope de Generación IA. Duplicado a propósito de image_gen.py: el servidor
+// sigue siendo la autoridad (responde 400), esto solo evita que el usuario
+// espere 4 minutos y gaste una generación para enterarse. Si cambia allá,
+// cambiar acá — está anotado en los dos lados.
+const AI_GEN_MAX = 45;
+
+function bodUpdateAIGenNotice() {
+  const el = document.getElementById('ai-gen-notice');
+  const btn = document.getElementById('ai-gen-btn');
+  if (!el || !btn) return;
+  const n = BOD_FILES.length;
+
+  if (n > AI_GEN_MAX) {
+    el.className = 'text-xs mb-3 max-w-3xl leading-relaxed text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2';
+    el.innerHTML = `<b>${n} productos: demasiados para este modo.</b> Acá la IA
+      redibuja la escena entera, y arriba de ${AI_GEN_MAX} deja de mantener el
+      texto de las etiquetas — en una prueba con 60 devolvió una imagen que no
+      tenía nada que ver con los productos. Usá <b>Estilos de layout</b> o
+      <b>Propuestas IA</b>: componen tus fotos reales sin redibujarlas, así que
+      no pierden nitidez y no tienen tope.`;
+    el.classList.remove('hidden');
+    btn.disabled = true;
+    btn.classList.add('opacity-40', 'cursor-not-allowed');
+    return;
+  }
+
+  btn.disabled = false;
+  btn.classList.remove('opacity-40', 'cursor-not-allowed');
+
+  if (n > 30) {
+    el.className = 'text-xs mb-3 max-w-3xl leading-relaxed text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2';
+    el.innerHTML = `<b>${n} productos.</b> Funciona hasta ${AI_GEN_MAX}, pero
+      cada generación tarda 3–5 min, cuesta una llamada de imagen y a esta
+      cantidad ya aparecen errores sueltos en las etiquetas. Probado bueno
+      hasta 45.`;
+    el.classList.remove('hidden');
+  } else if (n > 0) {
+    el.className = 'text-xs mb-3 max-w-3xl leading-relaxed text-gray-500';
+    el.textContent = `Tarda 3–5 min y consume una llamada de imagen. Máximo ${AI_GEN_MAX} productos.`;
+    el.classList.remove('hidden');
+  } else {
+    el.classList.add('hidden');
+  }
+}
+
 async function bodGenerateAIImage() {
+  if (BOD_FILES.length > AI_GEN_MAX) {
+    toast(`Máximo ${AI_GEN_MAX} productos en Generación IA — usá Estilos de layout o Propuestas IA`);
+    return;
+  }
+  // Confirmación solo donde el gasto duele: una generación son 3-5 min y una
+  // llamada de imagen, y a esta altura el usuario ya vio el aviso ámbar.
+  if (BOD_FILES.length > 30 &&
+      !confirm(`${BOD_FILES.length} productos: la generación tarda 3–5 min y consume una llamada de imagen.\n\n¿Generar igual?`)) {
+    return;
+  }
   const input = document.getElementById('ai-gen-input');
   const btn = document.getElementById('ai-gen-btn');
   const oldLabel = btn.innerHTML;
