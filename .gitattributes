@@ -3,11 +3,11 @@
 # propósito: la imagen de Docker es python-slim y no lleva Node, así que si no
 # estuviera en el repo no habría con qué compilarla al desplegar.
 #
-# El costo de eso es que las ramas de módulo (bodegon, promos) la regeneran cada
-# una por su lado y en cada merge conflictúa por un contenido que no significa
-# nada — dos compilaciones distintas del mismo CSS. El driver `keepours` resuelve
-# al lado de destino sin preguntar, y la regla que lo hace correcto es
-# RECOMPILAR después de cada merge a master:
+# El costo de eso es que cada rama de trabajo la regenera por su lado y en cada
+# merge conflictúa por un contenido que no significa nada — dos compilaciones
+# distintas del mismo CSS. El driver `keepours` resuelve al lado de destino sin
+# preguntar, y la regla que lo hace correcto es RECOMPILAR después de cada
+# merge a master:
 #
 #     npm run build:css && git add static/css/tailwind.css
 #

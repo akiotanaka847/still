@@ -627,9 +627,10 @@ def compose_psd(layers: list, size: tuple, output, preview=None) -> None:
     preview: imagen ya compuesta para el preview aplanado. Si no viene, se
             compone acá apilando las capas en orden.
 
-    Extraída de render_psd para que otros módulos (ej. promo.py, que arma un
-    PSD con una capa por campo de la plantilla) reusen el mismo workaround en
-    vez de duplicarlo: el auto-flatten interno de psd-tools al guardar
+    Se extrajo de render_psd cuando el repo tenía un segundo módulo que también
+    escribía PSD (Promos, retirado el 2026-09-03) y se conserva separada porque
+    render_psd la usa tal cual: acá vive el workaround, en un solo lugar. El
+    problema que esquiva: el auto-flatten interno de psd-tools al guardar
     (composite() sobre un documento recién creado) está roto — comprobado con
     datos reales, tira AssertionError de longitud al releer el archivo. Se
     inyecta el preview a mano, garantizando además que coincide exactamente
@@ -653,9 +654,9 @@ def compose_psd(layers: list, size: tuple, output, preview=None) -> None:
         psd.create_pixel_layer(img, name=name, top=top, left=left)
 
     # Comprimir el preview con RLE en vez de crudo. Sin esto el preview pesa
-    # ancho x alto x 4 bytes sin comprimir — en una plantilla de promo real
-    # (20226x6122) eso solo ya son 472 MB. Con RLE, las zonas transparentes
-    # (que son casi todo) colapsan. Medido sobre un caso real.
+    # ancho x alto x 4 bytes sin comprimir — con un documento de 20226x6122
+    # (medido sobre un caso real) eso solo ya son 472 MB. Con RLE, las zonas
+    # transparentes (que son casi todo) colapsan.
     try:
         from psd_tools.constants import Compression
         psd._record.image_data.compression = Compression.RLE
