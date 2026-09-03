@@ -47,13 +47,25 @@ def _compute_export_scale(layout: dict) -> float:
     items = layout.get("items") or []
     ratios = [it["oh"] / it["sh"] for it in items
               if it.get("sh", 0) > 0 and it.get("oh", 0) > 0]
-    if not ratios:
-        return 1.0
-    scale = max(1.0, min(MAX_EXPORT_SCALE, max(ratios)))
     max_dim = max(layout.get("canvas_width", 0), layout.get("canvas_height", 0), 1)
-    if max_dim * scale > MAX_CANVAS_DIM:
-        scale = MAX_CANVAS_DIM / max_dim
-    return max(1.0, scale)
+    tope = MAX_CANVAS_DIM / max_dim          # <1 cuando hay que REDUCIR
+
+    if not ratios:
+        return min(1.0, tope)
+
+    scale = max(1.0, min(MAX_EXPORT_SCALE, max(ratios)))
+    # MAX_CANVAS_DIM decía ser "tope duro del lado mayor del canvas final",
+    # pero el `max(1.0, ...)` del final lo volvía tope solo HACIA ARRIBA: con
+    # un lienzo lógico ya mayor a 4000 px esto calculaba la reducción correcta
+    # y acto seguido la descartaba, así que no había ningún techo real. Un
+    # bodegón de 60 productos salía a 7616x4985 (38 MP) y uno de 30 a 19 MP.
+    #
+    # Ahora reduce de verdad, que es lo que hace que la pieza degrade con
+    # gracia: al crecer la cantidad, el producto ocupa menos px en la salida
+    # (60 productos → ~442 px de alto cada uno) en vez de que el archivo
+    # crezca sin límite. Los productos son fotos de alta resolución, así que
+    # reducir no pierde nitidez: pierde tamaño, que es lo esperado.
+    return min(scale, tope) if max_dim * scale > MAX_CANVAS_DIM else scale
 
 
 def _scale_layout(layout: dict, scale: float) -> dict:

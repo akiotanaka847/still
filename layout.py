@@ -254,15 +254,55 @@ def compute_layout(
     elif sort_strategy == 'dinamico':
         max_vertical_boost = 1.6
 
-    # Config automática — preferir 1 fila en sets pequeños (composición más limpia)
-    if rows_count == 0 or aspect_w == 0:
-        if n <= 6:
-            rows_count = rows_count or 1; aspect_w = aspect_w or 5;  aspect_h = aspect_h or 3
-        elif n <= 15:
-            rows_count = rows_count or 2; aspect_w = aspect_w or 8;  aspect_h = aspect_h or 3
-        else:
-            rows_count = rows_count or 3; aspect_w = aspect_w or 10; aspect_h = aspect_h or 3
-    aspect_h = aspect_h or 3
+    # ─── Cuántas filas ───────────────────────────────────────────────────────
+    # Antes esto era una escalera fija (1 fila hasta 6, 2 hasta 15, 3 en
+    # adelante) y aspect_w/aspect_h se asignaban pero NO SE USABAN en ningún
+    # lado: eran parámetros muertos. Con el canvas exacto al contenido, 3 filas
+    # de N crecen SOLO en horizontal, así que a partir de ~30 productos la
+    # pieza se estiraba sin techo: 60 productos daban 12510x2975 (4.2:1).
+    #
+    # El criterio ahora es el que de verdad importa: renderer.py topa el LADO
+    # MAYOR de la salida en MAX_CANVAS_DIM, así que el producto sale más grande
+    # cuando el lienzo se acerca al CUADRADO — es el reparto que menos
+    # desperdicia en el lado que manda. Se elige el número de filas que
+    # minimiza ese lado mayor (medido en anchos de producto).
+    #
+    # El piso de aspecto 1.0 es lo que evita que la optimización se pase de
+    # lista: sin él, 14 productos irían a 3 filas (aspecto 0.83, producto más
+    # grande) y la pieza saldría más alta que ancha, que no es un bodegón.
+    # Con el piso, todo n <= 30 conserva el reparto que ya tenía.
+    if aspect_w and aspect_h:
+        target_aspect = aspect_w / aspect_h
+    else:
+        target_aspect = 0.0
+        aspect_w, aspect_h = 0, 3
+
+    if rows_count == 0:
+        # La escala preserva la razón ancho/alto, así que se puede calcular
+        # antes de _scale_items.
+        razones = [max(1.0, float(im.get("width", 1))) / max(1.0, float(im.get("height", 1)))
+                   for im in images]
+        razon_prod = sum(razones) / len(razones)
+
+        ASPECTO_MINIMO = 1.0        # nunca más alto que ancho
+        mejor, mejor_escala = 1, -1.0
+        for r in range(1, max(1, n) + 1):
+            por_fila = -(-n // r)                     # ceil
+            ancho_rel = por_fila * razon_prod
+            alto_rel = float(r)
+            aspecto = ancho_rel / alto_rel
+            if r > 1 and aspecto < ASPECTO_MINIMO:
+                continue
+            if target_aspect:
+                # Si el usuario pidió un aspecto, se respeta su intención:
+                # gana el reparto que más se le acerca.
+                puntaje = -abs(aspecto - target_aspect)
+            else:
+                # Producto más grande = lado mayor más chico.
+                puntaje = 1.0 / max(ancho_rel, alto_rel)
+            if puntaje > mejor_escala:
+                mejor_escala, mejor = puntaje, r
+        rows_count = mejor
 
     # Escalar items
     items: List[_Item] = _scale_items(images, base_height, max_vertical_boost)

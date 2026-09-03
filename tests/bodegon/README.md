@@ -71,3 +71,52 @@ etiqueta necesita ~40 px de alto solo para leerse.
 **Para lotes grandes no hay que subir el tope: hay que agrupar y generar por
 grupo**, que es lo que ya decidió `ROADMAP_PLATAFORMA.md` ("grupos por CSV",
 un bodegón por grupo).
+
+---
+
+## Escala del camino determinista (2026-09-03)
+
+La pregunta era si los productos podían encoger con gracia al crecer la
+cantidad, en vez de tener un tope. En el camino determinista **sí**, y por una
+razón que no aplica a la generativa: los productos son **fotos reales pegadas**,
+no redibujadas, así que reducirlas pierde tamaño pero **no nitidez**.
+
+Al medirlo aparecieron dos cosas rotas:
+
+**Las filas estaban fijas en 3** a partir de 16 productos, y `aspect_w`/
+`aspect_h` se asignaban pero **nunca se leían** — parámetros muertos. Como el
+canvas es exacto al contenido, 3 filas de N crecen solo a lo ancho: 60
+productos daban `12510x2975`, una tira de 4.2:1.
+
+**`MAX_CANVAS_DIM` no era un tope.** Decía ser "tope duro del lado mayor del
+canvas final", pero `_compute_export_scale` terminaba en `max(1.0, scale)`, así
+que solo limitaba hacia ARRIBA: con un lienzo lógico ya mayor a 4000 px
+calculaba la reducción correcta y acto seguido la descartaba. Un bodegón de 60
+productos salía a 38 MP.
+
+### Resultado
+
+Las filas ahora se eligen para **maximizar el tamaño del producto** dentro del
+tope: con el lado mayor topado, el producto sale más grande cuando el lienzo se
+acerca al cuadrado. El piso de aspecto 1.0 evita que la pieza salga más alta
+que ancha.
+
+| n | filas antes → ahora | salida | aspecto | alto/producto | ganancia |
+|---|---|---|---|---|---|
+| 6 | 1 → 1 | 4000×1254 | 3.19 | 1078 px | igual |
+| 14 | 2 → 2 | 4000×2089 | 1.91 | 900 px | igual |
+| 16 | 3 → 3 | 4000×3057 | 1.31 | 869 px | igual |
+| 20 | 3 → 3 | 4000×2864 | 1.40 | 815 px | igual |
+| 30 | 3 → **4** | 3999×3299 | 1.21 | 701 px | **+32%** |
+| 40 | 3 → **5** | 4000×3395 | 1.18 | 564 px | **+58%** |
+| 60 | 3 → **6** | 4000×3546 | 1.13 | 503 px | **+87%** |
+
+Todo `n ≤ 20` conserva el reparto que ya tenía: la mejora es solo donde antes
+degradaba. Verificado renderizando 60 productos reales (PNG 14.2 MP y PSD de 61
+capas, ambos 4000×3546) y sobre las 30 estrategias × 7 cantidades = 210
+combinaciones.
+
+De paso, `aspect_w`/`aspect_h` dejaron de ser código muerto: el control que el
+frontend ya enviaba ahora decide el reparto (5:1 → 3 filas, 1:1 → 6 filas).
+
+`tests/test_escala_salida.py` lo blinda en la suite automática.
