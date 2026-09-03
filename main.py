@@ -794,6 +794,24 @@ async def bodegon_ai_generate_image(body: dict, request: Request):
 
     custom_prompt = (body.get("custom_prompt") or "").strip()
 
+    # El tope se valida ACÁ, no dentro de generate_bodegon_image, porque no es
+    # un fallo del servidor sino del pedido: pasar por el `except Exception` de
+    # abajo lo convertía en un 500 y _public_error le borraba el mensaje con
+    # DEBUG apagado, así que el usuario veía "Error generando imagen con IA" y
+    # nunca se enteraba del límite ni de que los otros modos SÍ aguantan su
+    # cantidad. Mismo criterio que el 413 de MAX_FILES en /upload.
+    from image_gen import MAX_PRODUCTS_FOR_GENERATION
+    n = len(info["images"])
+    if n > MAX_PRODUCTS_FOR_GENERATION:
+        raise HTTPException(
+            400,
+            f"Generación IA redibuja la escena entera y solo mantiene la "
+            f"fidelidad de las etiquetas hasta {MAX_PRODUCTS_FOR_GENERATION} "
+            f"productos (tenés {n}). Para esta cantidad usá «Estilos de layout» "
+            f"o «Propuestas IA»: componen tus fotos reales sin redibujarlas, "
+            f"así que no pierden nitidez.",
+        )
+
     try:
         from image_gen import generate_bodegon_image
         # La llamada a OpenAI tarda 1-3 min y es síncrona (bloqueante) — sin
