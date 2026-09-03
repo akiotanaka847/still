@@ -207,9 +207,17 @@ def _rotated_bbox(w: float, h: float, degrees: float) -> tuple:
     return new_w, new_h
 
 
-# Tope del lado mayor del canvas final, en píxeles (peso/tiempo de render).
-# renderer.py lo APLICA reduciendo el layout; acá se necesita para saber si el
-# tope va a apretar, que es lo único que hace que el reparto de filas importe.
+# Umbral de referencia del lado mayor del lienzo, en píxeles.
+#
+# NO es un tope de tamaño final: renderer.py nunca reduce (ver
+# _compute_export_scale, y el porqué anotado ahí). Cumple dos papeles:
+#   - en renderer.py, techo de AMPLIACIÓN al exportar;
+#   - acá, umbral para decidir si el reparto de filas de siempre ya sirve.
+#
+# Ese segundo uso es el que importa para la forma de la pieza: mientras el
+# reparto fijo quepa por debajo de este umbral se respeta tal cual (y así los
+# sets chicos conservan su composición clásica); cuando se pasa, es señal de
+# que la pieza se está estirando y conviene recalcular.
 MAX_CANVAS_DIM = 4000
 
 
