@@ -25,11 +25,26 @@ from PIL import Image
 
 from renderer import _content_bbox
 
-MAX_PRODUCTS_FOR_GENERATION = 16  # probado con 14 productos reales (2026-08-30,
-                                   # catálogo real: bebidas, snacks, dips) con
-                                   # buena fidelidad — no es un límite duro
-                                   # conocido de la API, es un tope propio con
-                                   # margen chico sobre lo ya verificado
+# Tope propio, NO de la API: `images.edit` acepta 60 archivos sin quejarse
+# (verificado 2026-09-03). El límite es de CALIDAD, y se midió generando con
+# productos reales del catálogo — ver tests/bodegon/generativa_60.py:
+#
+#   n=14  fidelidad excelente. Etiquetas nítidas, incluso los sellos "EXCESO
+#         CALORÍAS/AZÚCARES" mexicanos correctos. Fondo transparente al 37%.
+#   n=20  usable. Composición buena, pero empiezan las marcas degradadas
+#         ("LMENDRA" por "ALMENDRA") e inventadas en la fila de atrás.
+#   n=30  la composición aún se sostiene, la fidelidad NO: "Modelox",
+#         "Bobelia", "ALMENDDA", "Pneds". Ya no sirve para catálogo.
+#   n=60  COLAPSO TOTAL. El modelo descarta el pedido entero y devuelve una
+#         imagen ajena — en la prueba, una foto de cumpleaños familiar sin un
+#         solo producto y sin transparencia. No es degradación gradual.
+#
+# El 20 es el techo de lo verificado como usable. Bajarlo a 16 recupera el
+# criterio de "fidelidad casi perfecta"; subirlo no está respaldado por nada.
+#
+# Para lotes más grandes NO hay que subir este número: hay que agrupar y
+# generar por grupo (ver ROADMAP_PLATAFORMA.md, "grupos por CSV").
+MAX_PRODUCTS_FOR_GENERATION = 20
 MAX_CUSTOM_PROMPT_LEN = 300
 
 
