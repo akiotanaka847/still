@@ -1,7 +1,7 @@
 """Config de pytest para las pruebas de Still.
 
 Agrega la raíz del repo al path para poder importar los módulos de la app
-(promo_excel, promo_source, ...) sin instalarla como paquete.
+(layout, renderer, ai_proposal, ...) sin instalarla como paquete.
 """
 import sys
 from pathlib import Path

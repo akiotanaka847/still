@@ -113,7 +113,7 @@ USERS_FILE = DATA_DIR / "users.json"
 SECRET_FILE = DATA_DIR / ".secret"
 
 # Prefijos de rutas que requieren sesión iniciada
-PROTECTED_PREFIXES = ("/api/bodegon", "/api/batch", "/api/promo", "/api/promo-lab")
+PROTECTED_PREFIXES = ("/api/bodegon", "/api/batch")
 
 
 def _get_secret() -> str:
@@ -239,12 +239,7 @@ _CSP = (
     "default-src 'self'; "
     "script-src 'self' 'unsafe-inline'; "
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-    # data: en font-src lo necesita el módulo de Promos: las plantillas
-    # incrustan sus woff2 como data URL para que el SVG sea autocontenido (un
-    # canvas que rasteriza un SVG con recursos externos queda "tainted" y no
-    # se puede exportar). Sin esto, FontFace.load() falla con "A network error
-    # occurred" y no se genera ninguna promo.
-    "font-src 'self' data: https://fonts.gstatic.com; "
+    "font-src 'self' https://fonts.gstatic.com; "
     "img-src 'self' data: blob:; "
     "connect-src 'self'; "
     "frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
@@ -1170,18 +1165,5 @@ async def batch_download(batch_id: str, request: Request):
         raise HTTPException(404, "ZIP no encontrado")
     return FileResponse(str(z), filename="bodegones.zip", media_type="application/zip")
 
-
-# Módulo de Promos (Excel → plantilla → PNG/SVG/PSD). Va como router aparte y
-# no inline acá: su lógica de Excel son ~750 líneas portadas de otro repo, y
-# mantenerlas separadas permite resincronizar con el upstream. Queda detrás de
-# la misma sesión que el resto (ver PROTECTED_PREFIXES).
-from promo import router as promo_router
-app.include_router(promo_router)
-
-# Módulo experimental de ingesta libre: mismas promos, pero alimentadas desde
-# cualquier origen (.xlsx, .json) en vez de solo Excel. Va aparte del router de
-# arriba a propósito — el módulo de Promos actual no se toca.
-from promo_lab import router as promo_lab_router
-app.include_router(promo_lab_router)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
