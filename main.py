@@ -4,6 +4,7 @@ Módulo 1: Reemplaza SmartObjectLayers en archivos PSD/PSB.
 Módulo 2: Generador de bodegones con layout automático + propuesta IA.
 """
 import hashlib
+import asyncio
 import hmac
 import json
 import logging
@@ -56,6 +57,23 @@ MAX_FILES = int(os.environ.get("MAX_FILES", "60"))
 MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024
 SESSION_TTL_HOURS = int(os.environ.get("SESSION_TTL_HOURS", "24"))
 BATCH_TTL_HOURS = int(os.environ.get("BATCH_TTL_HOURS", "24"))
+
+# Retención de las sesiones CON DUEÑO. Antes no tenían ninguna: la limpieza las
+# salteaba enteras, así que crecían sin techo (medido: 1.4 GB en 47 sesiones) y
+# en un filesystem con volumen eso llena el disco y tumba la app.
+#
+# El tope por cantidad está alineado con la galería: /api/bodegon/mine devuelve
+# out[:60], o sea que a partir de la 61ª el usuario ya no puede verla. Guardar
+# más es peso que nadie alcanza.
+#
+# El tope por tamaño es el que de verdad protege el disco: 60 sesiones pueden
+# ser 200 MB o 8 GB según cuántos productos traiga cada una. Se borra de la más
+# vieja hacia la más nueva hasta entrar en el presupuesto, así que la sesión en
+# la que se está trabajando (la más nueva) nunca se toca.
+SESSION_MAX_PER_USER = int(os.environ.get("SESSION_MAX_PER_USER", "60"))
+SESSION_MAX_MB_PER_USER = int(os.environ.get("SESSION_MAX_MB_PER_USER", "1500"))
+OWNED_SESSION_TTL_DAYS = int(os.environ.get("OWNED_SESSION_TTL_DAYS", "90"))
+CLEANUP_EVERY_HOURS = float(os.environ.get("CLEANUP_EVERY_HOURS", "6"))
 RENDER_RATE_LIMIT = int(os.environ.get("RENDER_RATE_LIMIT", "30"))
 AI_RATE_LIMIT = int(os.environ.get("AI_RATE_LIMIT", "12"))
 AI_IMAGE_RATE_LIMIT = int(os.environ.get("AI_IMAGE_RATE_LIMIT", "4"))
@@ -153,9 +171,37 @@ def _verify_pw(pw: str, stored: str) -> bool:
 
 
 # ─── Helpers internos ─────────────────────────────────────────────────────────
+def _dir_size(d: Path) -> int:
+    """Bytes que ocupa un directorio, sin reventar si algo desaparece a mitad."""
+    total = 0
+    for root, _dirs, files in os.walk(d):
+        for f in files:
+            try:
+                total += os.path.getsize(os.path.join(root, f))
+            except OSError:
+                pass
+    return total
+
+
 def _cleanup_old_sessions() -> None:
-    session_cutoff = time.time() - SESSION_TTL_HOURS * 3600
-    batch_cutoff = time.time() - BATCH_TTL_HOURS * 3600
+    """Aplica la retención a sesiones anónimas, lotes y sesiones con dueño.
+
+    Las tres tienen reglas distintas a propósito:
+
+    - Anónimas: TTL corto (SESSION_TTL_HOURS). No hay a quién mostrárselas.
+    - Lotes: TTL corto (BATCH_TTL_HOURS). Son un zip de paso.
+    - Con dueño: son el trabajo del usuario, así que NO se borran por edad sola.
+      Se aplican, en este orden, cuota de cantidad → presupuesto de disco →
+      TTL largo de respaldo. Siempre de la más vieja a la más nueva.
+    """
+    ahora = time.time()
+    session_cutoff = ahora - SESSION_TTL_HOURS * 3600
+    batch_cutoff = ahora - BATCH_TTL_HOURS * 3600
+    owned_cutoff = ahora - OWNED_SESSION_TTL_DAYS * 86400
+
+    por_usuario: dict = {}
+    borradas = 0
+
     for d in SESSIONS_DIR.iterdir():
         if not d.is_dir():
             continue
@@ -163,17 +209,66 @@ def _cleanup_old_sessions() -> None:
             for bd in d.iterdir():
                 if bd.is_dir() and bd.stat().st_mtime < batch_cutoff:
                     shutil.rmtree(bd, ignore_errors=True)
+                    borradas += 1
             continue
+
         info_file = d / "bodegon.json"
+        info = {}
         if info_file.exists():
             try:
                 info = json.loads(info_file.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, OSError):
                 info = {}
-            if info.get("owner"):
-                continue
-        if d.stat().st_mtime < session_cutoff:
+
+        owner = info.get("owner")
+        if not owner:
+            # Anónima: como antes.
+            if d.stat().st_mtime < session_cutoff:
+                shutil.rmtree(d, ignore_errors=True)
+                borradas += 1
+            continue
+
+        # Con dueño: se junta para decidir por usuario, no una por una.
+        try:
+            creada = float(info.get("created") or d.stat().st_mtime)
+        except (TypeError, ValueError):
+            creada = d.stat().st_mtime
+        por_usuario.setdefault(owner, []).append((creada, d))
+
+    presupuesto = SESSION_MAX_MB_PER_USER * 1024 * 1024
+    for owner, sesiones in por_usuario.items():
+        sesiones.sort(key=lambda x: x[0], reverse=True)      # más nueva primero
+
+        sobran = sesiones[SESSION_MAX_PER_USER:]             # cuota de cantidad
+        quedan = sesiones[:SESSION_MAX_PER_USER]
+
+        # Presupuesto de disco: se suma desde la más nueva y se corta EN la que
+        # se pasa, no después. Si se conservara la que desborda, el tope no
+        # sería un tope: con un presupuesto de 1500 MB y una sesión de 235 MB
+        # (tamaño real, medido) se podía terminar en 1735.
+        #
+        # La más nueva se conserva SIEMPRE, sin importar el presupuesto: es la
+        # que el usuario tiene abierta, y borrarla por cuota sería borrarle el
+        # trabajo en curso. Un presupuesto más chico que una sola sesión
+        # degrada a "guardar solo la última", que es lo razonable.
+        usado = 0
+        for i, (_creada, d) in enumerate(quedan):
+            usado += _dir_size(d)
+            if usado > presupuesto and i > 0:
+                sobran.extend(quedan[i:])
+                break
+
+        # TTL largo de respaldo, para cuentas abandonadas.
+        sobran.extend((c, d) for c, d in quedan if c < owned_cutoff
+                      and not any(d == x[1] for x in sobran))
+
+        for _creada, d in sobran:
+            _logger.info("Retención: borrando sesión %s de %s", d.name, owner)
             shutil.rmtree(d, ignore_errors=True)
+            borradas += 1
+
+    if borradas:
+        _logger.info("Retención: %d sesiones/lotes borrados", borradas)
 
 
 def _safe_name(name: str) -> str:
@@ -211,16 +306,39 @@ def _public_error(message: str, exc: Exception) -> HTTPException:
 
 
 # ─── Lifespan ─────────────────────────────────────────────────────────────────
+async def _cleanup_loop() -> None:
+    """Corre la retención cada CLEANUP_EVERY_HOURS mientras la app viva.
+
+    Antes solo corría al arrancar, y un servidor de producción puede pasar
+    semanas sin reiniciarse: la limpieza no llegaba nunca justo cuando más
+    hacía falta. Va en threadpool porque recorre el disco y bloquea.
+    """
+    while True:
+        # Piso de 1 s, no de 15 min: lo unico que tiene que evitar el piso es
+        # un busy-loop si alguien configura 0. Un piso grande hacia el loop
+        # imposible de verificar en una prueba, que es peor negocio — la
+        # proteccion real es que el default son 6 h.
+        await asyncio.sleep(max(1.0, CLEANUP_EVERY_HOURS * 3600))
+        try:
+            await run_in_threadpool(_cleanup_old_sessions)
+        except Exception:                      # nunca matar el loop por un fallo
+            _logger.exception("Fallo la limpieza periodica de sesiones")
+
+
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
     _cleanup_old_sessions()
+    tarea = asyncio.create_task(_cleanup_loop())
 
     def _open_browser():
         time.sleep(1.5)
         webbrowser.open("http://localhost:8000")
 
     threading.Thread(target=_open_browser, daemon=True).start()
-    yield
+    try:
+        yield
+    finally:
+        tarea.cancel()
 
 
 # ─── App ──────────────────────────────────────────────────────────────────────
