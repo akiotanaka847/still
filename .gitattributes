@@ -1,0 +1,20 @@
+# ─── Salida compilada ─────────────────────────────────────────────────────────
+# static/css/tailwind.css es la SALIDA de `npm run build:css`, versionada a
+# propósito: la imagen de Docker es python-slim y no lleva Node, así que si no
+# estuviera en el repo no habría con qué compilarla al desplegar.
+#
+# El costo de eso es que las ramas de módulo (bodegon, promos) la regeneran cada
+# una por su lado y en cada merge conflictúa por un contenido que no significa
+# nada — dos compilaciones distintas del mismo CSS. El driver `keepours` resuelve
+# al lado de destino sin preguntar, y la regla que lo hace correcto es
+# RECOMPILAR después de cada merge a master:
+#
+#     npm run build:css && git add static/css/tailwind.css
+#
+# El driver vive en la config local (no se versiona). Una vez por clon:
+#
+#     git config merge.keepours.driver true
+#
+# Sin esa línea el merge falla pidiendo el driver, que es un error ruidoso y no
+# una resolución silenciosa equivocada — preferible en ese orden.
+static/css/tailwind.css merge=keepours
