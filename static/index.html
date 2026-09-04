@@ -90,6 +90,15 @@
   .ravel-mark { width:100%; height:100%; display:block; filter:drop-shadow(0 8px 20px rgba(19,214,192,.18)); }
   /* Tarjetas de modo de Still AI: la seleccionada se marca con borde y fondo,
      no solo con color de texto — es una eleccion, no un enlace. */
+  .preset-btn { border:1px solid rgba(255,255,255,.12); color:#9aa6b8; background:transparent; transition:all .15s; }
+  .preset-btn:hover { border-color:rgba(99,102,241,.5); color:#c7d2fe; }
+  .preset-btn.is-on { border-color:#6366f1; background:rgba(99,102,241,.18); color:#e0e7ff; }
+  /* Tooltip nativo: un title basta y no arrastra JS ni libreria. El circulo
+     solo lo hace visible como algo consultable. */
+  .tip { display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px;
+         border-radius:50%; border:1px solid rgba(255,255,255,.25); color:#8e9aae;
+         font-size:9px; font-weight:700; cursor:help; flex-shrink:0; }
+  .tip:hover { border-color:#818cf8; color:#c7d2fe; }
   .ai-mode-card { border:1px solid rgba(255,255,255,.10); background:rgba(255,255,255,.03); }
   .ai-mode-card:hover { border-color:rgba(168,85,247,.45); }
   .ai-mode-card.is-on { border-color:#a855f7; background:rgba(168,85,247,.12); box-shadow:0 0 0 1px rgba(168,85,247,.35); }
@@ -494,7 +503,14 @@
             <h3 class="font-bold text-gray-900">Background</h3>
             <span class="text-xs text-gray-400 font-normal">(optional)</span>
           </div>
-          <p class="text-xs text-gray-500 mb-3 ml-8">Upload a background image, or leave it transparent and pick a studio background when you preview.</p>
+          <p class="text-xs text-gray-500 mb-3 ml-8">Leave it transparent, pick a studio background, or upload your own.</p>
+
+          <!-- Los fondos de estudio ya existian, pero SOLO aparecian en la
+               pantalla de vista previa, o sea despues de generar: nadie los
+               encontraba. Esta tira es la misma (mismas funciones, mismo
+               estado BOD_BACKGROUND_STYLE), solo que tambien aqui, que es
+               donde se decide. renderBgStyleGrid() llena las dos. -->
+          <div id="bg-style-grid-step" class="flex gap-2 overflow-x-auto pb-1 mb-3"></div>
                     <div id="bod-bg-dz"
                class="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center cursor-pointer
                       hover:border-indigo-300 hover:bg-indigo-50 transition-all"
@@ -717,7 +733,7 @@
         </div>
 
         <div class="bg-white border border-gray-200 rounded-2xl p-4 mb-4">
-          <p class="text-xs font-medium text-gray-500 mb-3">Vista previa</p>
+          <p class="text-xs font-medium text-gray-500 mb-3">Preview</p>
           <div class="overflow-auto rounded-xl flex items-center justify-center min-h-40">
             <canvas id="bod-canvas" class="max-w-full rounded-xl shadow-sm"></canvas>
           </div>
@@ -784,7 +800,7 @@
 
         <!-- Filas -->
         <div>
-          <label class="block text-xs font-medium text-gray-500 mb-1.5">Rows</label>
+          <div class="flex items-center gap-1.5 mb-1.5"><label class="text-xs font-medium text-gray-500">Rows</label><span class="tip" title="How many rows the products are spread across. Auto picks the one that keeps the piece from stretching.">?</span></div>
           <div class="flex gap-1.5" id="rows-btns">
             <button onclick="setRows(0)" data-rows="0"
                     class="rows-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-indigo-200 bg-indigo-600 text-white transition-all">Auto</button>
@@ -794,6 +810,36 @@
                     class="rows-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">2</button>
             <button onclick="setRows(3)" data-rows="3"
                     class="rows-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">3</button>
+          </div>
+        </div>
+
+        <!-- Presets con nombre para tamano y espaciado. Escriben en los MISMOS
+             cfg-height y cfg-gap que los sliders de abajo, asi que no hay dos
+             fuentes de verdad: el preset mueve el slider, y mover el slider a
+             mano desmarca el preset. Un slider que dice "760 px" no le dice
+             nada a quien compone; "Balanced" si. Los sliders siguen ahi para
+             control fino, dentro de Advanced. -->
+        <div>
+          <div class="flex items-center gap-1.5 mb-1.5">
+            <label class="text-xs font-medium text-gray-500">Product size</label>
+            <span class="tip" title="How tall each product is drawn in the composition, before the final export scale.">?</span>
+          </div>
+          <div class="flex gap-1.5" id="size-btns">
+            <button onclick="setSizePreset(520)"  data-v="520"  class="preset-btn flex-1 py-2 text-xs font-semibold rounded-lg">Small</button>
+            <button onclick="setSizePreset(760)"  data-v="760"  class="preset-btn is-on flex-1 py-2 text-xs font-semibold rounded-lg">Balanced</button>
+            <button onclick="setSizePreset(1100)" data-v="1100" class="preset-btn flex-1 py-2 text-xs font-semibold rounded-lg">Large</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center gap-1.5 mb-1.5">
+            <label class="text-xs font-medium text-gray-500">Spacing</label>
+            <span class="tip" title="Gap left between products. Compact packs them together; Wide gives each one air.">?</span>
+          </div>
+          <div class="flex gap-1.5" id="gap-btns">
+            <button onclick="setGapPreset(15)" data-v="15" class="preset-btn flex-1 py-2 text-xs font-semibold rounded-lg">Compact</button>
+            <button onclick="setGapPreset(40)" data-v="40" class="preset-btn is-on flex-1 py-2 text-xs font-semibold rounded-lg">Normal</button>
+            <button onclick="setGapPreset(90)" data-v="90" class="preset-btn flex-1 py-2 text-xs font-semibold rounded-lg">Wide</button>
           </div>
         </div>
 
@@ -807,7 +853,7 @@
             </div>
             <input type="range" id="cfg-height" min="300" max="2000" value="760" step="10"
                    class="w-full accent-indigo-600"
-                   oninput="document.getElementById('lbl-height').textContent=this.value+' px'">
+                   oninput="document.getElementById('lbl-height').textContent=this.value+' px'; _marcarPreset('size-btns', this.value)">
           </div>
           <!-- Separación -->
           <div>
@@ -817,12 +863,12 @@
             </div>
             <input type="range" id="cfg-gap" min="0" max="200" value="40" step="5"
                    class="w-full accent-indigo-600"
-                   oninput="document.getElementById('lbl-gap').textContent=this.value+' px'">
+                   oninput="document.getElementById('lbl-gap').textContent=this.value+' px'; _marcarPreset('gap-btns', this.value)">
           </div>
           <!-- Ángulo (solo Inclinado derecha/izquierda) -->
           <div>
             <div class="flex items-center justify-between mb-1.5">
-              <label class="text-xs font-medium text-gray-500">Tilt angle <span class="text-gray-300 font-normal">(Tilt styles)</span></label>
+              <div class="flex items-center gap-1.5"><label class="text-xs font-medium text-gray-500">Tilt angle <span class="text-gray-300 font-normal">(Tilt styles)</span></label><span class="tip" title="Only affects the Tilt right / Tilt left styles: how many degrees each product leans.">?</span></div>
               <span class="text-xs font-semibold text-gray-700" id="lbl-tilt-angle">30°</span>
             </div>
             <input type="range" id="cfg-tilt-angle" min="5" max="60" value="30" step="1"
@@ -1031,6 +1077,9 @@ function switchTab(name) {
   });
   if (name === 'projects') loadProjectsGrid();
   if (name === 'home') loadHome();
+  // La tira de fondos del paso 2 vive fuera del flujo de vista previa, asi que
+  // hay que pintarla al entrar a Create y no solo al llegar al preview.
+  if (name === 'bodegon') renderBgStyleGrid();
   window.scrollTo({ top: 0 });
 }
 
@@ -2070,6 +2119,24 @@ function bodUpdateAIGenNotice() {
 // Alterna los dos modos de Still AI. No desmonta nada: solo muestra u oculta
 // el panel de cada uno, asi que el resultado ya generado de un modo sigue ahi
 // si se vuelve a el.
+// Los presets y los sliders son la MISMA configuracion vista de dos formas.
+// Escribir en uno actualiza al otro: si no, la interfaz podria mostrar
+// "Balanced" mientras el slider dice 1100, y el render usaria el slider.
+function _marcarPreset(cont, v) {
+  document.querySelectorAll('#' + cont + ' .preset-btn').forEach(b =>
+    b.classList.toggle('is-on', Number(b.dataset.v) === Number(v)));
+}
+function setSizePreset(v) {
+  const sl = document.getElementById('cfg-height');
+  sl.value = v; document.getElementById('lbl-height').textContent = v + ' px';
+  _marcarPreset('size-btns', v);
+}
+function setGapPreset(v) {
+  const sl = document.getElementById('cfg-gap');
+  sl.value = v; document.getElementById('lbl-gap').textContent = v + ' px';
+  _marcarPreset('gap-btns', v);
+}
+
 function setAIMode(mode) {
   const reco = mode === 'reco';
   document.getElementById('ai-pane-reco').classList.toggle('hidden', !reco);
@@ -2316,26 +2383,32 @@ function _bgSwatchClass(selected) {
 }
 
 async function renderBgStyleGrid() {
-  const grid = document.getElementById('bg-style-grid');
-  if (!grid) return;
-  grid.innerHTML = '';
-
-  const noneCard = document.createElement('div');
-  noneCard.className = _bgSwatchClass(!BOD_BACKGROUND_STYLE);
-  noneCard.title = 'No background (transparent)';
-  noneCard.innerHTML = `<div class="checker-bg w-full h-full flex items-center justify-center"><span class="text-[8px] text-gray-400 font-semibold text-center leading-tight px-1">No<br>background</span></div>`;
-  noneCard.onclick = () => selectBgStyle(null);
-  grid.appendChild(noneCard);
-
+  // Dos tiras con el mismo contenido: la del paso 2 (donde se decide) y la de
+  // la vista previa (donde se ve el efecto). Comparten BOD_BACKGROUND_STYLE,
+  // asi que elegir en una marca la otra.
+  const grids = ['bg-style-grid-step', 'bg-style-grid']
+    .map(id => document.getElementById(id)).filter(Boolean);
+  if (!grids.length) return;
   const styles = await loadBgStyles();
-  styles.forEach(s => {
-    const card = document.createElement('div');
-    card.className = _bgSwatchClass(BOD_BACKGROUND_STYLE === s.id);
-    card.title = s.label;
-    card.innerHTML = `<img src="${s.thumb}" class="w-full h-full object-cover" alt="${esc(s.label)}">`;
-    card.onclick = () => selectBgStyle(s.id);
-    grid.appendChild(card);
-  });
+  for (const grid of grids) {
+    grid.innerHTML = '';
+
+    const noneCard = document.createElement('div');
+    noneCard.className = _bgSwatchClass(!BOD_BACKGROUND_STYLE);
+    noneCard.title = 'No background (transparent)';
+  noneCard.innerHTML = `<div class="checker-bg w-full h-full flex items-center justify-center"><span class="text-[8px] text-gray-400 font-semibold text-center leading-tight px-1">No<br>background</span></div>`;
+    noneCard.onclick = () => selectBgStyle(null);
+    grid.appendChild(noneCard);
+
+    styles.forEach(s => {
+      const card = document.createElement('div');
+      card.className = _bgSwatchClass(BOD_BACKGROUND_STYLE === s.id);
+      card.title = s.label;
+      card.innerHTML = `<img src="${s.thumb}" class="w-full h-full object-cover" alt="${esc(s.label)}">`;
+      card.onclick = () => selectBgStyle(s.id);
+      grid.appendChild(card);
+    });
+  }
 }
 
 function selectBgStyle(id) {
