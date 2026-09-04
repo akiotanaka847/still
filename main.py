@@ -421,6 +421,50 @@ async def _unhandled_exception(request: Request, exc: Exception):
 
 
 # ─── Rutas ────────────────────────────────────────────────────────────────────
+# ─── Iconos en la RAÍZ ─────────────────────────────────────────────────────────
+# El navegador pide /favicon.ico por su cuenta, sin mirar los <link> del HTML:
+# al abrir la pestana, desde un marcador, desde el historial. Aqui devolvia 404
+# y encima los navegadores CACHEAN ese 404, asi que la pestana se quedaba sin
+# icono por mucho que el HTML declarara los suyos — y el ?v= de los <link> no
+# sirve de nada contra una URL que el navegador construye solo.
+#
+# Lo mismo con los apple-touch-icon, que iOS pide en la raiz al anadir a la
+# pantalla de inicio si no encuentra la etiqueta.
+_ICONOS_RAIZ = {
+    "/favicon.ico": ("favicon.ico", "image/x-icon"),
+    "/apple-touch-icon.png": ("favicon-180.png", "image/png"),
+    "/apple-touch-icon-precomposed.png": ("favicon-180.png", "image/png"),
+}
+
+
+def _servir_icono_raiz(nombre: str, tipo: str) -> FileResponse:
+    ruta = STATIC_DIR / nombre
+    if not ruta.exists():
+        raise HTTPException(404, "Icon not found")
+    # Estos si se guardan: son pequenos y cuando cambian se cambia su nombre
+    # o su ?v= en el HTML.
+    return FileResponse(
+        str(ruta),
+        media_type=tipo,
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon_raiz() -> FileResponse:
+    return _servir_icono_raiz(*_ICONOS_RAIZ["/favicon.ico"])
+
+
+@app.get("/apple-touch-icon.png", include_in_schema=False)
+async def apple_icono() -> FileResponse:
+    return _servir_icono_raiz(*_ICONOS_RAIZ["/apple-touch-icon.png"])
+
+
+@app.get("/apple-touch-icon-precomposed.png", include_in_schema=False)
+async def apple_icono_pre() -> FileResponse:
+    return _servir_icono_raiz(*_ICONOS_RAIZ["/apple-touch-icon-precomposed.png"])
+
+
 @app.get("/", response_class=HTMLResponse)
 async def frontend() -> HTMLResponse:
     """La pagina entera. Toda la aplicacion vive en este HTML.

@@ -81,3 +81,41 @@ def test_los_iconos_van_versionados():
     assert enlaces, "el HTML no declara ningun icono"
     sin_version = [e for e in enlaces if "?v=" not in e]
     assert not sin_version, f"iconos sin ?v=: {sin_version}"
+
+
+def test_el_icono_se_sirve_en_la_raiz():
+    """El navegador pide /favicon.ico por su cuenta, sin mirar los <link>: al
+    abrir la pestana, desde un marcador, desde el historial. Devolvia 404, y
+    los navegadores cachean ese 404 — la pestana se quedaba sin icono por
+    mucho que el HTML declarara los suyos. El ?v= de los <link> no ayuda
+    contra una URL que el navegador construye solo.
+    """
+    from fastapi.testclient import TestClient
+
+    import main
+
+    r = TestClient(main.app).get("/favicon.ico")
+    assert r.status_code == 200, "/favicon.ico en la raiz no se sirve"
+    assert r.headers["content-type"].startswith("image/")
+    assert len(r.content) > 500
+
+
+def test_los_iconos_de_apple_se_sirven_en_la_raiz():
+    """iOS los pide en la raiz al anadir a la pantalla de inicio si no
+    encuentra la etiqueta."""
+    from fastapi.testclient import TestClient
+
+    c = TestClient(__import__("main").app)
+    for ruta in ("/apple-touch-icon.png", "/apple-touch-icon-precomposed.png"):
+        r = c.get(ruta)
+        assert r.status_code == 200, f"{ruta} no se sirve"
+        assert r.headers["content-type"].startswith("image/")
+
+
+def test_los_iconos_de_raiz_si_se_pueden_guardar():
+    """Al contrario que el HTML: son pequenos y cuando cambian se cambia su
+    nombre o su ?v= en el HTML."""
+    from fastapi.testclient import TestClient
+
+    r = TestClient(__import__("main").app).get("/favicon.ico")
+    assert "no-cache" not in r.headers.get("cache-control", "")
