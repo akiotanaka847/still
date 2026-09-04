@@ -88,6 +88,11 @@
   .still-mark-box { display:block; filter:drop-shadow(0 14px 30px rgba(124,58,237,.30)); }
   .still-mark-box img { width:100%; height:100%; display:block; object-fit:contain; }
   .ravel-mark { width:100%; height:100%; display:block; filter:drop-shadow(0 8px 20px rgba(19,214,192,.18)); }
+  /* Tarjetas de modo de Still AI: la seleccionada se marca con borde y fondo,
+     no solo con color de texto — es una eleccion, no un enlace. */
+  .ai-mode-card { border:1px solid rgba(255,255,255,.10); background:rgba(255,255,255,.03); }
+  .ai-mode-card:hover { border-color:rgba(168,85,247,.45); }
+  .ai-mode-card.is-on { border-color:#a855f7; background:rgba(168,85,247,.12); box-shadow:0 0 0 1px rgba(168,85,247,.35); }
   .ravel-logo-lockup { display:flex; align-items:center; gap:.65rem; min-width:0; }
   .ravel-word { color:#fff; font-weight:800; line-height:1; letter-spacing:0; }
   /* El punto de la "i" de Still va VIOLETA, es el detalle propio del wordmark.
@@ -606,20 +611,55 @@
              Mismo tratamiento de tarjeta que las otras 2 secciones (borde +
              fondo suave) para que las 3 se vean como bloques paralelos, no
              una destacada con caja y las otras sueltas. -->
-        <div id="ai-block" class="mb-5 glass rounded-2xl p-4">
-          <div class="flex items-center gap-2 mb-1.5">
-            <span class="text-purple-600 text-sm">✦</span>
-            <p class="text-sm font-bold text-purple-800">AI proposals</p>
-            <span class="text-[10px] font-semibold text-purple-200 bg-purple-500/20 px-1.5 py-0.5 rounded-full">uses AI</span>
-            <span id="ai-status" class="text-[11px] text-purple-400">Optional</span>
+        <!-- UN SOLO panel de IA con dos modos, en vez de dos tarjetas moradas
+             casi identicas. El problema no era el aspecto: era que nada decia
+             en que se diferencian, y esa diferencia es la que mas importa —
+             "Recommend" COMPONE tus fotos reales sin tocar un pixel; "Create
+             image" las REDIBUJA. Ahora cada modo lo dice en su tarjeta.
+             Los controles de dentro son los mismos de antes, movidos enteros,
+             asi que ai-layout-select, ai-custom-input, ai-gen-input y sus
+             botones conservan sus handlers. -->
+        <div class="mb-5 glass rounded-2xl p-5">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-purple-400 text-sm">✦</span>
+            <p class="text-sm font-bold text-purple-200">Still AI</p>
+            <span id="ai-status" class="text-[11px] font-semibold text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full">Optional</span>
           </div>
+          <p class="text-xs text-gray-400 mb-4">Turn your products into high-impact visual compositions.</p>
+
+          <div class="grid sm:grid-cols-2 gap-3 mb-5">
+            <button type="button" id="ai-mode-reco-btn" onclick="setAIMode('reco')"
+                    class="ai-mode-card is-on text-left rounded-xl p-3.5 transition-all">
+              <div class="flex items-start gap-2.5">
+                <span class="text-lg leading-none mt-0.5">🧩</span>
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-white">Recommend composition</p>
+                  <p class="text-[11px] text-gray-400 leading-snug mt-0.5">Still reads your products and proposes the best arrangement. Your photos are composed, never redrawn.</p>
+                  <span class="inline-block mt-1.5 text-[10px] font-semibold text-emerald-300 bg-emerald-500/15 px-1.5 py-0.5 rounded-full">seconds · photos untouched</span>
+                </div>
+              </div>
+            </button>
+            <button type="button" id="ai-mode-crea-btn" onclick="setAIMode('crea')"
+                    class="ai-mode-card text-left rounded-xl p-3.5 transition-all">
+              <div class="flex items-start gap-2.5">
+                <span class="text-lg leading-none mt-0.5">🖼️</span>
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-white">Create image</p>
+                  <p class="text-[11px] text-gray-400 leading-snug mt-0.5">Generates a whole new image from your idea. It redraws the pixels, so labels can drift.</p>
+                  <span class="inline-block mt-1.5 text-[10px] font-semibold text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded-full">3–5 min · 1 image call</span>
+                </div>
+              </div>
+            </button>
+          </div>
+
+          <div id="ai-pane-reco">
           <p id="ai-reasoning" class="text-[11px] text-gray-500 mb-2.5 leading-relaxed max-w-3xl"></p>
           <div class="flex flex-col sm:flex-row sm:items-center gap-2 mb-3 max-w-3xl">
             <select id="ai-layout-select"
                     style="color-scheme: light; -webkit-appearance: none; appearance: none; color: #111827; background-color: #fff;"
                     class="text-xs text-gray-900 bg-white border border-purple-200 rounded-lg px-3 py-2 focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all">
               <option value="dynamic">Dynamic</option>
-              <option value="elegant">Elegante</option>
+              <option value="elegant">Elegant</option>
               <option value="editorial">Editorial</option>
             </select>
             <button id="ai-analyze-btn" onclick="bodAnalyzeAI()"
@@ -641,20 +681,9 @@
           </div>
 
           <div id="ai-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-5xl"></div>
-        </div>
-
-        <!-- Generación IA experimental: la IA redibuja la imagen completa
-             (gpt-image-2, images.edit) en vez de proponer un layout para que
-             Pillow lo componga — ver image_gen.py. No es una tarjeta más del
-             grid de arriba porque no produce un 'layout', produce un PNG
-             final directo. Sin párrafo descriptivo propio (ya lo dice la
-             leyenda de arriba) — repetirlo acá era la fuente principal del
-             amontonamiento que reportó el usuario. -->
-        <div id="ai-gen-block" class="mb-5 glass rounded-2xl p-4">
-          <div class="flex items-center gap-2 mb-3">
-            <p class="text-sm font-bold text-purple-800">AI Generation</p>
-            <span class="text-[10px] font-semibold text-amber-200 bg-amber-500/20 px-1.5 py-0.5 rounded-full">3–5 min · 1 image call</span>
           </div>
+
+          <div id="ai-pane-crea" class="hidden">
           <!-- Aviso de costo/límite. Va acá dentro y no como tarjeta aparte:
                es una nota sobre ESTE control, no una sección. Lo llena
                bodUpdateAIGenNotice() con la cantidad de productos actual. -->
@@ -671,20 +700,21 @@
             </button>
           </div>
           <div id="ai-gen-result" class="hidden">
-            <img id="ai-gen-img" alt="Composición generada"
+            <img id="ai-gen-img" alt="AI-generated composition"
                  class="max-w-full rounded-xl border border-gray-200 shadow-sm mb-2"
                  style="background-image: repeating-conic-gradient(#e5e7eb 0% 25%, #fff 0% 50%); background-size: 16px 16px;">
             <br>
             <div class="flex items-center gap-3">
               <a id="ai-gen-download" href="#" download="bodegon_ai.png"
                  class="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700">
-                ⬇ Descargar PNG
+                ⬇ Download PNG
               </a>
-              <a id="ai-gen-download-psd" href="#" download="bodegon_ai.psd" title="Una sola capa — la IA redibujó todo como una imagen, no hay productos separados"
+              <a id="ai-gen-download-psd" href="#" download="bodegon_ai.psd" title="Single layer — AI redrew everything as one image, no separate products"
                  class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-700">
-                ⬇ Descargar PSD
+                ⬇ Download PSD
               </a>
             </div>
+          </div>
           </div>
         </div>
 
@@ -2068,6 +2098,17 @@ function bodUpdateAIGenNotice() {
     // riesgo real de gastar de mas — ambar de 31 a 45, rojo por encima de 45.
     el.classList.add('hidden');
   }
+}
+
+// Alterna los dos modos de Still AI. No desmonta nada: solo muestra u oculta
+// el panel de cada uno, asi que el resultado ya generado de un modo sigue ahi
+// si se vuelve a el.
+function setAIMode(mode) {
+  const reco = mode === 'reco';
+  document.getElementById('ai-pane-reco').classList.toggle('hidden', !reco);
+  document.getElementById('ai-pane-crea').classList.toggle('hidden', reco);
+  document.getElementById('ai-mode-reco-btn').classList.toggle('is-on', reco);
+  document.getElementById('ai-mode-crea-btn').classList.toggle('is-on', !reco);
 }
 
 async function bodGenerateAIImage() {
