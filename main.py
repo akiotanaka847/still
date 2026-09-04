@@ -4,6 +4,7 @@ Módulo 1: Reemplaza SmartObjectLayers en archivos PSD/PSB.
 Módulo 2: Generador de composiciones con layout automático + propuesta IA.
 """
 import hashlib
+import io
 import asyncio
 import hmac
 import json
@@ -463,12 +464,132 @@ async def auth_logout(request: Request):
     return {"ok": True}
 
 
+AVATARS_DIR = DATA_DIR / "avatars"
+MAX_AVATAR_MB = 5
+AVATAR_PX = 256      # se guarda cuadrada y chica: es un avatar, no un asset
+
+
+def _avatar_path(user: str) -> Path:
+    """Ruta del avatar. Vive en DATA_DIR y NO en static/: en una plataforma de
+    filesystem efimero, static/ va dentro de la imagen y un redeploy se lleva
+    la foto — es el mismo error que ya costo los kits del modulo de Promos."""
+    return AVATARS_DIR / f"{_safe_name(user)}.png"
+
+
+def _perfil(user: str, users: dict = None) -> dict:
+    """Lo que la interfaz necesita saber del usuario actual."""
+    users = users if users is not None else _load_users()
+    info = users.get(user) or {}
+    return {
+        "username": user,
+        "display_name": info.get("display_name") or user,
+        "has_avatar": _avatar_path(user).exists(),
+    }
+
+
 @app.get("/api/auth/me")
 async def auth_me(request: Request):
     u = request.session.get("user")
     if not u:
         raise HTTPException(401, "Not authenticated")
-    return {"username": u}
+    return _perfil(u)
+
+
+@app.put("/api/auth/profile")
+async def auth_profile(body: dict, request: Request):
+    """Cambia el nombre VISIBLE, no el de acceso.
+
+    El username es la clave de users.json y el `owner` de cada sesion en disco:
+    renombrarlo obligaria a migrar todas las sesiones, y un fallo a mitad
+    dejaria sesiones huerfanas sin dueno. El nombre visible es un campo aparte
+    que no rompe nada.
+    """
+    u = request.session.get("user")
+    if not u:
+        raise HTTPException(401, "Not authenticated")
+    nombre = (body.get("display_name") or "").strip()
+    if not (1 <= len(nombre) <= 60):
+        raise HTTPException(400, "Name must be between 1 and 60 characters")
+    users = _load_users()
+    if u not in users:
+        raise HTTPException(404, "User not found")
+    users[u]["display_name"] = nombre
+    _save_users(users)
+    return _perfil(u, users)
+
+
+@app.post("/api/auth/password")
+async def auth_password(body: dict, request: Request):
+    """Cambia la contrasena. Exige la actual: sin eso, una sesion robada o un
+    equipo desatendido bastarian para quedarse con la cuenta."""
+    u = request.session.get("user")
+    if not u:
+        raise HTTPException(401, "Not authenticated")
+    _require_rate_limit(request, "pwchange", 10, 3600)
+    actual = body.get("current_password") or ""
+    nueva = body.get("new_password") or ""
+    users = _load_users()
+    if u not in users or not _verify_pw(actual, users[u]["password"]):
+        raise HTTPException(400, "Current password is incorrect")
+    if len(nueva) < 8:
+        raise HTTPException(400, "New password must be at least 8 characters")
+    if _verify_pw(nueva, users[u]["password"]):
+        raise HTTPException(400, "The new password is the same as the current one")
+    users[u]["password"] = _hash_pw(nueva)
+    _save_users(users)
+    return {"ok": True}
+
+
+@app.post("/api/auth/avatar")
+async def auth_avatar_upload(request: Request, avatar: UploadFile = File(...)):
+    """Sube la foto de perfil. Se normaliza a PNG cuadrado de AVATAR_PX: asi
+    da igual que suban un JPEG de 8000px o un WebP raro, y el tamano en disco
+    queda acotado por usuario sin necesidad de cuota aparte."""
+    u = request.session.get("user")
+    if not u:
+        raise HTTPException(401, "Not authenticated")
+    _require_rate_limit(request, "avatar", 20, 3600)
+    data = await avatar.read()
+    if not data:
+        raise HTTPException(400, "Empty file")
+    if len(data) > MAX_AVATAR_MB * 1024 * 1024:
+        raise HTTPException(413, f"Over the {MAX_AVATAR_MB} MB limit")
+    try:
+        from PIL import Image
+        im = Image.open(io.BytesIO(data))
+        im.load()
+        im = im.convert("RGBA")
+        lado = min(im.size)                      # recorte central cuadrado
+        izq, arr = (im.width - lado) // 2, (im.height - lado) // 2
+        im = im.crop((izq, arr, izq + lado, arr + lado))
+        im = im.resize((AVATAR_PX, AVATAR_PX), Image.LANCZOS)
+        AVATARS_DIR.mkdir(parents=True, exist_ok=True)
+        im.save(_avatar_path(u), "PNG", optimize=True)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(400, f"Could not read the image ({e})")
+    return _perfil(u)
+
+
+@app.get("/api/auth/avatar")
+async def auth_avatar_get(request: Request):
+    u = request.session.get("user")
+    if not u:
+        raise HTTPException(401, "Not authenticated")
+    fp = _avatar_path(u)
+    if not fp.exists():
+        raise HTTPException(404, "No avatar")
+    return FileResponse(str(fp), media_type="image/png")
+
+
+@app.delete("/api/auth/avatar")
+async def auth_avatar_delete(request: Request):
+    u = request.session.get("user")
+    if not u:
+        raise HTTPException(401, "Not authenticated")
+    _avatar_path(u).unlink(missing_ok=True)
+    return _perfil(u)
 
 
 # ══════════════════════════════════════════════════════════════════════════════

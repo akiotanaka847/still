@@ -320,9 +320,9 @@
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.098 19.902a3.75 3.75 0 005.304 0l6.401-6.402M6.75 21A3.75 3.75 0 013 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 003.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125h-4.072M10.5 8.197l2.88-2.88c.438-.439 1.15-.439 1.59 0l3.712 3.713c.44.44.44 1.152 0 1.59l-2.879 2.88"/></svg>
         <span>Styles</span> <span class="soon">Soon</span>
       </button>
-      <button onclick="toast('Próximamente','warn')" class="nav-item">
+      <button id="nav-settings" onclick="switchTab('settings')" class="nav-item">
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-        <span>Settings</span> <span class="soon">Soon</span>
+        <span>Settings</span>
       </button>
     </nav>
   </aside>
@@ -421,10 +421,6 @@
           <div class="metric-tile rounded-xl p-3"><p id="stat-projects" class="text-2xl font-black text-white">—</p><p class="text-[11px] text-gray-500 mt-1">Projects</p></div>
           <div class="metric-tile rounded-xl p-3"><p id="stat-products" class="text-2xl font-black text-white">—</p><p class="text-[11px] text-gray-500 mt-1">Products</p></div>
         </div>
-      </div>
-      <div class="ravel-panel rounded-2xl p-5">
-        <p class="text-[11px] uppercase tracking-widest text-gray-400 mb-3">Still by Ravel</p>
-        <p class="text-sm text-gray-500 leading-relaxed">Products, assets, data and brand rules go into Still to produce compositions, variations and adaptations ready for every channel.</p>
       </div>
     </aside>
   </section>
@@ -1053,9 +1049,86 @@
   </div>
 </div><!-- /panel-projects -->
 
+<!-- ═══════════════════════════════════════════════════════
+     TAB — SETTINGS (perfil del usuario)
+     El nombre que se cambia aqui es el VISIBLE, no el de acceso: el username
+     es la clave de users.json y el `owner` de cada sesion en disco, asi que
+     renombrarlo obligaria a migrar todas las sesiones. Ver /api/auth/profile.
+═══════════════════════════════════════════════════════ -->
+<div id="panel-settings" class="hidden">
+  <div class="mb-8">
+    <h1 class="text-3xl font-black text-gray-900 tracking-tight">Settings</h1>
+    <p class="text-sm text-gray-500 mt-1">Your profile and access.</p>
+  </div>
+
+  <div class="max-w-2xl space-y-5">
+
+    <!-- Foto -->
+    <div class="ravel-panel rounded-2xl p-5">
+      <h2 class="text-sm font-bold text-gray-900 mb-1">Profile photo</h2>
+      <p class="text-xs text-gray-500 mb-4">Square crop, saved at 256&nbsp;px. Max 5&nbsp;MB.</p>
+      <div class="flex items-center gap-4">
+        <div id="set-avatar" class="w-20 h-20 rounded-full brand-gradient flex items-center justify-center
+                    text-white text-xl font-bold flex-shrink-0 overflow-hidden bg-cover bg-center"></div>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="document.getElementById('set-avatar-input').click()"
+                  class="text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg transition-colors">
+            Upload photo
+          </button>
+          <button id="set-avatar-del" onclick="setAvatarDelete()"
+                  class="hidden text-xs font-medium text-gray-400 hover:text-red-400 px-3 py-2 rounded-lg transition-colors">
+            Remove
+          </button>
+          <input id="set-avatar-input" type="file" accept="image/png,image/jpeg,image/webp" class="hidden"
+                 onchange="setAvatarUpload(this.files[0])">
+        </div>
+      </div>
+    </div>
+
+    <!-- Nombre -->
+    <div class="ravel-panel rounded-2xl p-5">
+      <h2 class="text-sm font-bold text-gray-900 mb-1">Display name</h2>
+      <p class="text-xs text-gray-500 mb-4">How your name appears in the app. Your sign-in username stays
+        <span id="set-username" class="font-semibold text-gray-400"></span>.</p>
+      <form onsubmit="setSaveName(event)" class="flex flex-wrap items-center gap-2">
+        <input id="set-name" type="text" maxlength="60"
+               style="color-scheme: light; color:#111827; background-color:#fff;"
+               class="flex-1 min-w-[14rem] text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2
+                      focus:border-indigo-400 focus:outline-none">
+        <button type="submit" class="text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2.5 rounded-lg transition-colors">
+          Save name
+        </button>
+      </form>
+    </div>
+
+    <!-- Contrasena -->
+    <div class="ravel-panel rounded-2xl p-5">
+      <h2 class="text-sm font-bold text-gray-900 mb-1">Password</h2>
+      <p class="text-xs text-gray-500 mb-4">Your current password is required — that way a session left open
+        cannot be used to take over the account.</p>
+      <form onsubmit="setSavePassword(event)" class="space-y-3">
+        <input id="set-pw-cur" type="password" autocomplete="current-password" placeholder="Current password"
+               style="color-scheme: light; color:#111827; background-color:#fff;"
+               class="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:border-indigo-400 focus:outline-none">
+        <input id="set-pw-new" type="password" autocomplete="new-password" placeholder="New password (min 8 characters)"
+               style="color-scheme: light; color:#111827; background-color:#fff;"
+               class="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:border-indigo-400 focus:outline-none">
+        <input id="set-pw-rep" type="password" autocomplete="new-password" placeholder="Repeat the new password"
+               style="color-scheme: light; color:#111827; background-color:#fff;"
+               class="w-full text-sm text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:border-indigo-400 focus:outline-none">
+        <button type="submit" class="text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2.5 rounded-lg transition-colors">
+          Change password
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div><!-- /panel-settings -->
+
     </main>
   </div><!-- /área principal -->
 </div><!-- /shell -->
+
 
 <!-- TOAST -->
 <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-opacity duration-300 max-w-sm w-full px-4">
@@ -1067,17 +1140,18 @@
 // TABS
 // ═══════════════════════════════════════════════════════
 function switchTab(name) {
-  ['so', 'bodegon', 'batch', 'home', 'projects'].forEach(p => {
+  ['so', 'bodegon', 'batch', 'home', 'projects', 'settings'].forEach(p => {
     const el = document.getElementById('panel-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
   });
   // Estado activo del menú lateral
-  [['nav-home', 'home'], ['nav-bodegon', 'bodegon'], ['nav-batch', 'batch'], ['nav-projects', 'projects']].forEach(([id, n]) => {
+  [['nav-home', 'home'], ['nav-bodegon', 'bodegon'], ['nav-batch', 'batch'], ['nav-projects', 'projects'], ['nav-settings', 'settings']].forEach(([id, n]) => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('nav-item-active', name === n);
   });
   if (name === 'projects') loadProjectsGrid();
   if (name === 'home') loadHome();
+  if (name === 'settings') loadSettings();
   // La tira de fondos del paso 2 vive fuera del flujo de vista previa, asi que
   // hay que pintarla al entrar a Create y no solo al llegar al preview.
   if (name === 'bodegon') renderBgStyleGrid();
@@ -2574,6 +2648,80 @@ function relDate(ts) {
 // El tercer contador era "Queued": se cambio por "Products" porque no hay cola
 // en el backend —ningun trabajo se encola— y un contador siempre en 0 de algo
 // que no existe es peor que no tenerlo.
+// ═══ SETTINGS ═══
+// El perfil se lee de /api/auth/me y se repinta despues de CADA cambio, en vez
+// de adivinar el estado en el cliente: asi la barra superior, el avatar del
+// panel y el nombre no pueden quedar diciendo cosas distintas de lo que hay en
+// disco. La respuesta de cada endpoint ya trae el perfil entero por eso mismo.
+let PERFIL = null;
+
+function pintarPerfil(p) {
+  PERFIL = p;
+  const iniciales = (p.display_name || p.username).slice(0, 2).toUpperCase();
+  // ?t= al vuelo: sin eso el navegador sirve la foto vieja de su cache y
+  // parece que la subida no hizo nada.
+  const url = p.has_avatar ? `/api/auth/avatar?t=${Date.now()}` : null;
+  [document.getElementById('set-avatar'), document.getElementById('user-avatar')].forEach(el => {
+    if (!el) return;
+    if (url) { el.style.backgroundImage = `url('${url}')`; el.textContent = ''; }
+    else { el.style.backgroundImage = ''; el.textContent = iniciales; }
+  });
+  const tu = document.getElementById('topbar-username');
+  if (tu) tu.textContent = p.display_name || p.username;
+  const n = document.getElementById('set-name'); if (n) n.value = p.display_name || '';
+  const u = document.getElementById('set-username'); if (u) u.textContent = p.username;
+  const d = document.getElementById('set-avatar-del');
+  if (d) d.classList.toggle('hidden', !p.has_avatar);
+}
+
+async function loadSettings() {
+  try { const r = await fetch('/api/auth/me'); if (r.ok) pintarPerfil(await r.json()); }
+  catch (e) {}
+}
+
+async function setSaveName(ev) {
+  ev.preventDefault();
+  const v = document.getElementById('set-name').value.trim();
+  const r = await fetch('/api/auth/profile', {method: 'PUT',
+    headers: {'Content-Type': 'application/json'}, body: JSON.stringify({display_name: v})});
+  const d = await r.json();
+  if (!r.ok) return toast(d.detail || 'Could not save the name');
+  pintarPerfil(d); toast('Name saved', 'warn');
+}
+
+async function setSavePassword(ev) {
+  ev.preventDefault();
+  const cur = document.getElementById('set-pw-cur').value;
+  const nue = document.getElementById('set-pw-new').value;
+  const rep = document.getElementById('set-pw-rep').value;
+  // Se comprueba aca antes de gastar la peticion: el servidor no puede saber
+  // que el usuario quiso escribir dos veces la misma.
+  if (nue !== rep) return toast('The new passwords do not match');
+  const r = await fetch('/api/auth/password', {method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({current_password: cur, new_password: nue})});
+  const d = await r.json();
+  if (!r.ok) return toast(d.detail || 'Could not change the password');
+  ['set-pw-cur', 'set-pw-new', 'set-pw-rep'].forEach(i => document.getElementById(i).value = '');
+  toast('Password changed', 'warn');
+}
+
+async function setAvatarUpload(file) {
+  if (!file) return;
+  const fd = new FormData(); fd.append('avatar', file);
+  const r = await fetch('/api/auth/avatar', {method: 'POST', body: fd});
+  const d = await r.json();
+  document.getElementById('set-avatar-input').value = '';   // permite reelegir el mismo archivo
+  if (!r.ok) return toast(d.detail || 'Could not upload the photo');
+  pintarPerfil(d); toast('Photo updated', 'warn');
+}
+
+async function setAvatarDelete() {
+  const r = await fetch('/api/auth/avatar', {method: 'DELETE'});
+  if (!r.ok) return toast('Could not remove the photo');
+  pintarPerfil(await r.json()); toast('Photo removed', 'warn');
+}
+
 function homeGreeting() {
   const h = new Date().getHours();
   const el = document.getElementById('home-greeting');
@@ -2849,6 +2997,7 @@ function hideLogin(username) {
   // cifras salen de un endpoint que exige estar autenticado. Sin esta llamada
   // se quedaban en "—" hasta cambiar de pestana y volver.
   loadHome();
+  loadSettings();
 }
 async function authSubmit(ev) {
   ev.preventDefault();
