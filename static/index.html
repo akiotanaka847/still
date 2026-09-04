@@ -253,54 +253,14 @@
     </div>
   </section>
 
-  <!-- Panel derecho del login. Dice lo que la herramienta HACE, en el orden en
-       que se hace, y no promete nada que no exista: se quitaron el bloque "Tus
-       activos" (plantillas, reglas de marca y datos son modulos que aun no
-       estan) y el contador "1,000+ piezas generadas", que era un numero
-       inventado y ademas se solapaba con las etiquetas de las barras. -->
-  <section class="relative z-10 hidden lg:flex flex-1 min-h-screen items-center px-12 xl:px-16">
-    <div class="w-full max-w-3xl">
-      <p class="text-[11px] uppercase tracking-[.45em] text-slate-400 mb-8">Fotos de producto &rarr; piezas listas</p>
-
-      <h1 class="text-5xl xl:text-6xl font-black leading-[1.05] tracking-tight text-white">
-        Tus productos,<br>compuestos<br><span class="brand-text">por inteligencia.</span>
-      </h1>
-      <p class="mt-6 text-xl text-slate-300 max-w-xl leading-snug">
-        Sube las fotos. Still las organiza en composiciones profesionales y te las
-        entrega listas para publicar o para seguir editando.
-      </p>
-
-      <ol class="mt-12 space-y-5 max-w-xl">
-        <li class="flex gap-4">
-          <span class="flex-shrink-0 w-8 h-8 rounded-full bg-violet-500/20 border border-violet-400/40 text-violet-200 text-sm font-bold flex items-center justify-center">1</span>
-          <div>
-            <p class="text-white font-semibold">Sube tus productos</p>
-            <p class="text-sm text-slate-400">Cada foto se recorta sola a su contenido real, sin márgenes vacíos.</p>
-          </div>
-        </li>
-        <li class="flex gap-4">
-          <span class="flex-shrink-0 w-8 h-8 rounded-full bg-violet-500/20 border border-violet-400/40 text-violet-200 text-sm font-bold flex items-center justify-center">2</span>
-          <div>
-            <p class="text-white font-semibold">Elige entre varias composiciones</p>
-            <p class="text-sm text-slate-400">18 estilos geométricos, o deja que la IA mire tus fotos y proponga el orden y los tamaños.</p>
-          </div>
-        </li>
-        <li class="flex gap-4">
-          <span class="flex-shrink-0 w-8 h-8 rounded-full bg-violet-500/20 border border-violet-400/40 text-violet-200 text-sm font-bold flex items-center justify-center">3</span>
-          <div>
-            <p class="text-white font-semibold">Descarga y sigue trabajando</p>
-            <p class="text-sm text-slate-400">PNG con fondo transparente, o PSD con cada producto en su propia capa.</p>
-          </div>
-        </li>
-      </ol>
-
-      <div class="mt-12 flex flex-wrap gap-8 text-[11px] uppercase tracking-widest text-slate-400">
-        <span>PNG transparente</span>
-        <span>PSD por capas</span>
-        <span>Hasta 60 productos</span>
-        <span>Generación por lotes</span>
-      </div>
-    </div>
+  <!-- Panel derecho del login: UNA frase y nada mas. Tenia titular, bajada,
+       tres pasos numerados y una tira de capacidades; el usuario pidio quitar
+       el texto y dejar una sola frase. Lo que la herramienta hace ya se explica
+       dentro de la app, y una pantalla de acceso no es donde se lee. -->
+  <section class="relative z-10 hidden lg:flex flex-1 min-h-screen items-center px-12 xl:px-20">
+    <h1 class="text-6xl xl:text-7xl font-black leading-[1.02] tracking-tight text-white max-w-3xl">
+      Tus productos,<br>compuestos<br><span class="brand-text">por inteligencia.</span>
+    </h1>
   </section>
 </div>
 
