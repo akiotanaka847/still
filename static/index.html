@@ -211,8 +211,7 @@
              class="h-20 w-auto" style="filter:drop-shadow(0 14px 34px rgba(124,58,237,.28))">
       </div>
 
-      <h2 id="login-title" class="text-3xl font-black tracking-tight text-white">Bienvenido</h2>
-      <p id="login-sub" class="text-base text-slate-400 mt-2 mb-8 leading-relaxed">Accede a tu espacio de producción creativa impulsado por inteligencia artificial.</p>
+      <h2 id="login-title" class="text-3xl font-black tracking-tight text-white mb-8">Welcome</h2>
 
       <form onsubmit="authSubmit(event)" class="space-y-4">
         <div>
@@ -253,13 +252,14 @@
     </div>
   </section>
 
-  <!-- Panel derecho del login: UNA frase y nada mas. Tenia titular, bajada,
-       tres pasos numerados y una tira de capacidades; el usuario pidio quitar
-       el texto y dejar una sola frase. Lo que la herramienta hace ya se explica
-       dentro de la app, y una pantalla de acceso no es donde se lee. -->
+  <!-- Panel derecho del login: UNA frase, en ingles, que inspira en vez de
+       describir. Tenia titular, bajada, tres pasos numerados y una tira de
+       capacidades: demasiado para una pantalla donde nadie lee, porque quien
+       llega al login viene a entrar. La frase juega con el nombre — Still es
+       "still life", que es exactamente la pieza que produce la herramienta. -->
   <section class="relative z-10 hidden lg:flex flex-1 min-h-screen items-center px-12 xl:px-20">
     <h1 class="text-6xl xl:text-7xl font-black leading-[1.02] tracking-tight text-white max-w-3xl">
-      Tus productos,<br>compuestos<br><span class="brand-text">por inteligencia.</span>
+      Where products<br><span class="brand-text">become art.</span>
     </h1>
   </section>
 </div>
@@ -2701,10 +2701,7 @@ function authErr(msg) {
 function authToggle() {
   LOGIN_MODE = LOGIN_MODE === 'login' ? 'register' : 'login';
   const reg = LOGIN_MODE === 'register';
-  document.getElementById('login-title').textContent = reg ? 'Crea tu cuenta' : 'Bienvenido';
-  document.getElementById('login-sub').textContent = reg
-    ? 'Solicita acceso a tu espacio de producción creativa.'
-    : 'Accede a tu espacio de producción creativa impulsado por inteligencia artificial.';
+  document.getElementById('login-title').textContent = reg ? 'Create your account' : 'Welcome';
   document.getElementById('login-btn').innerHTML = reg
     ? 'Crear cuenta'
     : 'Iniciar sesión <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>';
