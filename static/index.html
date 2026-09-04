@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Still by Ravel — Inteligencia que produce resultados</title>
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
 <link rel="shortcut icon" href="/static/favicon.ico">
@@ -80,15 +79,26 @@
   .glow-btn:hover { box-shadow:0 12px 46px rgba(168,85,247,.45); transform:translateY(-2px); }
   .grid-fade { background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px); background-size:42px 42px; -webkit-mask-image:radial-gradient(ellipse 80% 80% at 50% 0%,#000 40%,transparent 100%); mask-image:radial-gradient(ellipse 80% 80% at 50% 0%,#000 40%,transparent 100%); }
   .shine { background:linear-gradient(90deg,#fff,#c7d2fe,#e9d5ff,#a5f3fc,#fff); background-size:200% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; animation:shimmer 5s linear infinite; }
-  .still-mark-box { border-radius:24%; background:linear-gradient(135deg,#7C3AED 0%,#4F6FFF 52%,#22D3EE 100%); box-shadow:0 16px 36px rgba(124,58,237,.28); display:flex; align-items:center; justify-content:center; overflow:hidden; }
-  /* El glifo va como SVG y no como la letra "S" de la tipografia: el logo de
-     marca tiene una forma de cinta propia que ninguna fuente reproduce, y con
-     texto cambiaba de dibujo segun que fuente cargara. Mismo trazado que
-     static/favicon.svg — si se toca uno hay que tocar el otro. */
-  .still-mark-box svg { width:62%; height:62%; display:block; }
+  /* La marca es la IMAGEN de marca real (static/still-mark.png), extraida del
+     original que entrego el usuario en Image/Stil.png. No se redibuja en CSS ni
+     en SVG: hubo un intento de aproximar el glifo a mano y no era el logo — la
+     "S" tiene una forma de cinta con volumen que ni una fuente ni un trazado a
+     ojo reproducen. El PNG ya trae su fondo, sus esquinas redondeadas y su
+     degradado, asi que este contenedor no pinta nada. */
+  .still-mark-box { display:block; filter:drop-shadow(0 14px 30px rgba(124,58,237,.30)); }
+  .still-mark-box img { width:100%; height:100%; display:block; object-fit:contain; }
   .ravel-mark { width:100%; height:100%; display:block; filter:drop-shadow(0 8px 20px rgba(19,214,192,.18)); }
   .ravel-logo-lockup { display:flex; align-items:center; gap:.65rem; min-width:0; }
   .ravel-word { color:#fff; font-weight:800; line-height:1; letter-spacing:0; }
+  /* El punto de la "i" de Still va VIOLETA, es el detalle propio del wordmark.
+     Se usa la i sin punto (U+0131) y se dibuja el punto aparte: superponer un
+     circulo sobre una "i" normal se descoloca en cuanto cambia la fuente o el
+     tamano, y aca el logo se pinta en cuatro tamanos distintos. Al ir en em,
+     escala solo con el texto. */
+  .ravel-word .dotless { position:relative; }
+  .ravel-word .dotless::after { content:""; position:absolute; left:50%; top:-.30em;
+    width:.30em; height:.30em; border-radius:50%; background:#7C3AED;
+    transform:translateX(-50%); }
   .ravel-byline { color:#aab5d1; font-size:.72rem; line-height:1.15; }
   .ravel-byline strong { color:#fff; font-weight:800; }
   .app-shell { background:radial-gradient(1000px 560px at 72% 0%,rgba(168,85,247,.20),transparent 55%),radial-gradient(900px 520px at 42% 10%,rgba(19,214,192,.16),transparent 58%),#070B18; }
@@ -191,12 +201,14 @@
 
   <section class="relative z-10 w-full lg:w-[40%] min-h-screen flex flex-col justify-between px-6 py-8 sm:px-10">
     <div class="ravel-panel rounded-2xl p-8 sm:p-10 w-full max-w-[32rem] my-auto">
-      <div class="ravel-logo-lockup mb-12">
-        <div class="w-16 h-16 still-mark-box text-4xl"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M67 29H42c-8 0-13 3-15 8-2 6 2 12 10 15l19 7c3 1 4 3 3 5-1 2-4 3-8 3H25v13h29c10 0 18-4 21-11 3-8-2-16-13-20l-18-7c-3-1-4-2-4-4 1-2 3-3 7-3h20V29Z" fill="#fff"/><path d="M25 67h28c5 0 8-1 9-4 1-2 0-4-4-5L38 51c-8-3-13-8-13-15 0-2 0-4 1-6-5 3-8 8-9 14-1 9 5 17 17 21l18 7c2 1 3 2 3 3-1 1-3 2-6 2H25V67Z" fill="#fff" opacity=".78"/></svg></div>
-        <div>
-          <div class="ravel-word text-4xl">Still</div>
-          <div class="ravel-byline text-base mt-1">by <strong>Ravel</strong></div>
-        </div>
+      <!-- En el login hay sitio para el LOCKUP entero (marca + "Still" + "by
+           Ravel" con su R), asi que va la imagen original en vez de recomponer
+           la palabra con tipografia: la R de Ravel es multicolor y el punto de
+           la "i" es violeta, y ninguna de las dos se reproduce con texto. En
+           sitios estrechos se usa solo still-mark.png mas texto. -->
+      <div class="mb-12">
+        <img src="/static/still-lockup.png" alt="Still by Ravel"
+             class="h-20 w-auto" style="filter:drop-shadow(0 14px 34px rgba(124,58,237,.28))">
       </div>
 
       <h2 id="login-title" class="text-3xl font-black tracking-tight text-white">Bienvenido</h2>
@@ -273,8 +285,8 @@
         </div>
         <div class="relative min-h-[330px]">
           <div class="absolute left-0 top-1/2 -translate-y-1/2 w-40 h-40 rounded-3xl border border-cyan-300/50 bg-[#10182d] flex flex-col items-center justify-center shadow-[0_0_45px_rgba(19,214,192,.35)]">
-            <div class="w-16 h-16 still-mark-box text-4xl mb-3"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M67 29H42c-8 0-13 3-15 8-2 6 2 12 10 15l19 7c3 1 4 3 3 5-1 2-4 3-8 3H25v13h29c10 0 18-4 21-11 3-8-2-16-13-20l-18-7c-3-1-4-2-4-4 1-2 3-3 7-3h20V29Z" fill="#fff"/><path d="M25 67h28c5 0 8-1 9-4 1-2 0-4-4-5L38 51c-8-3-13-8-13-15 0-2 0-4 1-6-5 3-8 8-9 14-1 9 5 17 17 21l18 7c2 1 3 2 3 3-1 1-3 2-6 2H25V67Z" fill="#fff" opacity=".78"/></svg></div>
-            <div class="text-3xl font-black text-white leading-none">Still</div>
+            <div class="w-16 h-16 still-mark-box text-4xl mb-3"><img src="/static/still-mark.png" alt="Still" width="512" height="512"></div>
+            <div class="text-3xl font-black text-white leading-none">St<span class="dotless">ı</span>ll</div>
             <div class="text-xs text-slate-300">by <span class="text-violet-400 font-bold">Ravel</span></div>
           </div>
           <div class="absolute left-36 right-0 top-0 bottom-0">
@@ -306,9 +318,9 @@
   <aside class="hidden md:flex flex-col w-60 flex-shrink-0 bg-white border-r border-gray-200 sticky top-0 h-screen">
     <!-- Logo -->
     <div class="h-16 flex items-center gap-2.5 px-5 border-b border-gray-100 flex-shrink-0">
-      <div class="w-9 h-9 flex-shrink-0 still-mark-box text-2xl"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M67 29H42c-8 0-13 3-15 8-2 6 2 12 10 15l19 7c3 1 4 3 3 5-1 2-4 3-8 3H25v13h29c10 0 18-4 21-11 3-8-2-16-13-20l-18-7c-3-1-4-2-4-4 1-2 3-3 7-3h20V29Z" fill="#fff"/><path d="M25 67h28c5 0 8-1 9-4 1-2 0-4-4-5L38 51c-8-3-13-8-13-15 0-2 0-4 1-6-5 3-8 8-9 14-1 9 5 17 17 21l18 7c2 1 3 2 3 3-1 1-3 2-6 2H25V67Z" fill="#fff" opacity=".78"/></svg></div>
+      <div class="w-9 h-9 flex-shrink-0 still-mark-box text-2xl"><img src="/static/still-mark.png" alt="Still" width="512" height="512"></div>
       <div>
-        <div class="font-black text-gray-900 text-xl tracking-tight leading-none">Still</div>
+        <div class="font-black text-gray-900 text-xl tracking-tight leading-none">St<span class="dotless">ı</span>ll</div>
         <div class="text-[11px] text-gray-400 leading-none mt-1">by <span class="brand-text font-bold">Ravel</span></div>
       </div>
     </div>
@@ -364,7 +376,7 @@
     <header class="h-16 bg-white border-b border-gray-200 sticky top-0 z-40 flex items-center gap-3 px-5 flex-shrink-0">
       <!-- Logo (solo móvil, sin sidebar) -->
       <div class="md:hidden flex items-center gap-2">
-        <div class="w-8 h-8 still-mark-box text-xl"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M67 29H42c-8 0-13 3-15 8-2 6 2 12 10 15l19 7c3 1 4 3 3 5-1 2-4 3-8 3H25v13h29c10 0 18-4 21-11 3-8-2-16-13-20l-18-7c-3-1-4-2-4-4 1-2 3-3 7-3h20V29Z" fill="#fff"/><path d="M25 67h28c5 0 8-1 9-4 1-2 0-4-4-5L38 51c-8-3-13-8-13-15 0-2 0-4 1-6-5 3-8 8-9 14-1 9 5 17 17 21l18 7c2 1 3 2 3 3-1 1-3 2-6 2H25V67Z" fill="#fff" opacity=".78"/></svg></div>
+        <div class="w-8 h-8 still-mark-box text-xl"><img src="/static/still-mark.png" alt="Still" width="512" height="512"></div>
         <span class="font-bold text-gray-900 text-sm">Still <span class="text-gray-400 font-medium">by</span> <span class="brand-text font-black">Ravel</span></span>
       </div>
 
