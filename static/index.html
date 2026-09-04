@@ -594,7 +594,7 @@
              tercera pata desalineada del trío). -->
         <div class="mb-4 glass rounded-2xl p-4">
           <div class="flex items-center gap-2 mb-3">
-            <span class="text-sm">📐</span>
+            <span class="text-gray-400"><svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5.5A1.5 1.5 0 015.5 4h13A1.5 1.5 0 0120 5.5v13a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 014 18.5v-13z"/><path stroke-linecap="round" stroke-linejoin="round" d="M4 10h16M10 10v10"/></svg></span>
             <p class="text-sm font-bold text-gray-700">Layout styles</p>
             <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-500/15 px-1.5 py-0.5 rounded-full">free · instant</span>
           </div>
@@ -631,7 +631,7 @@
             <button type="button" id="ai-mode-reco-btn" onclick="setAIMode('reco')"
                     class="ai-mode-card is-on text-left rounded-xl p-3.5 transition-all">
               <div class="flex items-start gap-2.5">
-                <span class="text-lg leading-none mt-0.5">🧩</span>
+                <span class="text-purple-300 mt-0.5"><svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5.5A1.5 1.5 0 015.5 4h4A1.5 1.5 0 0111 5.5v4A1.5 1.5 0 019.5 11h-4A1.5 1.5 0 014 9.5v-4zM13 5.5A1.5 1.5 0 0114.5 4h4A1.5 1.5 0 0120 5.5v4a1.5 1.5 0 01-1.5 1.5h-4A1.5 1.5 0 0113 9.5v-4zM4 14.5A1.5 1.5 0 015.5 13h4a1.5 1.5 0 011.5 1.5v4A1.5 1.5 0 019.5 20h-4A1.5 1.5 0 014 18.5v-4zM13 14.5A1.5 1.5 0 0114.5 13h4a1.5 1.5 0 011.5 1.5v4a1.5 1.5 0 01-1.5 1.5h-4a1.5 1.5 0 01-1.5-1.5v-4z"/></svg></span>
                 <div class="min-w-0">
                   <p class="text-sm font-semibold text-white">Recommend composition</p>
                   <p class="text-[11px] text-gray-400 leading-snug mt-0.5">Still reads your products and proposes the best arrangement. Your photos are composed, never redrawn.</p>
@@ -642,7 +642,7 @@
             <button type="button" id="ai-mode-crea-btn" onclick="setAIMode('crea')"
                     class="ai-mode-card text-left rounded-xl p-3.5 transition-all">
               <div class="flex items-start gap-2.5">
-                <span class="text-lg leading-none mt-0.5">🖼️</span>
+                <span class="text-purple-300 mt-0.5"><svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6.75A1.75 1.75 0 014.75 5h14.5A1.75 1.75 0 0121 6.75v10.5A1.75 1.75 0 0119.25 19H4.75A1.75 1.75 0 013 17.25V6.75z"/><path stroke-linecap="round" stroke-linejoin="round" d="M3.5 16l4.2-4.2a1.5 1.5 0 012.1 0l3.4 3.4"/><path stroke-linecap="round" stroke-linejoin="round" d="M14.5 13.5l1.6-1.6a1.5 1.5 0 012.1 0l2.3 2.3"/><path stroke-linecap="round" stroke-linejoin="round" d="M15.5 8.5h.01"/></svg></span>
                 <div class="min-w-0">
                   <p class="text-sm font-semibold text-white">Create image</p>
                   <p class="text-[11px] text-gray-400 leading-snug mt-0.5">Generates a whole new image from your idea. It redraws the pixels, so labels can drift.</p>
@@ -696,7 +696,7 @@
                    onkeydown="if(event.key==='Enter'){event.preventDefault(); bodGenerateAIImage();}">
             <button id="ai-gen-btn" onclick="bodGenerateAIImage()"
                     class="flex-shrink-0 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-2 rounded-lg transition-all whitespace-nowrap">
-              🧪 Generate image with AI
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 4V2m0 20v-2M9 4l-.7-.7M20.7 15.7l-.7-.7M4 15H2m20 0h-2M4.3 4.3L3.6 5M12 8l4 4-9 9-4-4 9-9z"/></svg> Generate image with AI
             </button>
           </div>
           <div id="ai-gen-result" class="hidden">
@@ -707,11 +707,11 @@
             <div class="flex items-center gap-3">
               <a id="ai-gen-download" href="#" download="bodegon_ai.png"
                  class="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700">
-                ⬇ Download PNG
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg> Download PNG
               </a>
               <a id="ai-gen-download-psd" href="#" download="bodegon_ai.psd" title="Single layer — AI redrew everything as one image, no separate products"
                  class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-700">
-                ⬇ Download PSD
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg> Download PSD
               </a>
             </div>
           </div>
@@ -961,25 +961,25 @@
       <div class="bg-white border border-gray-200 rounded-2xl p-5 lg:sticky lg:top-20 space-y-4">
         <h3 class="font-bold text-gray-900 text-sm">Generation mode</h3>
         <select id="batch-mode" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 bg-white focus:border-indigo-400 focus:outline-none">
-          <optgroup label="✦ Inteligente (IA)">
-            <option value="ai_depth" selected>IA · Profundidad</option>
-            <option value="ai">IA · Equilibrado</option>
-            <option value="ai_impacto">IA · Impacto</option>
-            <option value="ai_libre_1">IA · Libre</option>
+          <optgroup label="✦ Smart (AI)">
+            <option value="ai_depth" selected>AI · Depth</option>
+            <option value="ai">AI · Balanced</option>
+            <option value="ai_impacto">AI · Impact</option>
+            <option value="ai_libre_1">AI · Free</option>
           </optgroup>
-          <optgroup label="Geométrico">
+          <optgroup label="Geometric">
             <option value="auto">Auto</option>
-            <option value="centrado">Centrado</option>
-            <option value="sombra">Sombra</option>
-            <option value="profundidad">Profundidad</option>
+            <option value="centrado">Centered</option>
+            <option value="sombra">Shadow</option>
+            <option value="profundidad">Depth</option>
             <option value="profundidad_xl">Hero XL</option>
-            <option value="profundidad_grad">Escalonada</option>
-            <option value="impacto">Impacto</option>
-            <option value="fila_recta">Fila recta</option>
-            <option value="cruce">Cruce</option>
-            <option value="cascada">Cascada</option>
+            <option value="profundidad_grad">Stepped</option>
+            <option value="impacto">Impact</option>
+            <option value="fila_recta">Straight row</option>
+            <option value="cruce">Cross</option>
+            <option value="cascada">Cascade</option>
             <option value="radial">Radial</option>
-            <option value="flotante">Flotante</option>
+            <option value="flotante">Floating</option>
             <option value="inclinado_derecha">Inclinado derecha</option>
             <option value="inclinado_izquierda">Inclinado izquierda</option>
           </optgroup>
@@ -2547,7 +2547,7 @@ function renderProjectsGrid(sessions) {
       <div class="checker-bg aspect-square flex items-center justify-center">
         ${s.has_render
           ? `<img src="/api/bodegon/download/${s.session_id}" class="w-full h-full object-contain" loading="lazy">`
-          : `<span class="text-3xl opacity-30">🖼️</span>`}
+          : `<svg class="w-8 h-8 opacity-25" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6.75A1.75 1.75 0 014.75 5h14.5A1.75 1.75 0 0121 6.75v10.5A1.75 1.75 0 0119.25 19H4.75A1.75 1.75 0 013 17.25V6.75zM3.5 16l4.2-4.2a1.5 1.5 0 012.1 0l3.4 3.4"/></svg>`}
       </div>
       <div class="px-2.5 py-2">
         <p class="text-xs font-semibold text-gray-700">${esc(relDate(s.created))}</p>
@@ -2599,7 +2599,7 @@ function renderBatchGroups() {
     const row = document.createElement('div');
     row.className = 'flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2';
     row.innerHTML = `
-      <span class="text-base">📁</span>
+      <span class="text-gray-400"><svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5A1.5 1.5 0 014.5 6h4.2a1.5 1.5 0 011.06.44l1.3 1.3H19.5A1.5 1.5 0 0121 9.24v8.26A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5v-10z"/></svg></span>
       <span class="text-xs font-semibold text-gray-700 truncate flex-1">${esc(g.name)}</span>
       <span class="text-[10px] text-gray-400">${g.files.length} img</span>
       <button onclick="batchRemoveGroup(${i})" class="text-xs text-red-300 hover:text-red-500">✕</button>`;
