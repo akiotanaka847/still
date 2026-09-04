@@ -62,8 +62,6 @@
   .nav-item-active, .nav-item-active:hover {
     background:rgba(129,140,248,.16); color:#c7d2fe; font-weight:600;
     box-shadow:inset 0 0 0 1px rgba(129,140,248,.3); }
-  .nav-item .soon { margin-left:auto; font-size:.6rem; font-weight:600; color:#fcd34d;
-    background:rgba(245,158,11,.12); border:1px solid rgba(252,211,77,.3); padding:.05rem .35rem; border-radius:9999px; }
 
   ::-webkit-scrollbar{width:5px;}
   ::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:3px;}
@@ -314,18 +312,6 @@
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h4.1a1.5 1.5 0 0 1 1.07.45l1.33 1.33h7.5A1.5 1.5 0 0 1 20 9.28v8.22A1.5 1.5 0 0 1 18.5 19h-14A1.5 1.5 0 0 1 3 17.5v-10Z"/></svg>
         <span>Projects</span>
       </button>
-      <button onclick="toast('Coming soon','warn')" class="nav-item">
-        <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h4A1.5 1.5 0 0 1 11 5.5v4A1.5 1.5 0 0 1 9.5 11h-4A1.5 1.5 0 0 1 4 9.5v-4ZM13 5.5A1.5 1.5 0 0 1 14.5 4h4A1.5 1.5 0 0 1 20 5.5v4A1.5 1.5 0 0 1 18.5 11h-4A1.5 1.5 0 0 1 13 9.5v-4ZM4 14.5A1.5 1.5 0 0 1 5.5 13h4a1.5 1.5 0 0 1 1.5 1.5v4A1.5 1.5 0 0 1 9.5 20h-4A1.5 1.5 0 0 1 4 18.5v-4ZM13 14.5A1.5 1.5 0 0 1 14.5 13h4a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a1.5 1.5 0 0 1-1.5-1.5v-4Z"/></svg>
-        <span>Library</span> <span class="soon">Soon</span>
-      </button>
-      <button onclick="toast('Coming soon','warn')" class="nav-item">
-        <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 6.5A1.5 1.5 0 0 1 5.5 5h13A1.5 1.5 0 0 1 20 6.5v11a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5v-11ZM4 9.5h16M9.5 9.5V19"/></svg>
-        <span>Templates</span> <span class="soon">Soon</span>
-      </button>
-      <button onclick="toast('Coming soon','warn')" class="nav-item">
-        <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 0 0 0 17c1.1 0 1.8-.9 1.8-1.9 0-1-.6-1.7-.6-2.4 0-.8.6-1.4 1.4-1.4h1.6a3.8 3.8 0 0 0 3.8-3.8C20 6.4 16.4 3.5 12 3.5ZM7.5 9.5h.01M10.5 7h.01M14 7h.01"/></svg>
-        <span>Styles</span> <span class="soon">Soon</span>
-      </button>
       <button id="nav-settings" onclick="switchTab('settings')" class="nav-item">
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h14M9 5v4M15 10v4M11 15v4"/></svg>
         <span>Settings</span>
@@ -396,14 +382,6 @@
       <h3 class="font-bold text-gray-900 text-base">Batch production</h3>
       <p class="text-sm text-gray-500 mt-1.5">Generate multiple pieces automatically.</p>
       <span class="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-purple-600 group-hover:gap-2.5 transition-all">Open <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg></span>
-    </button>
-    <button onclick="toast('Templates coming soon','warn')" class="group text-left ravel-panel rounded-2xl p-5 card hover:border-white/20 transition-all">
-      <div class="w-10 h-10 rounded-xl bg-white/8 border border-white/10 text-slate-200 flex items-center justify-center mb-5">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4.5 4.5h15v15h-15zM9 4.5v15M4.5 9h15"/></svg>
-      </div>
-      <h3 class="font-bold text-gray-900 text-base">From template</h3>
-      <p class="text-sm text-gray-500 mt-1.5">Create from an existing template.</p>
-      <span class="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-400">Coming soon</span>
     </button>
   </section>
 
