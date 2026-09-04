@@ -1,7 +1,7 @@
 """
 PSD Smart Object Replacer — FastAPI backend
 Módulo 1: Reemplaza SmartObjectLayers en archivos PSD/PSB.
-Módulo 2: Generador de bodegones con layout automático + propuesta IA.
+Módulo 2: Generador de composiciones con layout automático + propuesta IA.
 """
 import hashlib
 import asyncio
@@ -342,7 +342,7 @@ async def lifespan(app_: FastAPI):
 
 
 # ─── App ──────────────────────────────────────────────────────────────────────
-app = FastAPI(title="StillAI", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Still by Ravel", version="1.0.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,      # misma-origen por defecto (no "*")
@@ -815,7 +815,7 @@ def _resolve_render_params(body: dict, info: dict, info_file: Path):
         # arman con el layout que ya trajo /ai-proposal, sin volver a llamar a
         # /compute. Guardarlo acá (además de en /compute) asegura que "la
         # última propuesta" quede igual sin importar qué camino se usó, para
-        # que reabrir la sesión (Mis bodegones) muestre exactamente esa.
+        # que reabrir la sesión (Mis proyectos) muestre exactamente esa.
         info["layout"] = layout
         info_file.write_text(json.dumps(info, indent=2), encoding="utf-8")
     elif "layout" in info:
@@ -834,7 +834,7 @@ def _resolve_render_params(body: dict, info: dict, info_file: Path):
 
 @app.post("/api/bodegon/render")
 async def bodegon_render(body: dict, request: Request):
-    """Renderiza el bodegón como PNG y lo guarda en la sesión."""
+    """Renderiza la composición como PNG y la guarda en la sesión."""
     _require_rate_limit(request, "render", RENDER_RATE_LIMIT, 3600)
     session_id = body.get("session_id", "")
     session_dir, info_file, info = _load_session_info(session_id, request)
@@ -862,7 +862,7 @@ async def bodegon_render(body: dict, request: Request):
 
 @app.post("/api/bodegon/render-psd")
 async def bodegon_render_psd(body: dict, request: Request):
-    """Renderiza el bodegón como PSD con cada producto en su propia capa
+    """Renderiza la composición como PSD con cada producto en su propia capa
     editable (ver renderer.render_psd) y lo guarda en la sesión. No soporta
     zoom de detalle (se ignora si está activo — queda fuera del PSD)."""
     _require_rate_limit(request, "render_psd", RENDER_RATE_LIMIT, 3600)
@@ -891,7 +891,7 @@ async def bodegon_render_psd(body: dict, request: Request):
 
 @app.post("/api/bodegon/ai-generate-image")
 async def bodegon_ai_generate_image(body: dict, request: Request):
-    """Genera el bodegón COMPLETO con IA generativa (gpt-image-2, images.edit)
+    """Genera la composición COMPLETA con IA generativa (gpt-image-2, images.edit)
     — modo alternativo y experimental al pipeline determinista: acá la IA
     redibuja la imagen final directamente a partir de las fotos de referencia
     (no un layout que después renderiza Pillow, sin tocar píxeles). Solo
@@ -1010,7 +1010,7 @@ async def bodegon_download_psd(session_id: str, request: Request):
 @app.get("/api/bodegon/mine")
 async def bodegon_mine(request: Request):
     """Lista las sesiones (grupos de productos) del usuario actual, más
-    reciente primero — para la galería 'Mis bodegones' y para precargar
+    reciente primero — para la galería 'Mis proyectos' y para precargar
     automáticamente los últimos productos al entrar."""
     user = request.session.get("user")
     out = []
@@ -1041,7 +1041,7 @@ async def bodegon_mine(request: Request):
 @app.get("/api/bodegon/session/{session_id}")
 async def bodegon_session_get(session_id: str, request: Request):
     """Devuelve el estado completo de una sesión propia para reabrirla (Mis
-    bodegones / precarga automática): productos + la última propuesta
+    composiciones / precarga automática): productos + la última propuesta
     guardada, si hay una."""
     _session_dir, _info_file, info = _load_session_info(session_id, request)
     return {
@@ -1240,7 +1240,7 @@ async def bodegon_ai_custom_layout(body: dict, request: Request):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# MÓDULO 3: GENERACIÓN POR LOTES (varias carpetas → varios bodegones)
+# MÓDULO 3: GENERACIÓN POR LOTES (varias carpetas -> varias piezas)
 # ══════════════════════════════════════════════════════════════════════════════
 @app.post("/api/batch/zip")
 async def batch_zip(body: dict, request: Request):
@@ -1252,7 +1252,7 @@ async def batch_zip(body: dict, request: Request):
     batch_id = str(uuid.uuid4())
     batch_dir = SESSIONS_DIR / "_batch" / batch_id
     batch_dir.mkdir(parents=True, exist_ok=True)
-    zip_path = batch_dir / "bodegones.zip"
+    zip_path = batch_dir / "piezas.zip"
 
     used: set = set()
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -1276,7 +1276,7 @@ async def batch_zip(body: dict, request: Request):
 
     if not used:
         shutil.rmtree(batch_dir, ignore_errors=True)
-        raise HTTPException(404, "No hay bodegones renderizados para empaquetar")
+        raise HTTPException(404, "No hay piezas renderizadas para empaquetar")
 
     (batch_dir / "batch.json").write_text(
         json.dumps({"owner": request.session.get("user"), "created": time.time()}, indent=2),
@@ -1299,10 +1299,10 @@ async def batch_download(batch_id: str, request: Request):
         raise HTTPException(404, "ZIP no encontrado")
     if meta.get("owner") != request.session.get("user"):
         raise HTTPException(404, "ZIP no encontrado")
-    z = batch_dir / "bodegones.zip"
+    z = batch_dir / "piezas.zip"
     if not z.exists():
         raise HTTPException(404, "ZIP no encontrado")
-    return FileResponse(str(z), filename="bodegones.zip", media_type="application/zip")
+    return FileResponse(str(z), filename="piezas.zip", media_type="application/zip")
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")

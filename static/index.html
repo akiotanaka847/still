@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>StillAI — Still perfect. Every time.</title>
+<title>Still by Ravel — Inteligencia que produce resultados</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
@@ -15,26 +15,34 @@
 <style>
   * { font-family: 'Inter', system-ui, sans-serif; }
 
-  /* Brand gradient */
+  /* Still by Ravel brand system */
   :root {
-    --brand-from: #5B8CF7;
+    --base: #070B18;
+    --surface: #0E1425;
+    --surface-elevated: #141B2E;
+    --border-soft: rgba(255,255,255,.08);
+    --still-teal: #13D6C0;
+    --ravel-purple: #8B5CF6;
+    --ravel-violet: #A855F7;
+    --brand-from: #4F6FFF;
+    --brand-mid:  #8B5CF6;
     --brand-to:   #A855F7;
   }
-  .brand-gradient { background: linear-gradient(135deg, var(--brand-from), var(--brand-to)); }
+  .brand-gradient { background: linear-gradient(90deg, var(--brand-from), var(--brand-mid), var(--brand-to)); }
   .brand-text {
-    background: linear-gradient(135deg, var(--brand-from), var(--brand-to));
+    background: linear-gradient(90deg, var(--brand-from), var(--ravel-purple), var(--brand-to));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
   .btn-brand {
-    background: linear-gradient(135deg, var(--brand-from), var(--brand-to));
-    box-shadow: 0 4px 20px rgba(91,140,247,.35);
+    background: linear-gradient(90deg, var(--brand-from), var(--ravel-purple), var(--brand-to));
+    box-shadow: 0 16px 38px rgba(79,111,255,.28);
   }
   .btn-brand:hover { opacity: .92; }
 
-  .dz-active  { border-color:var(--brand-from)!important; background:linear-gradient(135deg,#eef2ff,#f3e8ff)!important; }
-  .idz-active { border-color:var(--brand-from)!important; background:#eef2ff!important; }
+  .dz-active  { border-color:var(--still-teal)!important; background:rgba(19,214,192,.08)!important; }
+  .idz-active { border-color:var(--still-teal)!important; background:rgba(19,214,192,.08)!important; }
 
   @keyframes spin    { to{transform:rotate(360deg);} }
   @keyframes slideUp { from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);} }
@@ -72,6 +80,20 @@
   .glow-btn:hover { box-shadow:0 12px 46px rgba(168,85,247,.45); transform:translateY(-2px); }
   .grid-fade { background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px); background-size:42px 42px; -webkit-mask-image:radial-gradient(ellipse 80% 80% at 50% 0%,#000 40%,transparent 100%); mask-image:radial-gradient(ellipse 80% 80% at 50% 0%,#000 40%,transparent 100%); }
   .shine { background:linear-gradient(90deg,#fff,#c7d2fe,#e9d5ff,#a5f3fc,#fff); background-size:200% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; animation:shimmer 5s linear infinite; }
+  .still-mark-box { border-radius:24%; background:linear-gradient(135deg,#7C3AED 0%,#4F6FFF 52%,#22D3EE 100%); box-shadow:0 16px 36px rgba(124,58,237,.28); display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  /* El glifo va como SVG y no como la letra "S" de la tipografia: el logo de
+     marca tiene una forma de cinta propia que ninguna fuente reproduce, y con
+     texto cambiaba de dibujo segun que fuente cargara. Mismo trazado que
+     static/favicon.svg — si se toca uno hay que tocar el otro. */
+  .still-mark-box svg { width:62%; height:62%; display:block; }
+  .ravel-mark { width:100%; height:100%; display:block; filter:drop-shadow(0 8px 20px rgba(19,214,192,.18)); }
+  .ravel-logo-lockup { display:flex; align-items:center; gap:.65rem; min-width:0; }
+  .ravel-word { color:#fff; font-weight:800; line-height:1; letter-spacing:0; }
+  .ravel-byline { color:#aab5d1; font-size:.72rem; line-height:1.15; }
+  .ravel-byline strong { color:#fff; font-weight:800; }
+  .app-shell { background:radial-gradient(1000px 560px at 72% 0%,rgba(168,85,247,.20),transparent 55%),radial-gradient(900px 520px at 42% 10%,rgba(19,214,192,.16),transparent 58%),#070B18; }
+  .ravel-panel { background:linear-gradient(180deg,rgba(20,27,46,.86),rgba(14,20,37,.76)); border:1px solid var(--border-soft); box-shadow:0 18px 60px rgba(0,0,0,.24); }
+  .metric-tile { background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.08); }
 
   /* Fondo de cuadritos (transparencia) para previews uniformes — oscuro */
   .checker-bg {
@@ -162,66 +184,132 @@
 </div>
 
 <!-- ═══════════ LOGIN ═══════════ -->
-<div id="login-overlay" class="fixed inset-0 z-[100] flex items-center justify-center px-4 overflow-hidden"
-     style="display:flex; background:radial-gradient(130% 130% at 0% 0%,#101733 0%,#0a0e1f 55%,#06080f 100%);">
-  <div class="aurora w-96 h-96" style="top:-120px;left:-80px;background:#5B8CF7;opacity:.4;"></div>
-  <div class="aurora w-[30rem] h-[30rem]" style="bottom:-160px;right:-120px;background:#A855F7;opacity:.35;animation-delay:-6s;"></div>
+<div id="login-overlay" class="fixed inset-0 z-[100] flex overflow-hidden app-shell" style="display:flex;">
+  <div class="aurora w-[30rem] h-[30rem]" style="top:-160px;left:-120px;background:#13D6C0;opacity:.22;"></div>
+  <div class="aurora w-[34rem] h-[34rem]" style="bottom:-180px;right:-120px;background:#8B5CF6;opacity:.28;animation-delay:-6s;"></div>
   <div class="absolute inset-0 grid-fade"></div>
 
-  <div class="glass rounded-3xl p-8 w-full max-w-sm relative text-white shadow-2xl">
-    <div class="flex items-center gap-2.5 mb-6">
-      <div class="w-9 h-9 brand-gradient rounded-xl flex items-center justify-center shadow-lg">
-        <span class="text-white font-black leading-none">S</span>
+  <section class="relative z-10 w-full lg:w-[40%] min-h-screen flex flex-col justify-between px-6 py-8 sm:px-10">
+    <div class="ravel-panel rounded-2xl p-8 sm:p-10 w-full max-w-[32rem] my-auto">
+      <div class="ravel-logo-lockup mb-12">
+        <div class="w-16 h-16 still-mark-box text-4xl"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M67 29H42c-8 0-13 3-15 8-2 6 2 12 10 15l19 7c3 1 4 3 3 5-1 2-4 3-8 3H25v13h29c10 0 18-4 21-11 3-8-2-16-13-20l-18-7c-3-1-4-2-4-4 1-2 3-3 7-3h20V29Z" fill="#fff"/><path d="M25 67h28c5 0 8-1 9-4 1-2 0-4-4-5L38 51c-8-3-13-8-13-15 0-2 0-4 1-6-5 3-8 8-9 14-1 9 5 17 17 21l18 7c2 1 3 2 3 3-1 1-3 2-6 2H25V67Z" fill="#fff" opacity=".78"/></svg></div>
+        <div>
+          <div class="ravel-word text-4xl">Still</div>
+          <div class="ravel-byline text-base mt-1">by <strong>Ravel</strong></div>
+        </div>
       </div>
-      <div class="flex items-baseline gap-0.5">
-        <span class="font-bold text-white text-base">Still</span>
-        <span class="font-black text-base brand-text">AI</span>
+
+      <h2 id="login-title" class="text-3xl font-black tracking-tight text-white">Bienvenido</h2>
+      <p id="login-sub" class="text-base text-slate-400 mt-2 mb-8 leading-relaxed">Accede a tu espacio de producción creativa impulsado por inteligencia artificial.</p>
+
+      <form onsubmit="authSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-200 mb-2">Correo electrónico</label>
+          <input id="login-user" type="text" autocomplete="username" autocapitalize="none" spellcheck="false"
+                 class="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-sm text-white placeholder-white/35 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition-all"
+                 placeholder="tu@empresa.com">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-200 mb-2">Contraseña</label>
+          <input id="login-pass" type="password" autocomplete="current-password"
+                 class="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-sm text-white placeholder-white/35 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition-all"
+                 placeholder="••••••••">
+        </div>
+        <div class="flex items-center justify-between gap-3 text-xs text-slate-400">
+          <label class="inline-flex items-center gap-2 select-none">
+            <input type="checkbox" checked class="w-4 h-4 rounded border-white/20 bg-white/10 accent-violet-500">
+            Recordarme en este dispositivo
+          </label>
+          <button type="button" onclick="toast('Recuperación de contraseña próximamente','warn')" class="text-violet-300 hover:text-violet-200 font-semibold">¿Olvidaste tu contraseña?</button>
+        </div>
+        <p id="login-error" class="hidden text-xs text-red-300 bg-red-500/10 border border-red-400/20 rounded-lg px-3 py-2"></p>
+        <button id="login-btn" type="submit"
+                class="glow-btn w-full btn-brand text-white font-semibold py-3.5 rounded-xl mt-1 flex items-center justify-center gap-2">
+          Iniciar sesión
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        </button>
+      </form>
+
+      <div class="flex items-center gap-4 my-7">
+        <div class="h-px flex-1 bg-white/10"></div>
+        <span class="text-xs text-slate-500">o continúa con</span>
+        <div class="h-px flex-1 bg-white/10"></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <button onclick="toast('Google próximamente','warn')" class="h-12 rounded-xl border border-white/12 bg-white/5 hover:bg-white/8 text-sm font-semibold text-white transition-all">Google</button>
+        <button onclick="toast('Microsoft próximamente','warn')" class="h-12 rounded-xl border border-white/12 bg-white/5 hover:bg-white/8 text-sm font-semibold text-white transition-all">Microsoft</button>
+      </div>
+
+      <p id="login-toggle" class="text-sm text-slate-400 text-center mt-8">
+        ¿No tienes una cuenta? <button type="button" onclick="authToggle()" class="text-violet-300 font-semibold hover:underline">Contáctanos</button>
+      </p>
+    </div>
+    <div class="hidden sm:flex items-end justify-between text-[11px] text-slate-500">
+      <span>Still by Ravel<br>© 2026. Todos los derechos reservados.</span>
+      <span>Seguridad&nbsp;&nbsp;|&nbsp;&nbsp;Privacidad&nbsp;&nbsp;|&nbsp;&nbsp;Términos</span>
+    </div>
+  </section>
+
+  <section class="relative z-10 hidden lg:flex flex-1 min-h-screen items-center px-12 xl:px-16">
+    <div class="w-full max-w-5xl">
+      <div class="flex justify-between text-[11px] uppercase tracking-[.45em] text-slate-400 mb-14">
+        <span>De datos a experiencias reales</span>
+        <span class="text-right">Una plataforma.<br>Infinitas posibilidades.</span>
+      </div>
+      <h1 class="text-5xl xl:text-6xl font-black leading-[1.05] tracking-tight text-white max-w-2xl">
+        De la lógica creativa<br>a la producción<br><span class="brand-text">a escala.</span>
+      </h1>
+      <p class="mt-5 text-xl text-slate-300 max-w-2xl leading-snug">Automatiza, personaliza y multiplica tu contenido visual con inteligencia que produce resultados.</p>
+
+      <div class="mt-12 grid xl:grid-cols-[220px_1fr] gap-8 items-center">
+        <div class="ravel-panel rounded-2xl p-5">
+          <p class="text-xs uppercase tracking-widest text-white font-bold mb-4">Tus activos</p>
+          <div class="space-y-3 text-sm text-slate-300">
+            <div class="flex items-center gap-3"><span class="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center">SKU</span>Productos</div>
+            <div class="flex items-center gap-3"><span class="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center">TPL</span>Plantillas</div>
+            <div class="flex items-center gap-3"><span class="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center">BR</span>Reglas de marca</div>
+            <div class="flex items-center gap-3"><span class="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center">DAT</span>Datos y promociones</div>
+          </div>
+        </div>
+        <div class="relative min-h-[330px]">
+          <div class="absolute left-0 top-1/2 -translate-y-1/2 w-40 h-40 rounded-3xl border border-cyan-300/50 bg-[#10182d] flex flex-col items-center justify-center shadow-[0_0_45px_rgba(19,214,192,.35)]">
+            <div class="w-16 h-16 still-mark-box text-4xl mb-3"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M67 29H42c-8 0-13 3-15 8-2 6 2 12 10 15l19 7c3 1 4 3 3 5-1 2-4 3-8 3H25v13h29c10 0 18-4 21-11 3-8-2-16-13-20l-18-7c-3-1-4-2-4-4 1-2 3-3 7-3h20V29Z" fill="#fff"/><path d="M25 67h28c5 0 8-1 9-4 1-2 0-4-4-5L38 51c-8-3-13-8-13-15 0-2 0-4 1-6-5 3-8 8-9 14-1 9 5 17 17 21l18 7c2 1 3 2 3 3-1 1-3 2-6 2H25V67Z" fill="#fff" opacity=".78"/></svg></div>
+            <div class="text-3xl font-black text-white leading-none">Still</div>
+            <div class="text-xs text-slate-300">by <span class="text-violet-400 font-bold">Ravel</span></div>
+          </div>
+          <div class="absolute left-36 right-0 top-0 bottom-0">
+            <div class="absolute inset-y-14 left-0 right-10 rounded-full bg-gradient-to-r from-cyan-400/25 via-violet-500/25 to-transparent blur-xl"></div>
+            <div class="relative ml-20 grid grid-cols-5 gap-3 items-end h-full">
+              <div class="h-32 rounded-xl ravel-panel p-3 flex items-end text-xs text-white">In-store</div>
+              <div class="h-44 rounded-xl ravel-panel p-3 flex items-end text-xs text-white">E-commerce</div>
+              <div class="h-56 rounded-xl ravel-panel p-3 flex items-end text-xs text-white">Social</div>
+              <div class="h-64 rounded-xl ravel-panel p-3 flex items-end text-xs text-white">Marketplace</div>
+              <div class="h-48 rounded-xl ravel-panel p-3 flex items-end text-xs text-white">Print</div>
+            </div>
+          </div>
+          <div class="absolute right-0 bottom-0 ravel-panel rounded-2xl px-6 py-4">
+            <p class="text-2xl font-black text-white">1,000+</p>
+            <p class="text-xs uppercase tracking-widest text-slate-400">piezas generadas</p>
+          </div>
+        </div>
+      </div>
+      <div class="mt-12 grid grid-cols-4 gap-5 text-[11px] uppercase tracking-widest text-slate-400">
+        <span>Más velocidad</span><span>Consistencia de marca</span><span>Listo para cada canal</span><span>Mayor impacto</span>
       </div>
     </div>
-
-    <h2 id="login-title" class="text-2xl font-black tracking-tight">Bienvenido</h2>
-    <p id="login-sub" class="text-sm text-slate-400 mt-1 mb-6">Inicia sesión para continuar</p>
-
-    <form onsubmit="authSubmit(event)" class="space-y-3.5">
-      <div>
-        <label class="block text-xs font-medium text-slate-300 mb-1.5">Usuario</label>
-        <input id="login-user" type="text" autocomplete="username" autocapitalize="none" spellcheck="false"
-               class="w-full bg-white/5 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-white/30 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
-               placeholder="tu_usuario">
-      </div>
-      <div>
-        <label class="block text-xs font-medium text-slate-300 mb-1.5">Contraseña</label>
-        <input id="login-pass" type="password" autocomplete="current-password"
-               class="w-full bg-white/5 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-white/30 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
-               placeholder="••••••••">
-      </div>
-      <p id="login-error" class="hidden text-xs text-red-300 bg-red-500/10 border border-red-400/20 rounded-lg px-3 py-2"></p>
-      <button id="login-btn" type="submit"
-              class="glow-btn w-full brand-gradient text-white font-semibold py-3 rounded-xl mt-1 flex items-center justify-center gap-2">
-        Iniciar sesión
-      </button>
-    </form>
-
-    <p id="login-toggle" class="text-xs text-slate-400 text-center mt-5">
-      ¿No tienes cuenta? <button type="button" onclick="authToggle()" class="text-indigo-300 font-semibold hover:underline">Crear una</button>
-    </p>
-  </div>
-
-  <p class="absolute bottom-5 text-[11px] text-slate-500">StillAI · Still perfect. Every time.</p>
+  </section>
 </div>
 
 <div class="flex min-h-screen">
 
   <!-- ═══════════ SIDEBAR ═══════════ -->
-  <aside class="hidden md:flex flex-col w-56 flex-shrink-0 bg-white border-r border-gray-200 sticky top-0 h-screen">
+  <aside class="hidden md:flex flex-col w-60 flex-shrink-0 bg-white border-r border-gray-200 sticky top-0 h-screen">
     <!-- Logo -->
-    <div class="h-14 flex items-center gap-2.5 px-5 border-b border-gray-100 flex-shrink-0">
-      <div class="w-8 h-8 brand-gradient rounded-xl flex items-center justify-center shadow-lg">
-        <span class="text-white font-black text-base leading-none">S</span>
-      </div>
-      <div class="flex items-baseline gap-0.5">
-        <span class="font-bold text-gray-900 text-sm tracking-tight">Still</span>
-        <span class="font-black text-sm tracking-tight brand-text">AI</span>
+    <div class="h-16 flex items-center gap-2.5 px-5 border-b border-gray-100 flex-shrink-0">
+      <div class="w-9 h-9 flex-shrink-0 still-mark-box text-2xl"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M67 29H42c-8 0-13 3-15 8-2 6 2 12 10 15l19 7c3 1 4 3 3 5-1 2-4 3-8 3H25v13h29c10 0 18-4 21-11 3-8-2-16-13-20l-18-7c-3-1-4-2-4-4 1-2 3-3 7-3h20V29Z" fill="#fff"/><path d="M25 67h28c5 0 8-1 9-4 1-2 0-4-4-5L38 51c-8-3-13-8-13-15 0-2 0-4 1-6-5 3-8 8-9 14-1 9 5 17 17 21l18 7c2 1 3 2 3 3-1 1-3 2-6 2H25V67Z" fill="#fff" opacity=".78"/></svg></div>
+      <div>
+        <div class="font-black text-gray-900 text-xl tracking-tight leading-none">Still</div>
+        <div class="text-[11px] text-gray-400 leading-none mt-1">by <span class="brand-text font-bold">Ravel</span></div>
       </div>
     </div>
     <!-- Menú -->
@@ -232,15 +320,19 @@
       </button>
       <button id="nav-bodegon" onclick="switchTab('bodegon')" class="nav-item">
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
-        <span>Bodegón</span>
+        <span>Crear</span>
       </button>
       <button id="nav-batch" onclick="switchTab('batch')" class="nav-item">
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 6.878V6a2.25 2.25 0 012.25-2.25h7.5A2.25 2.25 0 0118 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 004.5 9v.878m13.5-3A2.25 2.25 0 0119.5 9v.878m0 0a2.246 2.246 0 00-.75-.128H5.25c-.263 0-.515.045-.75.128m15 0A2.25 2.25 0 0121 12v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6c0-.98.626-1.813 1.5-2.122"/></svg>
-        <span>Por lotes</span>
+        <span>Producción</span>
       </button>
       <button id="nav-projects" onclick="switchTab('projects')" class="nav-item">
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"/></svg>
         <span>Proyectos</span>
+      </button>
+      <button onclick="toast('Próximamente','warn')" class="nav-item">
+        <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 5.25h16.5m-16.5 6.75h16.5m-16.5 6.75h16.5M6 3v18m6-18v18m6-18v18"/></svg>
+        <span>Biblioteca</span> <span class="soon">Pronto</span>
       </button>
       <button onclick="toast('Próximamente','warn')" class="nav-item">
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
@@ -258,7 +350,7 @@
     <!-- Plan Pro -->
     <div class="p-3 flex-shrink-0">
       <div class="rounded-xl border border-amber-200 bg-amber-50 p-3">
-        <p class="text-xs font-bold text-amber-700">⭐ Plan Pro</p>
+        <p class="text-xs font-bold text-amber-700">Plan Pro</p>
         <p class="text-[10px] text-amber-600/80 mt-0.5 leading-snug">Más créditos, exportaciones en alta resolución y más.</p>
         <button onclick="toast('Próximamente','warn')" class="mt-2 w-full btn-brand text-white text-xs font-semibold py-2 rounded-lg">Mejorar plan</button>
       </div>
@@ -269,19 +361,24 @@
   <div class="flex-1 min-w-0 flex flex-col">
 
     <!-- Top bar -->
-    <header class="h-14 bg-white border-b border-gray-200 sticky top-0 z-40 flex items-center gap-3 px-5 flex-shrink-0">
+    <header class="h-16 bg-white border-b border-gray-200 sticky top-0 z-40 flex items-center gap-3 px-5 flex-shrink-0">
       <!-- Logo (solo móvil, sin sidebar) -->
       <div class="md:hidden flex items-center gap-2">
-        <div class="w-7 h-7 brand-gradient rounded-lg flex items-center justify-center">
-          <span class="text-white font-black text-sm">S</span>
-        </div>
-        <span class="font-bold text-gray-900 text-sm">Still<span class="brand-text font-black">AI</span></span>
+        <div class="w-8 h-8 still-mark-box text-xl"><svg viewBox="0 0 100 100" aria-hidden="true"><path d="M67 29H42c-8 0-13 3-15 8-2 6 2 12 10 15l19 7c3 1 4 3 3 5-1 2-4 3-8 3H25v13h29c10 0 18-4 21-11 3-8-2-16-13-20l-18-7c-3-1-4-2-4-4 1-2 3-3 7-3h20V29Z" fill="#fff"/><path d="M25 67h28c5 0 8-1 9-4 1-2 0-4-4-5L38 51c-8-3-13-8-13-15 0-2 0-4 1-6-5 3-8 8-9 14-1 9 5 17 17 21l18 7c2 1 3 2 3 3-1 1-3 2-6 2H25V67Z" fill="#fff" opacity=".78"/></svg></div>
+        <span class="font-bold text-gray-900 text-sm">Still <span class="text-gray-400 font-medium">by</span> <span class="brand-text font-black">Ravel</span></span>
+      </div>
+
+      <div class="hidden lg:flex flex-1 max-w-md">
+        <label class="relative w-full">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"/></svg>
+          <input class="w-full bg-white/5 border border-gray-200 rounded-xl pl-9 pr-3 py-2.5 text-sm text-gray-300 placeholder-gray-500 focus:outline-none focus:border-cyan-300" placeholder="Buscar proyectos, plantillas o productos...">
+        </label>
       </div>
 
       <div class="ml-auto flex items-center gap-2">
         <span title="Próximamente"
               class="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full cursor-default select-none">
-          ⭐ Pro
+          Plan Pro
         </span>
         <span id="topbar-username" class="hidden sm:block text-xs font-medium text-gray-300"></span>
         <div id="user-avatar"
@@ -296,263 +393,97 @@
     <main class="flex-1 min-w-0 px-6 py-6">
 
 <!-- ═══════════════════════════════════════════════════════
-     INICIO — Landing 2030
+     INICIO — Dashboard Ravel
 ═══════════════════════════════════════════════════════ -->
 <div id="panel-home" class="hidden">
-
-  <!-- 01 · HERO: mensaje + antes → después, con espacio para respirar -->
-  <section class="relative overflow-hidden rounded-3xl text-white px-8 py-14 sm:px-14 sm:py-16 mb-14"
-           style="background:radial-gradient(140% 100% at 15% 0%,#141b35 0%,#0a0e1f 60%,#070a16 100%);">
-    <div class="relative grid lg:grid-cols-2 gap-12 items-center">
-      <div>
-        <h1 class="text-4xl sm:text-5xl font-bold leading-[1.15] tracking-tight mb-5">
-          De tus productos<br>a <span style="color:#c4b5fd">imágenes que venden</span>.
-        </h1>
-        <p class="text-base text-slate-400 max-w-md mb-8 leading-relaxed">
-          Still convierte tus fotos reales en composiciones profesionales en segundos. Listas para tu tienda, catálogo o redes.
-        </p>
-
-        <div class="flex flex-wrap gap-3 mb-10">
-          <button onclick="switchTab('bodegon')"
-                  class="brand-gradient text-white font-semibold px-6 py-3 rounded-xl flex items-center gap-2 text-sm">
-            Crear mi primera composición
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-          </button>
-          <button onclick="switchTab('batch')"
-                  class="text-white font-semibold px-6 py-3 rounded-xl text-sm" style="border:1px solid rgba(255,255,255,.18)">
-            Generar por lotes
-          </button>
-        </div>
-
-        <div class="flex flex-wrap gap-x-8 gap-y-4">
-          <div class="flex items-start gap-2 max-w-[110px]">
-            <svg class="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-            <span class="text-xs text-slate-400 leading-snug">Productos reales</span>
-          </div>
-          <div class="flex items-start gap-2 max-w-[110px]">
-            <svg class="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
-            <span class="text-xs text-slate-400 leading-snug">Escala proporcional</span>
-          </div>
-          <div class="flex items-start gap-2 max-w-[110px]">
-            <svg class="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 12 22l-9-9 8.6-8.6A2 2 0 0 1 13 4h6a1 1 0 0 1 1 1v6a2 2 0 0 1-.4 1.4Z"/><circle cx="16" cy="8" r="1.1" fill="currentColor" stroke="none"/></svg>
-            <span class="text-xs text-slate-400 leading-snug">Branding intacto</span>
-          </div>
-          <div class="flex items-start gap-2 max-w-[130px]">
-            <svg class="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="1.6"/><path d="m21 15-5-5-9 9"/></svg>
-            <span class="text-xs text-slate-400 leading-snug">PNG + PSD listos para usar</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Flujo: antes → Still compone → después, con resultado real -->
-      <div>
-        <div class="flex items-center gap-1.5 sm:gap-2 text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-4">
-          <span>1 · Subes tus productos</span>
-          <span class="text-slate-600">┈┈→</span>
-          <span>2 · Still compone</span>
-          <span class="text-slate-600">┈┈→</span>
-          <span class="text-indigo-300">3 · Imagen lista para vender</span>
-        </div>
-        <div class="flex items-center gap-2 sm:gap-3">
-          <div class="grid grid-cols-2 gap-1.5 flex-shrink-0">
-            <img src="/static/landing/antes-1.png" alt="Foto suelta de producto" class="w-10 h-10 sm:w-11 sm:h-11 object-contain glass rounded-lg p-1.5">
-            <img src="/static/landing/antes-2.png" alt="Foto suelta de producto" class="w-10 h-10 sm:w-11 sm:h-11 object-contain glass rounded-lg p-1.5">
-            <img src="/static/landing/antes-3.png" alt="Foto suelta de producto" class="w-10 h-10 sm:w-11 sm:h-11 object-contain glass rounded-lg p-1.5">
-            <img src="/static/landing/antes-4.png" alt="Foto suelta de producto" class="w-10 h-10 sm:w-11 sm:h-11 object-contain glass rounded-lg p-1.5">
-          </div>
-          <svg class="w-4 h-4 text-indigo-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-          <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl brand-gradient flex items-center justify-center text-white font-black flex-shrink-0" style="box-shadow:0 0 22px rgba(91,140,247,.55)">S</div>
-          <svg class="w-4 h-4 text-indigo-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-          <div class="flex-1 min-w-0">
-            <img src="/static/landing/despues.png" alt="Composición final generada por Still, sin retocar" class="floaty w-full h-auto object-contain" style="filter:drop-shadow(0 18px 34px rgba(91,140,247,.4));">
-          </div>
-        </div>
-        <div class="flex items-center justify-between mt-4">
-          <span class="text-[11px] text-slate-500">✓ Resultado real — sin retocar</span>
-          <div class="flex gap-2">
-            <span class="glass rounded-lg px-3 py-1.5 text-[10px] font-semibold text-slate-200">PNG · transparente</span>
-            <span class="glass rounded-lg px-3 py-1.5 text-[10px] font-semibold text-slate-200">PSD · por capas</span>
-          </div>
-        </div>
-      </div>
+  <section class="mb-7 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+    <div>
+      <p class="text-[11px] uppercase tracking-[.35em] text-gray-400 mb-3">Creative Production Platform</p>
+      <h1 class="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">Buenos días<span id="home-user-greeting"></span></h1>
+      <p class="text-gray-500 text-base mt-2">¿Qué quieres producir hoy?</p>
     </div>
-  </section>
-
-  <!-- 02 · LA IA DECIDE. STILL COMPONE. -->
-  <section class="text-center pt-12 mb-14" style="border-top:1px solid rgba(255,255,255,.08)">
-    <h2 class="text-base sm:text-lg font-bold tracking-tight text-gray-900 mb-2">LA IA DECIDE. <span class="brand-text">STILL COMPONE.</span></h2>
-    <p class="text-sm text-gray-500 max-w-xl mx-auto leading-relaxed">La IA analiza tus productos, define jerarquía, escala y composición. Still usa tus imágenes reales para construir el resultado final.</p>
-  </section>
-
-  <!-- 03 · CÓMO FUNCIONA -->
-  <section class="mb-14 pt-12" style="border-top:1px solid rgba(255,255,255,.08)">
-    <div class="grid lg:grid-cols-[260px_1fr] gap-8 lg:gap-14">
-      <div>
-        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Cómo funciona</p>
-        <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight leading-snug">Tres pasos. Un resultado listo para usar.</h2>
-      </div>
-      <div class="flex flex-col sm:flex-row gap-8 sm:gap-6">
-        <div class="flex-1">
-          <div class="flex items-center gap-3 mb-3">
-            <span class="text-2xl font-bold text-gray-300">01</span>
-            <svg class="w-5 h-5 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4.5 4.5 0 0 1-1-8.9A5.5 5.5 0 0 1 16.9 8H17a4 4 0 0 1 1 7.9"/><path d="M12 12v7M9 15l3-3 3 3"/></svg>
-          </div>
-          <h3 class="font-bold text-gray-900 text-sm mb-1">Sube</h3>
-          <p class="text-xs text-gray-500 leading-relaxed">Tus fotos de producto. PNG o JPG.</p>
-        </div>
-        <svg class="hidden sm:block w-4 h-4 text-gray-300 mt-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-        <div class="flex-1">
-          <div class="flex items-center gap-3 mb-3">
-            <span class="text-2xl font-bold text-gray-300">02</span>
-            <svg class="w-5 h-5 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="7" r="1.6"/><circle cx="16" cy="12" r="1.6"/><circle cx="9" cy="17" r="1.6"/><path d="M4 7h2M18 12h2M4 17h3"/></svg>
-          </div>
-          <h3 class="font-bold text-gray-900 text-sm mb-1">Compone</h3>
-          <p class="text-xs text-gray-500 leading-relaxed">Elige un estilo o deja que Still proponga.</p>
-        </div>
-        <svg class="hidden sm:block w-4 h-4 text-gray-300 mt-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-        <div class="flex-1">
-          <div class="flex items-center gap-3 mb-3">
-            <span class="text-2xl font-bold text-gray-300">03</span>
-            <svg class="w-5 h-5 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4M4 19h16"/></svg>
-          </div>
-          <h3 class="font-bold text-gray-900 text-sm mb-1">Genera</h3>
-          <p class="text-xs text-gray-500 leading-relaxed">PNG para publicar. PSD para editar.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- 04 · TRES MOTORES DE COMPOSICIÓN -->
-  <section class="mb-14 pt-12" style="border-top:1px solid rgba(255,255,255,.08)">
-    <div class="grid lg:grid-cols-[260px_1fr] gap-8 lg:gap-14">
-      <div>
-        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Un solo Still</p>
-        <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight leading-snug">Tres motores de composición.</h2>
-      </div>
-      <div class="grid sm:grid-cols-3 gap-8">
-        <div>
-          <svg class="w-5 h-5 text-indigo-500 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>
-          <h3 class="font-bold text-gray-900 text-sm mb-1">Composición rápida</h3>
-          <p class="text-xs text-gray-500 leading-relaxed">Reglas precisas. Rápido, consistente y sin IA.</p>
-        </div>
-        <div>
-          <svg class="w-5 h-5 text-purple-500 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>
-          <h3 class="font-bold text-gray-900 text-sm mb-1">Composición inteligente</h3>
-          <p class="text-xs text-gray-500 leading-relaxed">La IA analiza tus productos y propone la mejor composición.</p>
-        </div>
-        <div>
-          <svg class="w-5 h-5 text-cyan-500 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.5 6.5l2 2M15.5 15.5l2 2M17.5 6.5l-2 2M8.5 15.5l-2 2"/></svg>
-          <h3 class="font-bold text-gray-900 text-sm mb-1">Escena generativa</h3>
-          <p class="text-xs text-gray-500 leading-relaxed">La IA crea una nueva escena a partir de tus productos.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- 05 · GENERACIÓN POR LOTES -->
-  <section class="mb-14 pt-12" style="border-top:1px solid rgba(255,255,255,.08)">
-    <div class="grid lg:grid-cols-[260px_1fr] gap-8 lg:gap-14 items-center">
-      <div>
-        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">¿Tienes muchos productos?</p>
-        <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight leading-snug mb-3">Genera cientos de composiciones <span class="brand-text">por lote.</span></h2>
-        <p class="text-sm text-gray-500 max-w-sm leading-relaxed">Sube tus carpetas. Cada carpeta se convierte en una composición independiente.</p>
-        <button onclick="switchTab('batch')" class="mt-4 text-sm font-semibold text-indigo-600 hover:underline">Generar por lotes →</button>
-      </div>
-      <div class="flex items-center gap-3 flex-wrap">
-        <div class="text-center px-6 py-4 rounded-xl" style="border:1px solid rgba(255,255,255,.08)"><p class="font-bold text-gray-900 text-sm">100 SKUs</p></div>
-        <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-        <div class="text-center px-6 py-4 rounded-xl brand-gradient"><p class="font-bold text-white text-sm">Still</p></div>
-        <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-        <div class="text-center px-6 py-4 rounded-xl" style="border:1px solid rgba(255,255,255,.08)"><p class="font-bold text-gray-900 text-sm">📦 ZIP</p></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- 06 · PSD -->
-  <section class="mb-14 pt-12" style="border-top:1px solid rgba(255,255,255,.08)">
-    <div class="grid lg:grid-cols-[260px_1fr] gap-8 lg:gap-14 items-center">
-      <div>
-        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Exportación</p>
-        <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight leading-snug">Genera en segundos. Sigue en Photoshop.</h2>
-      </div>
-      <div class="grid sm:grid-cols-2 gap-8">
-        <div>
-          <h3 class="font-bold text-gray-900 text-sm mb-1">PNG — listo para publicar</h3>
-          <p class="text-xs text-gray-500 leading-relaxed">Fondo transparente al ras, listo para tienda, catálogo o redes.</p>
-        </div>
-        <div>
-          <h3 class="font-bold text-gray-900 text-sm mb-1">PSD — listo para editar</h3>
-          <p class="text-xs text-gray-500 leading-relaxed">Una capa por producto + sombras, para seguir en Photoshop.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- 07 · EXTRAS + TECNOLOGÍA -->
-  <section class="mb-14 pt-12" style="border-top:1px solid rgba(255,255,255,.08)">
-    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-      <div class="flex flex-wrap gap-x-10 gap-y-4">
-        <div><p class="text-xs font-semibold text-gray-800">Fondos de estudio</p><p class="text-[11px] text-gray-500 mt-0.5">Profesionales y realistas</p></div>
-        <div><p class="text-xs font-semibold text-gray-800">Sombras de contacto</p><p class="text-[11px] text-gray-500 mt-0.5">Ancla tus productos</p></div>
-        <div><p class="text-xs font-semibold text-gray-800">Zoom de detalle</p><p class="text-[11px] text-gray-500 mt-0.5">Destaca lo importante</p></div>
-        <div><p class="text-xs font-semibold text-gray-800">Transparencia al ras</p><p class="text-[11px] text-gray-500 mt-0.5">Sin márgenes innecesarios</p></div>
-      </div>
-      <div class="flex items-center gap-4 flex-shrink-0">
-        <span class="text-[11px] font-bold text-gray-400 uppercase tracking-widest whitespace-nowrap">Potenciado por</span>
-        <div class="flex gap-4 text-xs font-semibold text-gray-500">
-          <span>Groq</span><span>Gemini</span><span>Claude</span><span>OpenAI</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- 08 · MÓDULOS -->
-  <p class="text-xs font-semibold text-gray-500 mb-3">Elige tu flujo</p>
-  <div class="grid md:grid-cols-2 gap-5 mb-8">
-    <button onclick="switchTab('bodegon')"
-            class="group text-left glass rounded-2xl p-6 card hover:border-indigo-300 transition-all relative overflow-hidden">
-      <div class="absolute -right-8 -top-8 w-28 h-28 rounded-full bg-indigo-50 opacity-70 group-hover:scale-125 transition-transform"></div>
-      <div class="relative">
-        <div class="w-12 h-12 rounded-2xl brand-gradient flex items-center justify-center text-white text-xl mb-4 shadow-lg">🖼️</div>
-        <h3 class="font-bold text-gray-900 text-lg">Bodegón individual</h3>
-        <p class="text-sm text-gray-500 mt-1.5 mb-4 max-w-sm">Sube tus productos, compara <strong class="text-gray-700">18 estilos + hasta 6 propuestas de IA</strong> (incluida una composición 100% libre), previsualiza y descarga el PNG con fondo transparente al ras.</p>
-        <span class="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 group-hover:gap-2.5 transition-all">
-          Entrar <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-        </span>
-      </div>
+    <button onclick="switchTab('bodegon')" class="btn-brand text-white font-semibold px-5 py-3 rounded-xl flex items-center justify-center gap-2 text-sm">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 5v14M5 12h14"/></svg>
+      Crear
     </button>
-
-    <button onclick="switchTab('batch')"
-            class="group text-left glass rounded-2xl p-6 card hover:border-purple-300 transition-all relative overflow-hidden">
-      <div class="absolute -right-8 -top-8 w-28 h-28 rounded-full bg-purple-50 opacity-70 group-hover:scale-125 transition-transform"></div>
-      <div class="relative">
-        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-white text-xl mb-4 shadow-lg" style="background:linear-gradient(135deg,#A855F7,#6366f1);">📁</div>
-        <h3 class="font-bold text-gray-900 text-lg">Generación por lotes</h3>
-        <p class="text-sm text-gray-500 mt-1.5 mb-4 max-w-sm">Sube carpetas: <strong class="text-gray-700">cada subcarpeta = un bodegón</strong>. Elige el modo, genera cientos y descarga todo en un ZIP.</p>
-        <span class="inline-flex items-center gap-1.5 text-sm font-semibold text-purple-600 group-hover:gap-2.5 transition-all">
-          Entrar <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-        </span>
-      </div>
-    </button>
-  </div>
-
-  <!-- 09 · CTA FINAL -->
-  <section class="relative overflow-hidden rounded-3xl text-white px-8 py-12 sm:px-14 sm:py-14 mb-7 text-center"
-           style="background:radial-gradient(120% 120% at 50% 100%,#131a33 0%,#0a0e1f 55%,#070a16 100%);">
-    <div class="aurora w-72 h-72" style="bottom:-60px;left:20%;background:#5B8CF7;"></div>
-    <div class="aurora w-72 h-72" style="bottom:-60px;right:20%;background:#A855F7;animation-delay:-6s;"></div>
-    <div class="absolute inset-0 grid-fade"></div>
-    <div class="relative max-w-xl mx-auto">
-      <h2 class="text-xl sm:text-2xl font-black tracking-tight mb-5">Tu próximo catálogo no debería empezar en Photoshop.</h2>
-      <button onclick="switchTab('bodegon')"
-              class="glow-btn brand-gradient text-white font-semibold px-7 py-3 rounded-2xl inline-flex items-center gap-2 shadow-lg text-sm">
-        Crear mi primera composición
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-      </button>
-    </div>
   </section>
 
-  <p class="text-center text-[11px] text-gray-400 mt-8">StillAI · Still perfect. Every time.</p>
+  <section class="grid md:grid-cols-3 gap-4 mb-7">
+    <button onclick="switchTab('bodegon')" class="group text-left ravel-panel rounded-2xl p-5 card hover:border-cyan-300/40 transition-all">
+      <div class="w-10 h-10 rounded-xl bg-cyan-400/10 border border-cyan-300/20 text-cyan-200 flex items-center justify-center mb-5">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 16.5 8.25 11.25a2.25 2.25 0 0 1 3.18 0l1.32 1.32m-1.5 4.68 3.75-3.75a2.25 2.25 0 0 1 3.18 0L21 16.32M4.5 19.5h15A1.5 1.5 0 0 0 21 18V6a1.5 1.5 0 0 0-1.5-1.5h-15A1.5 1.5 0 0 0 3 6v12a1.5 1.5 0 0 0 1.5 1.5Z"/></svg>
+      </div>
+      <h3 class="font-bold text-gray-900 text-base">Nueva composición</h3>
+      <p class="text-sm text-gray-500 mt-1.5">Crear una pieza a partir de productos.</p>
+      <span class="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 group-hover:gap-2.5 transition-all">Abrir <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg></span>
+    </button>
+    <button onclick="switchTab('batch')" class="group text-left ravel-panel rounded-2xl p-5 card hover:border-violet-300/40 transition-all">
+      <div class="w-10 h-10 rounded-xl bg-violet-400/10 border border-violet-300/20 text-violet-200 flex items-center justify-center mb-5">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 6.75h12M6 12h12M6 17.25h12M3.75 6.75h.01M3.75 12h.01M3.75 17.25h.01"/></svg>
+      </div>
+      <h3 class="font-bold text-gray-900 text-base">Producción por lotes</h3>
+      <p class="text-sm text-gray-500 mt-1.5">Generar múltiples piezas automáticamente.</p>
+      <span class="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-purple-600 group-hover:gap-2.5 transition-all">Abrir <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg></span>
+    </button>
+    <button onclick="toast('Plantillas próximamente','warn')" class="group text-left ravel-panel rounded-2xl p-5 card hover:border-white/20 transition-all">
+      <div class="w-10 h-10 rounded-xl bg-white/8 border border-white/10 text-slate-200 flex items-center justify-center mb-5">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4.5 4.5h15v15h-15zM9 4.5v15M4.5 9h15"/></svg>
+      </div>
+      <h3 class="font-bold text-gray-900 text-base">Desde plantilla</h3>
+      <p class="text-sm text-gray-500 mt-1.5">Crear utilizando una plantilla existente.</p>
+      <span class="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-400">Próximamente</span>
+    </button>
+  </section>
+
+  <section class="grid lg:grid-cols-[1fr_320px] gap-5">
+    <div class="ravel-panel rounded-2xl p-5">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-lg font-bold text-gray-900">Proyectos recientes</h2>
+          <p class="text-sm text-gray-500">Tus últimas composiciones y producciones.</p>
+        </div>
+        <button onclick="switchTab('projects')" class="text-sm font-semibold text-indigo-600 hover:text-indigo-400">Ver todos</button>
+      </div>
+      <div class="grid sm:grid-cols-3 gap-3">
+        <button onclick="switchTab('bodegon')" class="text-left rounded-xl border border-gray-200 bg-white p-3">
+          <div class="checker-bg aspect-[4/3] rounded-lg mb-3 flex items-center justify-center text-gray-400">
+            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 5v14M5 12h14"/></svg>
+          </div>
+          <p class="text-sm font-bold text-gray-900">Nueva pieza</p>
+          <p class="text-xs text-gray-500 mt-1">Borrador · 0 assets</p>
+        </button>
+        <button onclick="switchTab('batch')" class="text-left rounded-xl border border-gray-200 bg-white p-3">
+          <div class="aspect-[4/3] rounded-lg mb-3 bg-gradient-to-br from-cyan-400/10 to-violet-500/10 border border-white/10 flex items-center justify-center text-violet-200">
+            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 6.75h12M6 12h12M6 17.25h12"/></svg>
+          </div>
+          <p class="text-sm font-bold text-gray-900">Producción multicanal</p>
+          <p class="text-xs text-gray-500 mt-1">Listo · PNG / PSD</p>
+        </button>
+        <button onclick="switchTab('projects')" class="text-left rounded-xl border border-gray-200 bg-white p-3">
+          <div class="aspect-[4/3] rounded-lg mb-3 bg-white/5 border border-white/10 flex items-center justify-center text-cyan-200">
+            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3.75 12.75V12A2.25 2.25 0 0 1 6 9.75h12A2.25 2.25 0 0 1 20.25 12v6A2.25 2.25 0 0 1 18 20.25H6A2.25 2.25 0 0 1 3.75 18v-5.25ZM8.25 6.75h7.5"/></svg>
+          </div>
+          <p class="text-sm font-bold text-gray-900">Biblioteca de assets</p>
+          <p class="text-xs text-gray-500 mt-1">Procesando · catálogo</p>
+        </button>
+      </div>
+    </div>
+
+    <aside class="space-y-5">
+      <div class="ravel-panel rounded-2xl p-5">
+        <h2 class="text-lg font-bold text-gray-900 mb-4">Actividad</h2>
+        <div class="grid grid-cols-3 gap-2">
+          <div class="metric-tile rounded-xl p-3"><p class="text-2xl font-black text-white">48</p><p class="text-[11px] text-gray-500 mt-1">Piezas</p></div>
+          <div class="metric-tile rounded-xl p-3"><p class="text-2xl font-black text-white">12</p><p class="text-[11px] text-gray-500 mt-1">Proyectos</p></div>
+          <div class="metric-tile rounded-xl p-3"><p class="text-2xl font-black text-white">0</p><p class="text-[11px] text-gray-500 mt-1">En cola</p></div>
+        </div>
+      </div>
+      <div class="ravel-panel rounded-2xl p-5">
+        <p class="text-[11px] uppercase tracking-widest text-gray-400 mb-3">Still by Ravel</p>
+        <p class="text-sm text-gray-500 leading-relaxed">Productos, assets, datos y reglas de marca entran a Still para producir composiciones, variaciones y adaptaciones listas para cada canal.</p>
+      </div>
+    </aside>
+  </section>
 </div><!-- /panel-home -->
 
 <!-- ═══════════════════════════════════════════════════════
@@ -562,8 +493,8 @@
 
   <!-- Encabezado de página -->
   <div class="mb-6">
-    <h1 class="text-2xl font-bold text-gray-900">Generador de Bodegón</h1>
-    <p class="brand-text text-sm font-semibold">Still perfect. Every time.</p>
+    <h1 class="text-2xl font-bold text-gray-900">Crear composición</h1>
+    <p class="brand-text text-sm font-semibold">Inteligencia que produce resultados.</p>
     <p class="text-gray-500 text-sm mt-1 max-w-xl">Sube tus productos y deja que la IA cree composiciones profesionales listas para destacar.</p>
   </div>
 
@@ -615,6 +546,39 @@
           </div>
         </div>
 
+
+        <!-- ② Fondo. Vive en el FLUJO y no en el panel lateral: es una decision
+             sobre la pieza, no un ajuste fino, y ponerla junto a los sliders la
+             escondia. El marcado interior es el mismo de antes (bod-bg-dz,
+             bod-bg-input, bod-bg-pv...) para no tocar su cableado. -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-5">
+          <div class="flex items-center gap-2 mb-1">
+            <div class="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+              <span class="text-white text-xs font-bold">2</span>
+            </div>
+            <h3 class="font-bold text-gray-900">Fondo</h3>
+            <span class="text-xs text-gray-400 font-normal">(opcional)</span>
+          </div>
+          <p class="text-xs text-gray-500 mb-3 ml-8">Sube una imagen de fondo, o dejalo transparente y elige un fondo de estudio al ver la propuesta.</p>
+                    <div id="bod-bg-dz"
+               class="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center cursor-pointer
+                      hover:border-indigo-300 hover:bg-indigo-50 transition-all"
+               onclick="document.getElementById('bod-bg-input').click()"
+               ondragover="dzOver(event,'bod-bg-dz')" ondragleave="dzLeave('bod-bg-dz')" ondrop="bodBgDrop(event)">
+            <div id="bod-bg-ph" class="flex items-center justify-center gap-2 text-gray-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              <span class="text-xs">Subir fondo</span>
+            </div>
+            <div id="bod-bg-pv" class="hidden items-center gap-2">
+              <img id="bod-bg-thumb" src="" class="w-10 h-7 object-cover rounded border border-gray-200 flex-shrink-0">
+              <p id="bod-bg-fname" class="text-xs text-gray-700 truncate flex-1 text-left"></p>
+              <button onclick="bodClearBg(event)" class="text-xs text-red-400 hover:text-red-600 flex-shrink-0">✕</button>
+            </div>
+            <input id="bod-bg-input" type="file" accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp" class="hidden">
+          </div>
+        </div>
         <!-- Botón ver propuestas -->
         <button id="bod-gen-btn" onclick="bodShowProposals()"
                 class="w-full btn-brand text-white font-semibold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2">
@@ -742,7 +706,7 @@
             </button>
           </div>
           <div id="ai-gen-result" class="hidden">
-            <img id="ai-gen-img" alt="Bodegón generado por IA"
+            <img id="ai-gen-img" alt="Composición generada"
                  class="max-w-full rounded-xl border border-gray-200 shadow-sm mb-2"
                  style="background-image: repeating-conic-gradient(#e5e7eb 0% 25%, #fff 0% 50%); background-size: 16px 16px;">
             <br>
@@ -794,7 +758,7 @@
             </svg>
           </div>
           <div class="flex-1 min-w-0">
-            <p class="font-semibold text-gray-900 text-sm truncate" id="bod-info-title">Bodegón listo</p>
+            <p class="font-semibold text-gray-900 text-sm truncate" id="bod-info-title">Composición lista</p>
             <p class="text-xs text-gray-400 mt-0.5" id="bod-info-meta"></p>
           </div>
           <button onclick="showBOD('bod-proposals')"
@@ -927,28 +891,6 @@
           </div>
         </div>
 
-        <!-- Fondo -->
-        <div class="border-t border-gray-100 pt-4">
-          <label class="block text-xs font-medium text-gray-500 mb-2">Fondo <span class="text-gray-400 font-normal">(opcional)</span></label>
-          <div id="bod-bg-dz"
-               class="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center cursor-pointer
-                      hover:border-indigo-300 hover:bg-indigo-50 transition-all"
-               onclick="document.getElementById('bod-bg-input').click()"
-               ondragover="dzOver(event,'bod-bg-dz')" ondragleave="dzLeave('bod-bg-dz')" ondrop="bodBgDrop(event)">
-            <div id="bod-bg-ph" class="flex items-center justify-center gap-2 text-gray-400">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-              </svg>
-              <span class="text-xs">Subir fondo</span>
-            </div>
-            <div id="bod-bg-pv" class="hidden items-center gap-2">
-              <img id="bod-bg-thumb" src="" class="w-10 h-7 object-cover rounded border border-gray-200 flex-shrink-0">
-              <p id="bod-bg-fname" class="text-xs text-gray-700 truncate flex-1 text-left"></p>
-              <button onclick="bodClearBg(event)" class="text-xs text-red-400 hover:text-red-600 flex-shrink-0">✕</button>
-            </div>
-            <input id="bod-bg-input" type="file" accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp" class="hidden">
-          </div>
-        </div>
 
         <!-- Consejo de IA -->
         <div class="bg-purple-50 border border-purple-100 rounded-xl p-3 flex items-start gap-2">
@@ -986,8 +928,8 @@
   <!-- Encabezado -->
   <div class="mb-6">
     <h1 class="text-2xl font-bold text-gray-900">Generación por lotes</h1>
-    <p class="brand-text text-sm font-semibold">Still perfect. Every time.</p>
-    <p class="text-gray-500 text-sm mt-1 max-w-xl">Sube carpetas de productos: <strong class="text-gray-600">cada subcarpeta se convierte en un bodegón</strong>. Elige el modo y genéralos todos de una.</p>
+    <p class="brand-text text-sm font-semibold">Inteligencia que produce resultados.</p>
+    <p class="text-gray-500 text-sm mt-1 max-w-xl">Sube carpetas de productos: <strong class="text-gray-600">cada subcarpeta se convierte en una pieza</strong>. Elige el modo y genéralas todas de una.</p>
   </div>
 
   <!-- CONFIG -->
@@ -1010,7 +952,7 @@
             <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
           </div>
           <p class="text-sm font-medium text-gray-600">Elige una carpeta <span class="text-gray-400 font-normal">(con subcarpetas de productos)</span></p>
-          <p class="text-xs text-gray-400 mt-1.5">Cada subcarpeta = un bodegón · puedes agregar varias</p>
+          <p class="text-xs text-gray-400 mt-1.5">Cada subcarpeta = una pieza · puedes agregar varias</p>
           <input id="batch-folder-input" type="file" webkitdirectory directory multiple
                  accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp" class="hidden">
         </div>
@@ -1062,12 +1004,12 @@
         <button id="batch-gen-btn" onclick="batchGenerate()"
                 class="w-full btn-brand text-white font-semibold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-          Generar bodegones
+          Generar piezas
         </button>
 
         <div class="bg-purple-50 border border-purple-100 rounded-xl p-3 flex items-start gap-2">
           <span class="text-purple-500 text-sm flex-shrink-0">✦</span>
-          <p class="text-[11px] text-purple-500/90">Nombra tus subcarpetas por SKU o línea de producto: cada una será un bodegón con ese nombre.</p>
+          <p class="text-[11px] text-purple-500/90">Nombra tus subcarpetas por SKU o línea de producto: cada una será una pieza con ese nombre.</p>
         </div>
       </div>
     </aside>
@@ -1081,7 +1023,7 @@
           <span class="text-white text-xs font-bold">2</span>
         </div>
         <div>
-          <h2 class="font-bold text-gray-900 text-base leading-tight">Bodegones generados</h2>
+          <h2 class="font-bold text-gray-900 text-base leading-tight">Piezas generadas</h2>
           <p class="text-[11px] text-gray-400"><span id="batch-progress">0/0</span> listos</p>
         </div>
       </div>
@@ -1101,12 +1043,12 @@
 
 
 <!-- ═══════════════════════════════════════════════════════
-     TAB 4 — MIS PROYECTOS (bodegones guardados)
+     TAB 4 — MIS PROYECTOS
 ═══════════════════════════════════════════════════════ -->
 <div id="panel-projects" class="hidden">
   <div class="mb-6">
     <h1 class="text-2xl font-bold text-gray-900">Mis proyectos</h1>
-    <p class="text-gray-500 text-sm mt-1 max-w-xl">Tus bodegones guardados. Reabrí cualquiera para seguir editándolo o descargarlo de nuevo.</p>
+    <p class="text-gray-500 text-sm mt-1 max-w-xl">Tus piezas guardadas. Reabre cualquiera para seguir editándola o descargarla de nuevo.</p>
   </div>
   <div id="projects-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
     <p class="col-span-full text-sm text-gray-400 text-center py-12">Cargando...</p>
@@ -2466,7 +2408,7 @@ async function bodRender(format) {
   btn.innerHTML=`<div class="w-4 h-4 border-2 ${meta.spin} rounded-full spin"></div> Renderizando...`;
   try {
     await bodEnsureUploaded();
-    // Reabierta desde "Mis bodegones": el layout guardado se reusa tal cual
+    // Reabierta desde "Mis proyectos": el layout guardado se reusa tal cual
     // (misma composición, sin recalcular por STRATEGIES[BOD_SELECTED_IDX],
     // que acá no corresponde a ninguna tarjeta realmente elegida ahora).
     const body = BOD_REOPENED
@@ -2516,7 +2458,7 @@ function bodReset() {
 // bodRender); solo "Generar propuestas" (bodShowProposals) vuelve a subir,
 // como con cualquier otro grupo de fotos.
 // Nota: esto SOLO se dispara al hacer clic en una tarjeta de "Proyectos" —
-// nunca automáticamente al iniciar sesión ni al entrar a "Bodegón" (antes sí
+// nunca automáticamente al iniciar sesión ni al entrar a "Crear" (antes sí
 // pasaba y confundía: aparecía una propuesta vieja arriba de la pantalla de
 // trabajo sin que el usuario la pidiera).
 async function bodOpenSession(id) {
@@ -2581,7 +2523,7 @@ function relDate(ts) {
 }
 
 // Se llama al entrar a la pestaña "Proyectos" (switchTab) — siempre trae la
-// lista fresca del servidor, nunca toca el estado de "Bodegón".
+// lista fresca del servidor, nunca toca el estado de "Crear".
 function loadProjectsGrid() {
   const grid = document.getElementById('projects-grid');
   grid.innerHTML = `<p class="col-span-full text-sm text-gray-400 text-center py-12">Cargando...</p>`;
@@ -2594,7 +2536,7 @@ function loadProjectsGrid() {
 function renderProjectsGrid(sessions) {
   const grid = document.getElementById('projects-grid');
   if (!sessions.length) {
-    grid.innerHTML = `<p class="col-span-full text-sm text-gray-400 text-center py-12">Todavía no tienes bodegones guardados. Sube productos en "Bodegón" para empezar.</p>`;
+    grid.innerHTML = `<p class="col-span-full text-sm text-gray-400 text-center py-12">Todavía no tienes piezas guardadas. Sube productos en "Crear" para empezar.</p>`;
     return;
   }
   grid.innerHTML = sessions.map(s => `
@@ -2776,7 +2718,7 @@ async function batchDownloadAll() {
     const d = await res.json();
     if (!res.ok) throw new Error(d.detail || 'Error al empaquetar');
     const a = document.createElement('a');
-    a.href = `/api/batch/download/${d.batch_id}`; a.download = 'bodegones.zip';
+    a.href = `/api/batch/download/${d.batch_id}`; a.download = 'piezas.zip';
     document.body.appendChild(a); a.click(); a.remove();
   } catch (e) { toast(e.message); }
   finally { zipBtn.disabled = false; zipBtn.innerHTML = old; }
@@ -2796,11 +2738,15 @@ function authToggle() {
   LOGIN_MODE = LOGIN_MODE === 'login' ? 'register' : 'login';
   const reg = LOGIN_MODE === 'register';
   document.getElementById('login-title').textContent = reg ? 'Crea tu cuenta' : 'Bienvenido';
-  document.getElementById('login-sub').textContent = reg ? 'Regístrate para empezar' : 'Inicia sesión para continuar';
-  document.getElementById('login-btn').textContent = reg ? 'Crear cuenta' : 'Iniciar sesión';
+  document.getElementById('login-sub').textContent = reg
+    ? 'Solicita acceso a tu espacio de producción creativa.'
+    : 'Accede a tu espacio de producción creativa impulsado por inteligencia artificial.';
+  document.getElementById('login-btn').innerHTML = reg
+    ? 'Crear cuenta'
+    : 'Iniciar sesión <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>';
   document.getElementById('login-toggle').innerHTML = reg
-    ? '¿Ya tienes cuenta? <button type="button" onclick="authToggle()" class="text-indigo-300 font-semibold hover:underline">Inicia sesión</button>'
-    : '¿No tienes cuenta? <button type="button" onclick="authToggle()" class="text-indigo-300 font-semibold hover:underline">Crear una</button>';
+    ? '¿Ya tienes cuenta? <button type="button" onclick="authToggle()" class="text-violet-300 font-semibold hover:underline">Inicia sesión</button>'
+    : '¿No tienes una cuenta? <button type="button" onclick="authToggle()" class="text-violet-300 font-semibold hover:underline">Contáctanos</button>';
   authErr('');
 }
 function showLogin() { document.getElementById('login-overlay').style.display = 'flex'; }
@@ -2817,7 +2763,7 @@ async function authSubmit(ev) {
   const password = document.getElementById('login-pass').value;
   if (!username || !password) { authErr('Completa usuario y contraseña'); return; }
   const btn = document.getElementById('login-btn');
-  btn.disabled = true; const old = btn.textContent;
+  btn.disabled = true; const old = btn.innerHTML;
   btn.innerHTML = '<div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full spin"></div>';
   try {
     const ep = LOGIN_MODE === 'register' ? '/api/auth/register' : '/api/auth/login';
@@ -2829,7 +2775,7 @@ async function authSubmit(ev) {
     authErr('');
     hideLogin(d.username);
   } catch (e) { authErr(e.message); }
-  finally { btn.disabled = false; btn.textContent = old; }
+  finally { btn.disabled = false; btn.innerHTML = old; }
 }
 async function authLogout() {
   try { await fetch('/api/auth/logout', { method: 'POST' }); } catch (e) {}

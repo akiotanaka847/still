@@ -1,11 +1,11 @@
-# StillAI
+# Still by Ravel
 
-### *Composiciones de producto que venden, en segundos.*
+### *Inteligencia que produce resultados.*
 
-Herramienta web para armar composiciones de producto (bodegones, fotos de catálogo,
-piezas para redes) sin depender de un fotógrafo o diseñador para cada una. Subís tus
-fotos de producto y elegís entre tres formas distintas de generar la composición final,
-según cuánto control querés tener vos vs. cuánto le delegás a la IA.
+Plataforma de producción creativa para transformar productos, assets, datos y reglas
+de marca en composiciones visuales escalables. Subís tus fotos de producto y elegís
+entre tres formas distintas de generar la composición final, según cuánto control
+querés tener vos vs. cuánto le delegás a la IA.
 
 ---
 
@@ -18,7 +18,7 @@ según cuánto control querés tener vos vs. cuánto le delegás a la IA.
    (ver sección 3).
 4. **Descargás** — PNG listo para usar, o PSD para seguir editando en Photoshop.
 
-Todo corre en una sola pestaña ("Bodegón"), o por lotes si tenés muchos productos a la
+Todo corre en una sola pestaña ("Crear"), o por lotes si tenés muchos productos a la
 vez (sección 4).
 
 ---

@@ -1,7 +1,7 @@
 {
   "name": "still",
   "version": "1.0.0",
-  "description": "Herramienta web para armar composiciones de producto (bodegones, fotos de catálogo, piezas para redes) sin depender de un fotógrafo o diseñador para cada una. Subís tus fotos de producto y elegís entre tres formas distintas de generar la composición final, según cuánto control querés tener vos vs. cuánto le delegás a la IA.",
+  "description": "Still by Ravel: plataforma de producción creativa para transformar productos, assets y reglas de marca en composiciones visuales listas para publicar.",
   "main": "index.js",
   "directories": {
     "doc": "docs"
