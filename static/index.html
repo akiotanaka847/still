@@ -973,8 +973,8 @@
             <option value="cascada">Cascade</option>
             <option value="radial">Radial</option>
             <option value="flotante">Floating</option>
-            <option value="inclinado_derecha">Inclinado derecha</option>
-            <option value="inclinado_izquierda">Inclinado izquierda</option>
+            <option value="inclinado_derecha">Tilt right</option>
+            <option value="inclinado_izquierda">Tilt left</option>
           </optgroup>
         </select>
         <p class="text-[11px] text-gray-400"><strong class="text-gray-500">AI</strong> modes analyze each group (order + sizes). Slower but better. Geometric ones are instant.</p>
@@ -1002,7 +1002,7 @@
         </div>
         <div>
           <h2 class="font-bold text-gray-900 text-base leading-tight">Pieces generated</h2>
-          <p class="text-[11px] text-gray-400"><span id="batch-progress">0/0</span> listos</p>
+          <p class="text-[11px] text-gray-400"><span id="batch-progress">0/0</span> ready</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
@@ -2083,7 +2083,7 @@ async function bodUploadAndAnalyzeAI(cfg) {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
         <div>
-          <p class="text-xs font-semibold text-red-700">IA no disponible</p>
+          <p class="text-xs font-semibold text-red-700">AI unavailable</p>
           <p class="text-[10px] text-red-500 mt-0.5">${esc(e.message)}</p>
         </div>
       </div>`;
@@ -2145,12 +2145,12 @@ function bodUpdateAIGenNotice() {
 
   if (n > AI_GEN_MAX) {
     el.className = 'text-xs mb-3 max-w-3xl leading-relaxed text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2';
-    el.innerHTML = `<b>${n} productos: demasiados para este modo.</b> Acá la IA
-      redibuja la escena entera, y arriba de ${AI_GEN_MAX} deja de mantener el
-      texto de las etiquetas — en una prueba con 60 devolvió una imagen que no
-      tenía nada que ver con los productos. Usá <b>Layout styles</b> o
-      <b>AI proposals</b>: componen tus fotos reales sin redibujarlas, así que
-      no pierden nitidez y no tienen tope.`;
+    el.innerHTML = `<b>${n} products: too many for this mode.</b> Here the AI
+      redraws the whole scene, and past ${AI_GEN_MAX} it stops holding the
+      label text — in a test with 60 it returned an image that had nothing to
+      do with the products. Use <b>Layout styles</b> or <b>AI proposals</b>:
+      they compose your real photos without redrawing them, so they keep full
+      sharpness and have no limit.`;
     el.classList.remove('hidden');
     btn.disabled = true;
     btn.classList.add('opacity-40', 'cursor-not-allowed');
@@ -2162,10 +2162,9 @@ function bodUpdateAIGenNotice() {
 
   if (n > 30) {
     el.className = 'text-xs mb-3 max-w-3xl leading-relaxed text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2';
-    el.innerHTML = `<b>${n} productos.</b> Funciona hasta ${AI_GEN_MAX}, pero
-      cada generación tarda 3–5 min, cuesta una llamada de imagen y a esta
-      cantidad ya aparecen errores sueltos en las etiquetas. Probado bueno
-      hasta 45.`;
+    el.innerHTML = `<b>${n} products.</b> Works up to ${AI_GEN_MAX}, but each
+      generation takes 3–5 min, costs one image call, and at this count stray
+      errors start showing up in the labels. Tested good up to 45.`;
     el.classList.remove('hidden');
   } else {
     // Por debajo de 31 productos no se avisa nada: el usuario pidio que este
@@ -2288,7 +2287,7 @@ async function bodUseProposal() {
     document.getElementById('bod-loading-msg').textContent = 'Uploading images...';
     await bodEnsureUploaded();
 
-    document.getElementById('bod-loading-msg').textContent = 'Calculando layout final...';
+    document.getElementById('bod-loading-msg').textContent = 'Computing final layout…';
     const cfg = buildConfig(strategy.id);
     const compRes = await fetch('/api/bodegon/compute', {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -2638,6 +2637,12 @@ function relDate(ts) {
 // panel y el nombre no pueden quedar diciendo cosas distintas de lo que hay en
 // disco. La respuesta de cada endpoint ya trae el perfil entero por eso mismo.
 let PERFIL = null;
+// Al arrancar, switchTab('home') corre ANTES de checkAuth(), asi que loadHome()
+// pedia /api/bodegon/mine sin sesion: un 401 garantizado en la consola de todo
+// el mundo, y despues la MISMA peticion otra vez al autenticar. Este flag lo
+// evita — lo levanta hideLogin(), el unico sitio donde ya se sabe que hay
+// sesion.
+let SESION_OK = false;
 
 function pintarPerfil(p) {
   PERFIL = p;
@@ -2659,6 +2664,7 @@ function pintarPerfil(p) {
 }
 
 async function loadSettings() {
+  if (!SESION_OK) return;
   try { const r = await fetch('/api/auth/me'); if (r.ok) pintarPerfil(await r.json()); }
   catch (e) {}
 }
@@ -2713,7 +2719,8 @@ function homeGreeting() {
 }
 
 function loadHome() {
-  homeGreeting();
+  homeGreeting();                 // el saludo no depende del servidor
+  if (!SESION_OK) return;
   fetch('/api/bodegon/mine')
     .then(r => r.ok ? r.json() : {sessions: []})
     .then(d => {
@@ -2798,7 +2805,7 @@ function batchAddFiles(files) {
     const path = f.webkitRelativePath || f.name;
     const seg = path.split('/');
     // raíz/subcarpeta/archivo → grupo = subcarpeta ; raíz/archivo → grupo = raíz
-    const key = seg.length > 2 ? seg[1] : (seg.length === 2 ? seg[0] : 'Sueltos');
+    const key = seg.length > 2 ? seg[1] : (seg.length === 2 ? seg[0] : 'Loose');
     (groups[key] = groups[key] || []).push(f);
   }
   for (const [name, fs] of Object.entries(groups)) {
@@ -2933,7 +2940,7 @@ async function batchDownloadAll() {
   const zipBtn = document.getElementById('batch-zip-btn');
   zipBtn.disabled = true;
   const old = zipBtn.innerHTML;
-  zipBtn.innerHTML = `<div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full spin"></div> Empaquetando...`;
+  zipBtn.innerHTML = `<div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full spin"></div> Packing…`;
   try {
     const res = await fetch('/api/batch/zip', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2942,7 +2949,7 @@ async function batchDownloadAll() {
     const d = await res.json();
     if (!res.ok) throw new Error(d.detail || 'Packaging failed');
     const a = document.createElement('a');
-    a.href = `/api/batch/download/${d.batch_id}`; a.download = 'piezas.zip';
+    a.href = `/api/batch/download/${d.batch_id}`; a.download = 'pieces.zip';
     document.body.appendChild(a); a.click(); a.remove();
   } catch (e) { toast(e.message); }
   finally { zipBtn.disabled = false; zipBtn.innerHTML = old; }
@@ -2971,17 +2978,17 @@ function authToggle() {
   authErr('');
 }
 function showLogin() { document.getElementById('login-overlay').style.display = 'flex'; }
-function hideLogin(username) {
+function hideLogin(perfil) {
   document.getElementById('login-overlay').style.display = 'none';
-  if (username) {
-    document.getElementById('topbar-username').textContent = username;
-    document.getElementById('user-avatar').textContent = username.slice(0, 2).toUpperCase();
-  }
+  // Acepta un perfil (lo que manda checkAuth) o un username suelto (lo que
+  // manda el formulario de acceso, que solo conoce el nombre tecleado).
+  if (typeof perfil === 'string') perfil = {username: perfil, display_name: perfil, has_avatar: false};
   // El Home se pinta al iniciar la pagina, ANTES de saber si hay sesion, y sus
   // cifras salen de un endpoint que exige estar autenticado. Sin esta llamada
   // se quedaban en "—" hasta cambiar de pestana y volver.
+  SESION_OK = true;
+  if (perfil) pintarPerfil(perfil); else loadSettings();
   loadHome();
-  loadSettings();
 }
 async function authSubmit(ev) {
   ev.preventDefault();
@@ -3012,7 +3019,9 @@ async function authLogout() {
 async function checkAuth() {
   try {
     const r = await fetch('/api/auth/me');
-    if (r.ok) { hideLogin((await r.json()).username); }
+    // Se pasa el perfil ENTERO, no solo el username: checkAuth ya lo tiene y
+    // asi loadSettings no repite la misma peticion a /api/auth/me.
+    if (r.ok) { hideLogin(await r.json()); }
     else showLogin();
   } catch (e) { showLogin(); }
 }

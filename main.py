@@ -1423,7 +1423,10 @@ async def batch_download(batch_id: str, request: Request):
     z = batch_dir / "piezas.zip"
     if not z.exists():
         raise HTTPException(404, "ZIP not found")
-    return FileResponse(str(z), filename="piezas.zip", media_type="application/zip")
+    # El fichero en disco sigue llamandose piezas.zip a proposito: los lotes
+    # ya creados se buscan por ese nombre. Lo que cambia es el nombre con el
+    # que llega al usuario.
+    return FileResponse(str(z), filename="pieces.zip", media_type="application/zip")
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
