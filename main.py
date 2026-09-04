@@ -1154,6 +1154,14 @@ async def bodegon_mine(request: Request):
             "product_count": len(info.get("images", [])),
             "has_render": (d / "output" / "bodegon.png").exists(),
             "sort_strategy": layout.get("sort_strategy"),
+            # Los primeros productos, para que una sesion sin renderizar pueda
+            # ensenar sus fotos reales en la portada en vez de un hueco. El
+            # campo que sirve es filename (name viene sin extension).
+            "preview": [
+                im["filename"]
+                for im in (info.get("images") or [])[:3]
+                if im.get("filename")
+            ],
         })
     out.sort(key=lambda x: x["created"], reverse=True)
     return {"sessions": out[:60]}
@@ -1182,6 +1190,48 @@ async def bodegon_product_file(session_id: str, filename: str, request: Request)
     if not fp.exists():
         raise HTTPException(404, "File not found")
     return FileResponse(str(fp))
+
+
+THUMB_PX = 320       # miniatura de rejilla; nadie mira un borrador a 1600px
+
+
+@app.get("/api/bodegon/product-thumb/{session_id}/{filename}")
+async def bodegon_product_thumb(session_id: str, filename: str, request: Request):
+    """Miniatura del producto, para las rejillas de portada y de proyectos.
+
+    Existe por una medida concreta: pintar Projects con las fotos originales
+    movia 51 MB (una sola imagen pesaba 5 MB) porque son los PNG de producto
+    a resolucion completa. A 320 px eso baja a algo que cabe en una rejilla,
+    y el resultado se guarda en disco para no volver a redimensionar.
+
+    Aqui SI se reduce, al contrario que en la exportacion: esto no es un
+    entregable, es una vista previa. La foto original no se toca.
+    """
+    session_dir, _info_file, _info = _load_session_info(session_id, request)
+    origen = session_dir / "products" / Path(filename).name   # .name mata / y ..
+    if not origen.exists():
+        raise HTTPException(404, "File not found")
+
+    from PIL import Image   # local, igual que en el avatar
+
+    cache = session_dir / "thumbs" / f"{origen.stem}_{THUMB_PX}.png"
+    if not cache.exists() or cache.stat().st_mtime < origen.stat().st_mtime:
+        try:
+            cache.parent.mkdir(parents=True, exist_ok=True)
+            im = Image.open(origen)
+            im = im.convert("RGBA")
+            im.thumbnail((THUMB_PX, THUMB_PX), Image.LANCZOS)
+            im.save(cache, "PNG", optimize=True)
+        except (OSError, ValueError, Image.DecompressionBombError):
+            # Si no se puede miniaturizar, se sirve el original antes que
+            # dejar el hueco que esto viene a quitar.
+            return FileResponse(str(origen))
+
+    return FileResponse(
+        str(cache),
+        media_type="image/png",
+        headers={"Cache-Control": "private, max-age=86400"},
+    )
 
 
 @app.post("/api/bodegon/ai-proposal")

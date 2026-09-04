@@ -43,7 +43,8 @@ PERMITIDAS = {
     # Variables locales: el codigo de este proyecto se escribe en espanol
     # a proposito, solo la interfaz va en ingles.
     "iniciales", "perfil", "sesion", "sesiones", "ruta", "fila", "filas",
-    "ancho", "alto", "tope", "escala", "reparto", "aspecto",
+    "ancho", "alto", "tope", "escala", "reparto", "aspecto", "orden",
+    "miniatura", "miniaturas", "borrador", "borradores", "fotos", "origen",
     # ingles moderno que el diccionario de 1934 de macOS no conoce
     "email", "emails", "uploaded", "uploads", "uploading", "upload", "reset",
     "click", "clicks", "clicked", "online", "offline", "website", "workflow",
