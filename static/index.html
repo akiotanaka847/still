@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Still by Ravel — Inteligencia que produce resultados</title>
+<title>Still by Ravel — Intelligence that delivers</title>
 <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
 <link rel="shortcut icon" href="/static/favicon.ico">
@@ -215,13 +215,13 @@
 
       <form onsubmit="authSubmit(event)" class="space-y-4">
         <div>
-          <label class="block text-xs font-semibold text-slate-200 mb-2">Correo electrónico</label>
+          <label class="block text-xs font-semibold text-slate-200 mb-2">Email</label>
           <input id="login-user" type="text" autocomplete="username" autocapitalize="none" spellcheck="false"
                  class="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-sm text-white placeholder-white/35 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition-all"
-                 placeholder="tu@empresa.com">
+                 placeholder="you@company.com">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-200 mb-2">Contraseña</label>
+          <label class="block text-xs font-semibold text-slate-200 mb-2">Password</label>
           <input id="login-pass" type="password" autocomplete="current-password"
                  class="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-sm text-white placeholder-white/35 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition-all"
                  placeholder="••••••••">
@@ -231,24 +231,24 @@
             <input type="checkbox" checked class="w-4 h-4 rounded border-white/20 bg-white/10 accent-violet-500">
             Recordarme en este dispositivo
           </label>
-          <button type="button" onclick="toast('Recuperación de contraseña próximamente','warn')" class="text-violet-300 hover:text-violet-200 font-semibold">¿Olvidaste tu contraseña?</button>
+          <button type="button" onclick="toast('Recuperación de contraseña próximamente','warn')" class="text-violet-300 hover:text-violet-200 font-semibold">Forgot your password?</button>
         </div>
         <p id="login-error" class="hidden text-xs text-red-300 bg-red-500/10 border border-red-400/20 rounded-lg px-3 py-2"></p>
         <button id="login-btn" type="submit"
                 class="glow-btn w-full btn-brand text-white font-semibold py-3.5 rounded-xl mt-1 flex items-center justify-center gap-2">
-          Iniciar sesión
+          Sign in
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
         </button>
       </form>
 
 
       <p id="login-toggle" class="text-sm text-slate-400 text-center mt-8">
-        ¿No tienes una cuenta? <button type="button" onclick="authToggle()" class="text-violet-300 font-semibold hover:underline">Contáctanos</button>
+        Don't have an account? <button type="button" onclick="authToggle()" class="text-violet-300 font-semibold hover:underline">Contact us</button>
       </p>
     </div>
     <div class="hidden sm:flex items-end justify-between text-[11px] text-slate-500">
-      <span>Still by Ravel<br>© 2026. Todos los derechos reservados.</span>
-      <span>Seguridad&nbsp;&nbsp;|&nbsp;&nbsp;Privacidad&nbsp;&nbsp;|&nbsp;&nbsp;Términos</span>
+      <span>Still by Ravel<br>© 2026. All rights reserved.</span>
+      <span>Security&nbsp;&nbsp;|&nbsp;&nbsp;Privacy&nbsp;&nbsp;|&nbsp;&nbsp;Terms</span>
     </div>
   </section>
 
@@ -280,43 +280,43 @@
     <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
       <button id="nav-home" onclick="switchTab('home')" class="nav-item nav-item-active">
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955a1.5 1.5 0 012.122 0L22.5 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75"/></svg>
-        <span>Inicio</span>
+        <span>Home</span>
       </button>
       <button id="nav-bodegon" onclick="switchTab('bodegon')" class="nav-item">
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
-        <span>Crear</span>
+        <span>Create</span>
       </button>
       <button id="nav-batch" onclick="switchTab('batch')" class="nav-item">
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 6.878V6a2.25 2.25 0 012.25-2.25h7.5A2.25 2.25 0 0118 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 004.5 9v.878m13.5-3A2.25 2.25 0 0119.5 9v.878m0 0a2.246 2.246 0 00-.75-.128H5.25c-.263 0-.515.045-.75.128m15 0A2.25 2.25 0 0121 12v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6c0-.98.626-1.813 1.5-2.122"/></svg>
-        <span>Producción</span>
+        <span>Batch</span>
       </button>
       <button id="nav-projects" onclick="switchTab('projects')" class="nav-item">
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"/></svg>
-        <span>Proyectos</span>
+        <span>Projects</span>
       </button>
       <button onclick="toast('Próximamente','warn')" class="nav-item">
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 5.25h16.5m-16.5 6.75h16.5m-16.5 6.75h16.5M6 3v18m6-18v18m6-18v18"/></svg>
-        <span>Biblioteca</span> <span class="soon">Pronto</span>
+        <span>Library</span> <span class="soon">Soon</span>
       </button>
       <button onclick="toast('Próximamente','warn')" class="nav-item">
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
-        <span>Plantillas</span> <span class="soon">Pronto</span>
+        <span>Templates</span> <span class="soon">Soon</span>
       </button>
       <button onclick="toast('Próximamente','warn')" class="nav-item">
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.098 19.902a3.75 3.75 0 005.304 0l6.401-6.402M6.75 21A3.75 3.75 0 013 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 003.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125h-4.072M10.5 8.197l2.88-2.88c.438-.439 1.15-.439 1.59 0l3.712 3.713c.44.44.44 1.152 0 1.59l-2.879 2.88"/></svg>
-        <span>Estilos</span> <span class="soon">Pronto</span>
+        <span>Styles</span> <span class="soon">Soon</span>
       </button>
       <button onclick="toast('Próximamente','warn')" class="nav-item">
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-        <span>Ajustes</span> <span class="soon">Pronto</span>
+        <span>Settings</span> <span class="soon">Soon</span>
       </button>
     </nav>
     <!-- Plan Pro -->
     <div class="p-3 flex-shrink-0">
       <div class="rounded-xl border border-amber-200 bg-amber-50 p-3">
         <p class="text-xs font-bold text-amber-700">Plan Pro</p>
-        <p class="text-[10px] text-amber-600/80 mt-0.5 leading-snug">Más créditos, exportaciones en alta resolución y más.</p>
-        <button onclick="toast('Próximamente','warn')" class="mt-2 w-full btn-brand text-white text-xs font-semibold py-2 rounded-lg">Mejorar plan</button>
+        <p class="text-[10px] text-amber-600/80 mt-0.5 leading-snug">More credits, high-resolution exports and more.</p>
+        <button onclick="toast('Próximamente','warn')" class="mt-2 w-full btn-brand text-white text-xs font-semibold py-2 rounded-lg">Upgrade plan</button>
       </div>
     </div>
   </aside>
@@ -335,7 +335,7 @@
       <div class="hidden lg:flex flex-1 max-w-md">
         <label class="relative w-full">
           <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"/></svg>
-          <input class="w-full bg-white/5 border border-gray-200 rounded-xl pl-9 pr-3 py-2.5 text-sm text-gray-300 placeholder-gray-500 focus:outline-none focus:border-cyan-300" placeholder="Buscar proyectos, plantillas o productos...">
+          <input class="w-full bg-white/5 border border-gray-200 rounded-xl pl-9 pr-3 py-2.5 text-sm text-gray-300 placeholder-gray-500 focus:outline-none focus:border-cyan-300" placeholder="Search projects, templates or products...">
         </label>
       </div>
 
@@ -363,12 +363,12 @@
   <section class="mb-7 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
     <div>
       <p class="text-[11px] uppercase tracking-[.35em] text-gray-400 mb-3">Creative Production Platform</p>
-      <h1 class="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">Buenos días<span id="home-user-greeting"></span></h1>
-      <p class="text-gray-500 text-base mt-2">¿Qué quieres producir hoy?</p>
+      <h1 class="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">Good morning<span id="home-user-greeting"></span></h1>
+      <p class="text-gray-500 text-base mt-2">What do you want to produce today?</p>
     </div>
     <button onclick="switchTab('bodegon')" class="btn-brand text-white font-semibold px-5 py-3 rounded-xl flex items-center justify-center gap-2 text-sm">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 5v14M5 12h14"/></svg>
-      Crear
+      Create
     </button>
   </section>
 
@@ -377,25 +377,25 @@
       <div class="w-10 h-10 rounded-xl bg-cyan-400/10 border border-cyan-300/20 text-cyan-200 flex items-center justify-center mb-5">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 16.5 8.25 11.25a2.25 2.25 0 0 1 3.18 0l1.32 1.32m-1.5 4.68 3.75-3.75a2.25 2.25 0 0 1 3.18 0L21 16.32M4.5 19.5h15A1.5 1.5 0 0 0 21 18V6a1.5 1.5 0 0 0-1.5-1.5h-15A1.5 1.5 0 0 0 3 6v12a1.5 1.5 0 0 0 1.5 1.5Z"/></svg>
       </div>
-      <h3 class="font-bold text-gray-900 text-base">Nueva composición</h3>
-      <p class="text-sm text-gray-500 mt-1.5">Crear una pieza a partir de productos.</p>
-      <span class="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 group-hover:gap-2.5 transition-all">Abrir <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg></span>
+      <h3 class="font-bold text-gray-900 text-base">New composition</h3>
+      <p class="text-sm text-gray-500 mt-1.5">Create a piece from your products.</p>
+      <span class="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 group-hover:gap-2.5 transition-all">Open <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg></span>
     </button>
     <button onclick="switchTab('batch')" class="group text-left ravel-panel rounded-2xl p-5 card hover:border-violet-300/40 transition-all">
       <div class="w-10 h-10 rounded-xl bg-violet-400/10 border border-violet-300/20 text-violet-200 flex items-center justify-center mb-5">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 6.75h12M6 12h12M6 17.25h12M3.75 6.75h.01M3.75 12h.01M3.75 17.25h.01"/></svg>
       </div>
-      <h3 class="font-bold text-gray-900 text-base">Producción por lotes</h3>
-      <p class="text-sm text-gray-500 mt-1.5">Generar múltiples piezas automáticamente.</p>
-      <span class="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-purple-600 group-hover:gap-2.5 transition-all">Abrir <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg></span>
+      <h3 class="font-bold text-gray-900 text-base">Batch production</h3>
+      <p class="text-sm text-gray-500 mt-1.5">Generate multiple pieces automatically.</p>
+      <span class="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-purple-600 group-hover:gap-2.5 transition-all">Open <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg></span>
     </button>
     <button onclick="toast('Plantillas próximamente','warn')" class="group text-left ravel-panel rounded-2xl p-5 card hover:border-white/20 transition-all">
       <div class="w-10 h-10 rounded-xl bg-white/8 border border-white/10 text-slate-200 flex items-center justify-center mb-5">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4.5 4.5h15v15h-15zM9 4.5v15M4.5 9h15"/></svg>
       </div>
-      <h3 class="font-bold text-gray-900 text-base">Desde plantilla</h3>
-      <p class="text-sm text-gray-500 mt-1.5">Crear utilizando una plantilla existente.</p>
-      <span class="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-400">Próximamente</span>
+      <h3 class="font-bold text-gray-900 text-base">From template</h3>
+      <p class="text-sm text-gray-500 mt-1.5">Create from an existing template.</p>
+      <span class="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-400">Coming soon</span>
     </button>
   </section>
 
@@ -403,48 +403,48 @@
     <div class="ravel-panel rounded-2xl p-5">
       <div class="flex items-center justify-between mb-4">
         <div>
-          <h2 class="text-lg font-bold text-gray-900">Proyectos recientes</h2>
-          <p class="text-sm text-gray-500">Tus últimas composiciones y producciones.</p>
+          <h2 class="text-lg font-bold text-gray-900">Recent projects</h2>
+          <p class="text-sm text-gray-500">Your latest compositions and batches.</p>
         </div>
-        <button onclick="switchTab('projects')" class="text-sm font-semibold text-indigo-600 hover:text-indigo-400">Ver todos</button>
+        <button onclick="switchTab('projects')" class="text-sm font-semibold text-indigo-600 hover:text-indigo-400">See all</button>
       </div>
       <div class="grid sm:grid-cols-3 gap-3">
         <button onclick="switchTab('bodegon')" class="text-left rounded-xl border border-gray-200 bg-white p-3">
           <div class="checker-bg aspect-[4/3] rounded-lg mb-3 flex items-center justify-center text-gray-400">
             <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 5v14M5 12h14"/></svg>
           </div>
-          <p class="text-sm font-bold text-gray-900">Nueva pieza</p>
-          <p class="text-xs text-gray-500 mt-1">Borrador · 0 assets</p>
+          <p class="text-sm font-bold text-gray-900">New piece</p>
+          <p class="text-xs text-gray-500 mt-1">Draft · 0 assets</p>
         </button>
         <button onclick="switchTab('batch')" class="text-left rounded-xl border border-gray-200 bg-white p-3">
           <div class="aspect-[4/3] rounded-lg mb-3 bg-gradient-to-br from-cyan-400/10 to-violet-500/10 border border-white/10 flex items-center justify-center text-violet-200">
             <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 6.75h12M6 12h12M6 17.25h12"/></svg>
           </div>
-          <p class="text-sm font-bold text-gray-900">Producción multicanal</p>
-          <p class="text-xs text-gray-500 mt-1">Listo · PNG / PSD</p>
+          <p class="text-sm font-bold text-gray-900">Multichannel production</p>
+          <p class="text-xs text-gray-500 mt-1">Ready · PNG / PSD</p>
         </button>
         <button onclick="switchTab('projects')" class="text-left rounded-xl border border-gray-200 bg-white p-3">
           <div class="aspect-[4/3] rounded-lg mb-3 bg-white/5 border border-white/10 flex items-center justify-center text-cyan-200">
             <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3.75 12.75V12A2.25 2.25 0 0 1 6 9.75h12A2.25 2.25 0 0 1 20.25 12v6A2.25 2.25 0 0 1 18 20.25H6A2.25 2.25 0 0 1 3.75 18v-5.25ZM8.25 6.75h7.5"/></svg>
           </div>
-          <p class="text-sm font-bold text-gray-900">Biblioteca de assets</p>
-          <p class="text-xs text-gray-500 mt-1">Procesando · catálogo</p>
+          <p class="text-sm font-bold text-gray-900">Asset library</p>
+          <p class="text-xs text-gray-500 mt-1">Processing · catalog</p>
         </button>
       </div>
     </div>
 
     <aside class="space-y-5">
       <div class="ravel-panel rounded-2xl p-5">
-        <h2 class="text-lg font-bold text-gray-900 mb-4">Actividad</h2>
+        <h2 class="text-lg font-bold text-gray-900 mb-4">Activity</h2>
         <div class="grid grid-cols-3 gap-2">
-          <div class="metric-tile rounded-xl p-3"><p class="text-2xl font-black text-white">48</p><p class="text-[11px] text-gray-500 mt-1">Piezas</p></div>
-          <div class="metric-tile rounded-xl p-3"><p class="text-2xl font-black text-white">12</p><p class="text-[11px] text-gray-500 mt-1">Proyectos</p></div>
-          <div class="metric-tile rounded-xl p-3"><p class="text-2xl font-black text-white">0</p><p class="text-[11px] text-gray-500 mt-1">En cola</p></div>
+          <div class="metric-tile rounded-xl p-3"><p class="text-2xl font-black text-white">48</p><p class="text-[11px] text-gray-500 mt-1">Pieces</p></div>
+          <div class="metric-tile rounded-xl p-3"><p class="text-2xl font-black text-white">12</p><p class="text-[11px] text-gray-500 mt-1">Projects</p></div>
+          <div class="metric-tile rounded-xl p-3"><p class="text-2xl font-black text-white">0</p><p class="text-[11px] text-gray-500 mt-1">Queued</p></div>
         </div>
       </div>
       <div class="ravel-panel rounded-2xl p-5">
         <p class="text-[11px] uppercase tracking-widest text-gray-400 mb-3">Still by Ravel</p>
-        <p class="text-sm text-gray-500 leading-relaxed">Productos, assets, datos y reglas de marca entran a Still para producir composiciones, variaciones y adaptaciones listas para cada canal.</p>
+        <p class="text-sm text-gray-500 leading-relaxed">Products, assets, data and brand rules go into Still to produce compositions, variations and adaptations ready for every channel.</p>
       </div>
     </aside>
   </section>
@@ -457,9 +457,9 @@
 
   <!-- Encabezado de página -->
   <div class="mb-6">
-    <h1 class="text-2xl font-bold text-gray-900">Crear composición</h1>
-    <p class="brand-text text-sm font-semibold">Inteligencia que produce resultados.</p>
-    <p class="text-gray-500 text-sm mt-1 max-w-xl">Sube tus productos y deja que la IA cree composiciones profesionales listas para destacar.</p>
+    <h1 class="text-2xl font-bold text-gray-900">Create composition</h1>
+    <p class="brand-text text-sm font-semibold">Intelligence that delivers.</p>
+    <p class="text-gray-500 text-sm mt-1 max-w-xl">Upload your products and let AI build professional compositions ready to stand out.</p>
   </div>
 
   <!-- Layout de 2 columnas (se expande a ancho completo en propuestas/preview) -->
@@ -477,8 +477,8 @@
             <div class="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
               <span class="text-white text-xs font-bold">1</span>
             </div>
-            <span class="font-semibold text-gray-800">Sube tus productos</span>
-            <span class="text-xs text-gray-400">(obligatorio)</span>
+            <span class="font-semibold text-gray-800">Upload your products</span>
+            <span class="text-xs text-gray-400">(required)</span>
           </div>
 
           <div id="bod-prod-dz"
@@ -491,7 +491,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
               </svg>
             </div>
-            <p class="text-sm font-medium text-gray-600">Arrastra imágenes aquí <span class="text-gray-400 font-normal">o haz clic para seleccionar</span></p>
+            <p class="text-sm font-medium text-gray-600">Drag images here <span class="text-gray-400 font-normal">or click to select</span></p>
             <p class="text-xs text-gray-400 mt-1.5">PNG · JPG · WebP · TIFF · BMP</p>
             <input id="bod-prod-input" type="file" multiple
                    accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp" class="hidden">
@@ -520,10 +520,10 @@
             <div class="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
               <span class="text-white text-xs font-bold">2</span>
             </div>
-            <h3 class="font-bold text-gray-900">Fondo</h3>
-            <span class="text-xs text-gray-400 font-normal">(opcional)</span>
+            <h3 class="font-bold text-gray-900">Background</h3>
+            <span class="text-xs text-gray-400 font-normal">(optional)</span>
           </div>
-          <p class="text-xs text-gray-500 mb-3 ml-8">Sube una imagen de fondo, o dejalo transparente y elige un fondo de estudio al ver la propuesta.</p>
+          <p class="text-xs text-gray-500 mb-3 ml-8">Upload a background image, or leave it transparent and pick a studio background when you preview.</p>
                     <div id="bod-bg-dz"
                class="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center cursor-pointer
                       hover:border-indigo-300 hover:bg-indigo-50 transition-all"
@@ -533,7 +533,7 @@
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
               </svg>
-              <span class="text-xs">Subir fondo</span>
+              <span class="text-xs">Upload background</span>
             </div>
             <div id="bod-bg-pv" class="hidden items-center gap-2">
               <img id="bod-bg-thumb" src="" class="w-10 h-7 object-cover rounded border border-gray-200 flex-shrink-0">
@@ -550,15 +550,15 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
           </svg>
-          Generar propuestas
+          Generate proposals
         </button>
       </section>
 
       <!-- LOADING -->
       <section id="bod-loading" class="hidden bg-white border border-gray-200 rounded-2xl py-20 text-center">
         <div class="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full spin mx-auto mb-4"></div>
-        <p id="bod-loading-msg" class="text-gray-700 font-semibold">Subiendo imágenes...</p>
-        <p class="text-gray-400 text-sm mt-1">Un momento</p>
+        <p id="bod-loading-msg" class="text-gray-700 font-semibold">Uploading images...</p>
+        <p class="text-gray-400 text-sm mt-1">One moment</p>
       </section>
 
       <!-- PROPUESTAS -->
@@ -570,7 +570,7 @@
             </div>
             <div>
               <h2 class="font-bold text-gray-900 text-base leading-tight">Propuestas generadas</h2>
-              <p class="text-[11px] text-gray-400">Clic para seleccionar · <span id="prop-count"></span></p>
+              <p class="text-[11px] text-gray-400">Click to select · <span id="prop-count"></span></p>
             </div>
           </div>
           <div class="flex items-center gap-2">
@@ -591,15 +591,15 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5 text-[11px]">
           <div class="flex items-start gap-1.5 text-gray-500">
             <span class="flex-shrink-0">📐</span>
-            <span><b class="text-gray-700">Estilos de layout</b> — instantáneo y gratis, tus fotos sin tocar</span>
+            <span><b class="text-gray-700">Layout styles</b> — instant and free, your photos untouched</span>
           </div>
           <div class="flex items-start gap-1.5 text-gray-500">
             <span class="flex-shrink-0 text-purple-600">✦</span>
-            <span><b class="text-purple-800">Propuestas IA</b> — la IA sugiere cómo acomodarlas</span>
+            <span><b class="text-purple-800">Propuestas IA</b> — AI suggests how to arrange them</span>
           </div>
           <div class="flex items-start gap-1.5 text-gray-500">
             <span class="flex-shrink-0">🧪</span>
-            <span><b class="text-purple-800">Generación IA</b> — la IA redibuja la imagen entera</span>
+            <span><b class="text-purple-800">AI Generation</b> — AI redraws the whole image</span>
           </div>
         </div>
 
@@ -618,20 +618,20 @@
             <select id="ai-layout-select"
                     style="color-scheme: light; -webkit-appearance: none; appearance: none; color: #111827; background-color: #fff;"
                     class="text-xs text-gray-900 bg-white border border-purple-200 rounded-lg px-3 py-2 focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all">
-              <option value="dynamic">Dinámica</option>
+              <option value="dynamic">Dynamic</option>
               <option value="elegant">Elegante</option>
               <option value="editorial">Editorial</option>
             </select>
             <button id="ai-analyze-btn" onclick="bodAnalyzeAI()"
                     class="inline-flex items-center justify-center gap-2 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-2 rounded-lg transition-all">
-              ✦ Generar composición IA
+              ✦ Generate AI composition
             </button>
           </div>
 
           <div class="flex items-center gap-2 mb-3 max-w-3xl">
             <input id="ai-custom-input" type="text" maxlength="200"
                    style="color-scheme: light; -webkit-appearance: none; appearance: none; color: #111827; background-color: #fff;"
-                   placeholder="Describe una composición a tu manera (opcional) — déjalo vacío para pedir una propuesta más"
+                   placeholder="Describe a composition your way (optional) — leave empty for a free proposal"
                    class="flex-1 text-xs text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
                    onkeydown="if(event.key==='Enter'){event.preventDefault(); bodGenerateCustomAI();}">
             <button id="ai-custom-btn" onclick="bodGenerateCustomAI()" title="Con texto: sigue tu idea. Vacío: la IA propone otra composición distinta a las de arriba"
@@ -652,7 +652,7 @@
              amontonamiento que reportó el usuario. -->
         <div id="ai-gen-block" class="mb-5 glass rounded-2xl p-4">
           <div class="flex items-center gap-2 mb-3">
-            <p class="text-sm font-bold text-purple-800">Generación IA</p>
+            <p class="text-sm font-bold text-purple-800">AI Generation</p>
           </div>
           <!-- Aviso de costo/límite. Va acá dentro y no como tarjeta aparte:
                es una nota sobre ESTE control, no una sección. Lo llena
@@ -661,12 +661,12 @@
           <div class="flex items-center gap-2 mb-3 max-w-3xl">
             <input id="ai-gen-input" type="text" maxlength="300"
                    style="color-scheme: light; -webkit-appearance: none; appearance: none; color: #111827; background-color: #fff;"
-                   placeholder="Estilo opcional — ej: fondo oscuro dramático, gotas de agua, minimalista..."
+                   placeholder="Optional style — e.g. dramatic dark background, water drops, minimal..."
                    class="flex-1 text-xs text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
                    onkeydown="if(event.key==='Enter'){event.preventDefault(); bodGenerateAIImage();}">
             <button id="ai-gen-btn" onclick="bodGenerateAIImage()"
                     class="flex-shrink-0 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-2 rounded-lg transition-all whitespace-nowrap">
-              🧪 Generar imagen con IA
+              🧪 Generate image with AI
             </button>
           </div>
           <div id="ai-gen-result" class="hidden">
@@ -693,13 +693,13 @@
         <div class="mb-4 glass rounded-2xl p-4">
           <div class="flex items-center gap-2 mb-3">
             <span class="text-sm">📐</span>
-            <p class="text-sm font-bold text-gray-700">Estilos de layout</p>
+            <p class="text-sm font-bold text-gray-700">Layout styles</p>
           </div>
           <div id="proposals-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"></div>
           <div id="proposals-grid-more" class="hidden grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mt-3"></div>
           <button id="proposals-more-btn" onclick="bodToggleMoreStyles()"
                   class="mt-3 text-xs font-medium text-gray-500 hover:text-indigo-600 transition-colors">
-            Ver todos los estilos
+            See all styles
           </button>
         </div>
 
@@ -722,7 +722,7 @@
             </svg>
           </div>
           <div class="flex-1 min-w-0">
-            <p class="font-semibold text-gray-900 text-sm truncate" id="bod-info-title">Composición lista</p>
+            <p class="font-semibold text-gray-900 text-sm truncate" id="bod-info-title">Composition ready</p>
             <p class="text-xs text-gray-400 mt-0.5" id="bod-info-meta"></p>
           </div>
           <button onclick="showBOD('bod-proposals')"
@@ -737,7 +737,7 @@
         </div>
 
         <div class="bg-white border border-gray-200 rounded-2xl p-4 mb-4">
-          <p class="text-xs font-medium text-gray-500 mb-3">Fondo de estudio <span class="text-gray-300 font-normal">(opcional, generado por IA)</span></p>
+          <p class="text-xs font-medium text-gray-500 mb-3">Studio background <span class="text-gray-300 font-normal">(optional, AI-generated)</span></p>
           <div id="bg-style-grid" class="flex gap-2 overflow-x-auto pb-1"></div>
         </div>
 
@@ -745,8 +745,8 @@
           <input type="checkbox" id="zoom-detail-toggle" onchange="onZoomDetailToggle()"
                  class="mt-0.5 w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-400 flex-shrink-0">
           <span>
-            <span class="text-xs font-medium text-gray-700 block">Zoom de detalle</span>
-            <span class="text-[11px] text-gray-400 block mt-0.5">Burbuja ampliada sobre una zona interesante del héroe (logo, sello, textura). Con propuestas ✦ IA, la IA elige la zona; en las geométricas se detecta automáticamente.</span>
+            <span class="text-xs font-medium text-gray-700 block">Detail zoom</span>
+            <span class="text-[11px] text-gray-400 block mt-0.5">Magnified bubble over an interesting area of the hero (logo, seal, texture). With ✦ AI proposals it is picked automatically; in geometric styles it uses the hero’s center.</span>
           </span>
         </label>
 
@@ -754,8 +754,8 @@
           <input type="checkbox" id="shadow-toggle" checked onchange="onShadowToggle()"
                  class="mt-0.5 w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-400 flex-shrink-0">
           <span>
-            <span class="text-xs font-medium text-gray-700 block">Sombra de contacto</span>
-            <span class="text-[11px] text-gray-400 block mt-0.5">Sombra elíptica debajo de cada producto, para que se sientan "apoyados". Desactivala si tu fondo o composición se ven mejor sin ella.</span>
+            <span class="text-xs font-medium text-gray-700 block">Contact shadow</span>
+            <span class="text-[11px] text-gray-400 block mt-0.5">Elliptical shadow under each product so they feel grounded. Turn it off if your background already has its own shadows.</span>
           </span>
         </label>
 
@@ -787,17 +787,17 @@
       <div class="bg-white border border-gray-200 rounded-2xl p-5 lg:sticky lg:top-20 space-y-5">
 
         <div class="flex items-center justify-between">
-          <h3 class="font-bold text-gray-900 text-sm">Opciones de diseño</h3>
+          <h3 class="font-bold text-gray-900 text-sm">Design options</h3>
           <!-- Rápido / Avanzado -->
           <div class="flex bg-gray-100 rounded-lg p-0.5 text-[11px] font-semibold">
-            <button id="opts-rapido" onclick="setOptsMode('rapido')" class="px-2.5 py-1 rounded-md text-gray-500 transition-all">Rápido</button>
-            <button id="opts-avanzado" onclick="setOptsMode('avanzado')" class="px-2.5 py-1 rounded-md bg-white shadow-sm text-indigo-600 transition-all">Avanzado</button>
+            <button id="opts-rapido" onclick="setOptsMode('rapido')" class="px-2.5 py-1 rounded-md text-gray-500 transition-all">Quick</button>
+            <button id="opts-avanzado" onclick="setOptsMode('avanzado')" class="px-2.5 py-1 rounded-md bg-white shadow-sm text-indigo-600 transition-all">Advanced</button>
           </div>
         </div>
 
         <!-- Filas -->
         <div>
-          <label class="block text-xs font-medium text-gray-500 mb-1.5">Filas</label>
+          <label class="block text-xs font-medium text-gray-500 mb-1.5">Rows</label>
           <div class="flex gap-1.5" id="rows-btns">
             <button onclick="setRows(0)" data-rows="0"
                     class="rows-btn flex-1 py-2 text-xs font-semibold rounded-lg border border-indigo-200 bg-indigo-600 text-white transition-all">Auto</button>
@@ -812,10 +812,10 @@
 
         <!-- Opciones avanzadas (sliders) -->
         <div id="opts-advanced" class="space-y-5 pt-1 border-t border-gray-100">
-          <!-- Tamaño de producto -->
+          <!-- Product size -->
           <div class="pt-4">
             <div class="flex items-center justify-between mb-1.5">
-              <label class="text-xs font-medium text-gray-500">Tamaño de producto</label>
+              <label class="text-xs font-medium text-gray-500">Product size</label>
               <span class="text-xs font-semibold text-gray-700" id="lbl-height">760 px</span>
             </div>
             <input type="range" id="cfg-height" min="300" max="2000" value="760" step="10"
@@ -825,7 +825,7 @@
           <!-- Separación -->
           <div>
             <div class="flex items-center justify-between mb-1.5">
-              <label class="text-xs font-medium text-gray-500">Separación entre productos</label>
+              <label class="text-xs font-medium text-gray-500">Spacing between products</label>
               <span class="text-xs font-semibold text-gray-700" id="lbl-gap">40 px</span>
             </div>
             <input type="range" id="cfg-gap" min="0" max="200" value="40" step="5"
@@ -835,7 +835,7 @@
           <!-- Ángulo (solo Inclinado derecha/izquierda) -->
           <div>
             <div class="flex items-center justify-between mb-1.5">
-              <label class="text-xs font-medium text-gray-500">Ángulo de inclinación <span class="text-gray-300 font-normal">(estrategias Inclinado)</span></label>
+              <label class="text-xs font-medium text-gray-500">Tilt angle <span class="text-gray-300 font-normal">(Tilt styles)</span></label>
               <span class="text-xs font-semibold text-gray-700" id="lbl-tilt-angle">30°</span>
             </div>
             <input type="range" id="cfg-tilt-angle" min="5" max="60" value="30" step="1"
@@ -849,19 +849,19 @@
           <div class="flex items-start gap-2">
             <svg class="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             <div>
-              <p class="text-xs font-medium text-gray-600">Sombras y profundidad</p>
-              <p class="text-[11px] text-gray-400 mt-0.5">Elige las propuestas <strong class="text-gray-500">Sombra</strong> o <strong class="text-gray-500">Profundidad</strong> para anclar tus productos con sombra de contacto.</p>
+              <p class="text-xs font-medium text-gray-600">Shadow and depth</p>
+              <p class="text-[11px] text-gray-400 mt-0.5">Pick the <strong class="text-gray-500">Shadow</strong> or <strong class="text-gray-500">Depth</strong> proposals to ground your products with a contact shadow.</p>
             </div>
           </div>
         </div>
 
 
-        <!-- Consejo de IA -->
+        <!-- AI tip -->
         <div class="bg-purple-50 border border-purple-100 rounded-xl p-3 flex items-start gap-2">
           <span class="text-purple-500 text-sm flex-shrink-0">✦</span>
           <div>
-            <p class="text-xs font-semibold text-purple-800">Consejo de IA</p>
-            <p class="text-[11px] text-purple-500/90 mt-0.5">Los fondos claros y neutros destacan mejor tus productos.</p>
+            <p class="text-xs font-semibold text-purple-800">AI tip</p>
+            <p class="text-[11px] text-purple-500/90 mt-0.5">Light, neutral backgrounds make your products stand out.</p>
           </div>
         </div>
       </div>
@@ -873,12 +873,12 @@
     <button onclick="bodReset()"
             class="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-800 px-3 py-2 rounded-xl hover:bg-gray-50 transition-all">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-      Volver a empezar
+      Start over
     </button>
     <button title="Próximamente" disabled
             class="inline-flex items-center gap-2 text-sm font-medium text-gray-400 border border-gray-200 px-4 py-2 rounded-xl cursor-not-allowed">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
-      Guardar proyecto <span class="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">Pronto</span>
+      Save project <span class="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">Soon</span>
     </button>
   </div>
 
@@ -891,9 +891,9 @@
 
   <!-- Encabezado -->
   <div class="mb-6">
-    <h1 class="text-2xl font-bold text-gray-900">Generación por lotes</h1>
-    <p class="brand-text text-sm font-semibold">Inteligencia que produce resultados.</p>
-    <p class="text-gray-500 text-sm mt-1 max-w-xl">Sube carpetas de productos: <strong class="text-gray-600">cada subcarpeta se convierte en una pieza</strong>. Elige el modo y genéralas todas de una.</p>
+    <h1 class="text-2xl font-bold text-gray-900">Batch generation</h1>
+    <p class="brand-text text-sm font-semibold">Intelligence that delivers.</p>
+    <p class="text-gray-500 text-sm mt-1 max-w-xl">Upload product folders: <strong class="text-gray-600">each subfolder becomes a piece</strong>. Pick a mode and generate them all at once.</p>
   </div>
 
   <!-- CONFIG -->
@@ -906,7 +906,7 @@
           <div class="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
             <span class="text-white text-xs font-bold">1</span>
           </div>
-          <span class="font-semibold text-gray-800">Sube carpetas de productos</span>
+          <span class="font-semibold text-gray-800">Upload product folders</span>
         </div>
 
         <div id="batch-dz"
@@ -915,8 +915,8 @@
           <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center mx-auto mb-3">
             <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
           </div>
-          <p class="text-sm font-medium text-gray-600">Elige una carpeta <span class="text-gray-400 font-normal">(con subcarpetas de productos)</span></p>
-          <p class="text-xs text-gray-400 mt-1.5">Cada subcarpeta = una pieza · puedes agregar varias</p>
+          <p class="text-sm font-medium text-gray-600">Choose a folder <span class="text-gray-400 font-normal">(with product subfolders)</span></p>
+          <p class="text-xs text-gray-400 mt-1.5">Each subfolder = one piece · you can add several</p>
           <input id="batch-folder-input" type="file" webkitdirectory directory multiple
                  accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp" class="hidden">
         </div>
@@ -926,7 +926,7 @@
           <div class="flex items-center justify-between mb-2">
             <span class="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              <span id="batch-group-count">0</span> grupos · <span id="batch-file-count">0</span> imágenes
+              <span id="batch-group-count">0</span> groups · <span id="batch-file-count">0</span> images
             </span>
             <button onclick="batchClear()" class="text-xs text-red-400 hover:text-red-600">Quitar todo</button>
           </div>
@@ -938,7 +938,7 @@
     <!-- Opciones -->
     <aside class="lg:col-span-1">
       <div class="bg-white border border-gray-200 rounded-2xl p-5 lg:sticky lg:top-20 space-y-4">
-        <h3 class="font-bold text-gray-900 text-sm">Modo de generación</h3>
+        <h3 class="font-bold text-gray-900 text-sm">Generation mode</h3>
         <select id="batch-mode" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 bg-white focus:border-indigo-400 focus:outline-none">
           <optgroup label="✦ Inteligente (IA)">
             <option value="ai_depth" selected>IA · Profundidad</option>
@@ -951,7 +951,7 @@
             <option value="centrado">Centrado</option>
             <option value="sombra">Sombra</option>
             <option value="profundidad">Profundidad</option>
-            <option value="profundidad_xl">Héroe XL</option>
+            <option value="profundidad_xl">Hero XL</option>
             <option value="profundidad_grad">Escalonada</option>
             <option value="impacto">Impacto</option>
             <option value="fila_recta">Fila recta</option>
@@ -963,17 +963,17 @@
             <option value="inclinado_izquierda">Inclinado izquierda</option>
           </optgroup>
         </select>
-        <p class="text-[11px] text-gray-400">Los modos <strong class="text-gray-500">IA</strong> analizan cada grupo (orden + tamaños). Más lentos pero mejores. Los geométricos son instantáneos.</p>
+        <p class="text-[11px] text-gray-400"><strong class="text-gray-500">AI</strong> modes analyze each group (order + sizes). Slower but better. Geometric ones are instant.</p>
 
         <button id="batch-gen-btn" onclick="batchGenerate()"
                 class="w-full btn-brand text-white font-semibold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-          Generar piezas
+          Generate pieces
         </button>
 
         <div class="bg-purple-50 border border-purple-100 rounded-xl p-3 flex items-start gap-2">
           <span class="text-purple-500 text-sm flex-shrink-0">✦</span>
-          <p class="text-[11px] text-purple-500/90">Nombra tus subcarpetas por SKU o línea de producto: cada una será una pieza con ese nombre.</p>
+          <p class="text-[11px] text-purple-500/90">Name your subfolders by SKU or product line: each becomes a piece with that name.</p>
         </div>
       </div>
     </aside>
@@ -1011,8 +1011,8 @@
 ═══════════════════════════════════════════════════════ -->
 <div id="panel-projects" class="hidden">
   <div class="mb-6">
-    <h1 class="text-2xl font-bold text-gray-900">Mis proyectos</h1>
-    <p class="text-gray-500 text-sm mt-1 max-w-xl">Tus piezas guardadas. Reabre cualquiera para seguir editándola o descargarla de nuevo.</p>
+    <h1 class="text-2xl font-bold text-gray-900">My projects</h1>
+    <p class="text-gray-500 text-sm mt-1 max-w-xl">Your saved pieces. Reopen any of them to keep editing or download it again.</p>
   </div>
   <div id="projects-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
     <p class="col-span-full text-sm text-gray-400 text-center py-12">Cargando...</p>
@@ -1088,7 +1088,7 @@ function _warnSkipped(upData) {
   const skipped = upData && upData.skipped;
   if (!skipped || !skipped.length) return;
   const detail = skipped.map(s => `${s.filename}: ${s.reason}`).join(' · ');
-  toast(`${skipped.length} imagen${skipped.length!==1?'es':''} no se pudo${skipped.length!==1?'ieron':''} cargar — ${detail}`, 'warn');
+  toast(`${skipped.length} image${skipped.length!==1?'s':''} could not be loaded — ${detail}`, 'warn');
 }
 
 function esc(s) {
@@ -1112,7 +1112,7 @@ let BOD_UPLOAD_PROMISE = null;
 let BOD_AI_DONE = false;
 let BOD_AI_STYLE = 'dynamic';
 let BOD_BACKGROUND_STYLE = null;  // id del fondo de estudio elegido (null = sin fondo)
-let BOD_ZOOM_DETAIL = false;      // burbuja de zoom sobre el héroe
+let BOD_ZOOM_DETAIL = false;      // burbuja de zoom sobre the hero
 let BOD_REOPENED = false;    // true = bod-preview viene de "Proyectos" (reusar el layout guardado tal cual, no recomputar por STRATEGIES[BOD_SELECTED_IDX])
 let BOD_SHADOW = true;            // sombra de contacto (activada por defecto, como siempre)
 let BG_STYLES = null;             // caché de /api/bodegon/background-styles
@@ -1139,7 +1139,7 @@ function centerHeroRows(rows) {
 const STRATEGIES = [
   {
     // Equilibrado: orden natural por altura, aspecto estándar
-    id: 'auto', label: 'Auto', desc: 'Equilibrado, héroe al centro',
+    id: 'auto', label: 'Auto', desc: 'Balanced, hero at the center',
     color: 'indigo',
     prepareItems: items => [...items].sort((a,b) => b.sh - a.sh),
     modifyCfg:   cfg => cfg,
@@ -1147,7 +1147,7 @@ const STRATEGIES = [
   },
   {
     // Por área: orden por tamaño real de imagen, canvas cuadrado
-    id: 'area', label: 'Por área', desc: 'Mayor superficie al centro',
+    id: 'area', label: 'By area', desc: 'Largest footprint at the center',
     color: 'emerald',
     prepareItems: items => [...items].sort((a,b) => (b.ow*b.oh)-(a.ow*a.oh)),
     modifyCfg:   cfg => ({...cfg, aspect_w:1, aspect_h:1}),
@@ -1155,7 +1155,7 @@ const STRATEGIES = [
   },
   {
     // Alternado: intercala verticales/horizontales, canvas panorámico
-    id: 'alternado', label: 'Alternado', desc: 'Ritmo visual alto/ancho',
+    id: 'alternado', label: 'Alternating', desc: 'Tall/wide visual rhythm',
     color: 'violet',
     prepareItems: items => {
       const s=[...items].sort((a,b)=>(b.oh/b.ow)-(a.oh/a.ow));
@@ -1170,7 +1170,7 @@ const STRATEGIES = [
   },
   {
     // Centrado: más alto al centro, widescreen
-    id: 'centrado', label: 'Centrado', desc: 'Más alto al centro',
+    id: 'centrado', label: 'Centered', desc: 'Tallest at the center',
     color: 'amber',
     prepareItems: items => [...items].sort((a,b) => b.sh - a.sh),
     modifyCfg:   cfg => ({...cfg, aspect_w:16, aspect_h:9}),
@@ -1190,7 +1190,7 @@ const STRATEGIES = [
   },
   {
     // Uniforme: todos la misma altura, formato muy ancho
-    id: 'uniforme', label: 'Uniforme', desc: 'Misma altura, formato ancho',
+    id: 'uniforme', label: 'Uniform', desc: 'Same height, wide format',
     color: 'sky',
     prepareItems: items => [...items].sort((a,b) => b.ow - a.ow),
     modifyCfg:   cfg => ({...cfg, rows_count:1, max_vertical_boost:1.0, aspect_w:3, aspect_h:1}),
@@ -1198,7 +1198,7 @@ const STRATEGIES = [
   },
   {
     // Dinámico: contraste extremo de tamaños, 1 fila, boost alto
-    id: 'dinamico', label: 'Dinámico', desc: 'Contraste de tamaños extremo',
+    id: 'dinamico', label: 'Dynamic', desc: 'Extreme size contrast',
     color: 'rose',
     prepareItems: items => [...items].sort((a,b) => b.sh - a.sh),
     modifyCfg:   cfg => ({...cfg, rows_count:1, max_vertical_boost:2.2, aspect_w:5, aspect_h:3}),
@@ -1206,7 +1206,7 @@ const STRATEGIES = [
   },
   {
     // Sombra: orden natural, productos anclados con sombra de contacto
-    id: 'sombra', label: 'Sombra', desc: 'Anclados con sombra de contacto',
+    id: 'sombra', label: 'Shadow', desc: 'Grounded with contact shadow',
     color: 'slate',
     shadow: true,
     prepareItems: items => [...items].sort((a,b) => b.sh - a.sh),
@@ -1215,7 +1215,7 @@ const STRATEGIES = [
   },
   {
     // Profundidad: héroe al centro más grande, solapamiento y sombra
-    id: 'profundidad', label: 'Profundidad', desc: 'Héroe al frente + solapamiento',
+    id: 'profundidad', label: 'Depth', desc: 'Hero in front + overlap',
     color: 'teal',
     shadow: true, depth: true, overlap: 0.16, heroScale: 1.32, falloff: 0.93,
     prepareItems: items => [...items].sort((a,b) => b.sh - a.sh),
@@ -1224,7 +1224,7 @@ const STRATEGIES = [
   },
   {
     // Héroe XL: producto central dominante, mucho solapamiento
-    id: 'profundidad_xl', label: 'Héroe XL', desc: 'Producto central dominante',
+    id: 'profundidad_xl', label: 'Hero XL', desc: 'Dominant center product',
     color: 'cyan',
     shadow: true, depth: true, overlap: 0.24, heroScale: 1.5, falloff: 1.0,
     prepareItems: items => [...items].sort((a,b) => b.sh - a.sh),
@@ -1233,7 +1233,7 @@ const STRATEGIES = [
   },
   {
     // Escalonada: tamaño decrece del centro hacia los lados (efecto abanico)
-    id: 'profundidad_grad', label: 'Escalonada', desc: 'Decrece hacia los lados',
+    id: 'profundidad_grad', label: 'Stepped', desc: 'Shrinks toward the sides',
     color: 'fuchsia',
     shadow: true, depth: true, overlap: 0.20, heroScale: 1.18, falloff: 0.84,
     prepareItems: items => [...items].sort((a,b) => b.sh - a.sh),
@@ -1243,7 +1243,7 @@ const STRATEGIES = [
   {
     // Impacto: héroe recto al centro + abanico de inclinaciones hacia los lados,
     // estilo pieza publicitaria (más energía visual que las estrategias de profundidad).
-    id: 'impacto', label: 'Impacto', desc: 'Abanico dinámico tipo anuncio',
+    id: 'impacto', label: 'Impact', desc: 'Dynamic ad-style fan',
     color: 'orange',
     shadow: true, depth: true, tilt: true, tiltMode: 'fan',
     overlap: 0.22, heroScale: 1.50, falloff: 0.88,
@@ -1254,7 +1254,7 @@ const STRATEGIES = [
   {
     // Fila recta: derechos (sin inclinación), en línea, sin héroe centrado —
     // como una foto de producto convencional (variedad/línea de un SKU).
-    id: 'fila_recta', label: 'Fila recta', desc: 'Derechos en línea, sin héroe',
+    id: 'fila_recta', label: 'Straight row', desc: 'Upright in line, no hero',
     color: 'lime',
     shadow: true, depth: true, overlap: 0.16, heroScale: 1.0, falloff: 1.0,
     prepareItems: items => [...items].sort((a,b) => b.sh - a.sh),
@@ -1264,7 +1264,7 @@ const STRATEGIES = [
   {
     // Cruce: inclinados unos hacia otros, convergen al centro de la fila
     // (no hacia/desde un héroe) — funciona incluso con solo 2 productos.
-    id: 'cruce', label: 'Cruce', desc: 'Inclinados uno hacia el otro',
+    id: 'cruce', label: 'Cross', desc: 'Tilted toward each other',
     color: 'red',
     shadow: true, depth: true, tilt: true, tiltMode: 'converge',
     overlap: 0.32, heroScale: 1.15, falloff: 1.0,
@@ -1275,8 +1275,8 @@ const STRATEGIES = [
   {
     // Inclinado derecha: TODOS el mismo ángulo, sin fórmula por distancia —
     // línea prolija pero pareja, no en abanico ni convergencia. La magnitud
-    // la elige el usuario con el slider "Ángulo de inclinación" (5°-60°).
-    id: 'inclinado_derecha', label: 'Inclinado derecha', desc: 'Todos parejo — ángulo configurable',
+    // la elige el usuario con el slider "Tilt angle" (5°-60°).
+    id: 'inclinado_derecha', label: 'Tilt right', desc: 'All even \u2014 adjustable angle',
     color: 'emerald',
     shadow: true, depth: true, tilt: true, tiltMode: 'uniform', tiltAngle: 30,
     overlap: 0.18, heroScale: 1.0, falloff: 1.0,
@@ -1285,7 +1285,7 @@ const STRATEGIES = [
     postProcess: rows => rows,
   },
   {
-    id: 'inclinado_izquierda', label: 'Inclinado izquierda', desc: 'Todos parejo — ángulo configurable',
+    id: 'inclinado_izquierda', label: 'Tilt left', desc: 'All even \u2014 adjustable angle',
     color: 'violet',
     shadow: true, depth: true, tilt: true, tiltMode: 'uniform', tiltAngle: -30,
     overlap: 0.18, heroScale: 1.0, falloff: 1.0,
@@ -1296,7 +1296,7 @@ const STRATEGIES = [
   {
     // Cascada: misma inclinación para todos, crece hacia una esquina —
     // layout propio (no encaja en el modelo de filas), ver computeCascadaJS.
-    id: 'cascada', label: 'Cascada', desc: 'Crece en diagonal, misma inclinación',
+    id: 'cascada', label: 'Cascade', desc: 'Grows diagonally, same tilt',
     color: 'yellow',
     modifyCfg: cfg => cfg,
     standalone: computeCascadaJS,
@@ -1304,7 +1304,7 @@ const STRATEGIES = [
   {
     // Radial: alturas/ángulos variados por posición, irradiando desde el
     // centro — layout propio (no encaja en el modelo de filas), ver computeRadialJS.
-    id: 'radial', label: 'Radial', desc: 'Irradia desde el centro',
+    id: 'radial', label: 'Radial', desc: 'Radiates from the center',
     color: 'pink',
     modifyCfg: cfg => cfg,
     standalone: computeRadialJS,
@@ -1312,18 +1312,18 @@ const STRATEGIES = [
   {
     // Flotante: cada producto a su propia altura (sin línea de base
     // compartida) — layout propio, ver computeFlotanteJS.
-    id: 'flotante', label: 'Flotante', desc: 'Cada uno a su propia altura',
+    id: 'flotante', label: 'Floating', desc: 'Each at its own height',
     color: 'sky',
     modifyCfg: cfg => cfg,
     standalone: computeFlotanteJS,
   },
 ];
 
-// 3 estilos curados para mostrar de entrada en "Estilos de layout" (de los
+// 3 estilos curados para mostrar de entrada en "Layout styles" (de los
 // ~18 totales) — elegidos por variedad de carácter visual: Auto (equilibrado,
 // el más seguro como default), Profundidad (solapamiento, look premium) e
 // Impacto (abanico dinámico, tipo anuncio). El resto queda detrás de
-// "Ver todos los estilos" — ver bodShowProposals/bodToggleMoreStyles.
+// "See all styles" — ver bodShowProposals/bodToggleMoreStyles.
 const CURATED_STRATEGY_IDS = ['auto', 'profundidad', 'impacto'];
 
 // "Propuestas IA" muestra una sola composición visora a la vez (elegida en
@@ -1382,7 +1382,7 @@ function bodToggleMoreStyles() {
   const btn = document.getElementById('proposals-more-btn');
   const opening = more.classList.contains('hidden');
   more.classList.toggle('hidden');
-  btn.textContent = opening ? 'Ver menos estilos' : `Ver todos los estilos (${STRATEGIES.length})`;
+  btn.textContent = opening ? 'Ver menos estilos' : `See all styles (${STRATEGIES.length})`;
 }
 
 // Las propuestas IA ocupan índices a partir de AI_BASE
@@ -1476,7 +1476,7 @@ function computeLayoutJS(images, cfg, strategy) {
         // 'fan' (impacto): pivote = héroe, se abren hacia afuera.
         // 'converge' (cruce): pivote = centro geométrico de la fila, se
         // inclinan hacia el centro aunque no haya un producto recto de
-        // referencia (p. ej. con 2 productos, ninguno es "el héroe").
+        // referencia (p. ej. con 2 productos, ninguno es "the hero").
         // 'uniform' (inclinado izq/der): TODOS el mismo ángulo, sin fórmula
         // por distancia — la magnitud la elige el usuario (slider), el signo
         // (derecha/izquierda) lo define la estrategia. Mismo criterio que
@@ -1683,7 +1683,7 @@ function bodProdDrop(e) { e.preventDefault(); dzLeave('bod-prod-dz'); if(e.dataT
 
 function bodAddProducts(files) {
   const valid = files.filter(f => /\.(png|jpe?g|webp|tiff?|bmp|gif)$/i.test(f.name));
-  if (!valid.length) { toast('Agrega imágenes válidas (PNG, JPG, WebP, TIFF)'); return; }
+  if (!valid.length) { toast('Add valid images (PNG, JPG, WebP, TIFF)'); return; }
   // Antes se descartaba en silencio un archivo si ya había uno con el mismo
   // nombre — bloqueaba subir la misma foto dos veces (p. ej. 2 unidades del
   // mismo producto). Ahora se permite: _recomputeBodNames() desambigua
@@ -1863,7 +1863,7 @@ function _makeProposalCard(idx, label, desc, labelColor, clsFn) {
 }
 
 function bodShowProposals() {
-  if (!BOD_FILES.length) { toast('Agrega al menos una imagen de producto'); return; }
+  if (!BOD_FILES.length) { toast('Add at least one product image'); return; }
 
   BOD_SESSION = null; BOD_UPLOAD_PROMISE = null; BOD_AI_VARIANTS = []; BOD_AI_REASONING = ''; BOD_AI_DONE = false; BOD_AI_STYLE = 'dynamic';
   BOD_SELECTED_IDX = 0; BOD_REOPENED = false;
@@ -1874,7 +1874,7 @@ function bodShowProposals() {
 
   // Estrategias geométricas (cálculo client-side instantáneo). Se muestran
   // solo 3 curadas por defecto (variedad de estilo, no las "primeras 3" del
-  // array) — el resto queda oculto detrás de "Ver todos los estilos", para
+  // array) — el resto queda oculto detrás de "See all styles", para
   // no abrumar con ~18 tarjetas de entrada. Ver bodToggleMoreStyles().
   const layouts = STRATEGIES.map(s => s.standalone ? s.standalone(BOD_FILES, baseCfg) : computeLayoutJS(BOD_FILES, baseCfg, s));
   const grid = document.getElementById('proposals-grid');
@@ -1882,7 +1882,7 @@ function bodShowProposals() {
   const moreBtn = document.getElementById('proposals-more-btn');
   grid.innerHTML = ''; gridMore.innerHTML = '';
   gridMore.classList.add('hidden');
-  moreBtn.textContent = `Ver todos los estilos (${STRATEGIES.length})`;
+  moreBtn.textContent = `See all styles (${STRATEGIES.length})`;
 
   const curatedIdx = new Set(CURATED_STRATEGY_IDS.map(id => STRATEGIES.findIndex(s => s.id === id)));
   CURATED_STRATEGY_IDS.forEach(id => {
@@ -1995,7 +1995,7 @@ async function bodUploadAndAnalyzeAI(cfg) {
 // servidor con order/hero/sizes/Dinámica/Elegante/Editorial (eso vive en
 // /ai-proposal). Reusa la sesión ya subida, sin volver a mandar archivos.
 // Un click reemplaza la tarjeta "a medida" anterior si ya había una — no se
-// acumulan varias, siempre es "tu última idea".
+// acumulan varias, siempre es "your last idea".
 async function bodGenerateCustomAI() {
   const input = document.getElementById('ai-custom-input');
   const text = input.value.trim();
@@ -2048,7 +2048,7 @@ function bodUpdateAIGenNotice() {
     el.innerHTML = `<b>${n} productos: demasiados para este modo.</b> Acá la IA
       redibuja la escena entera, y arriba de ${AI_GEN_MAX} deja de mantener el
       texto de las etiquetas — en una prueba con 60 devolvió una imagen que no
-      tenía nada que ver con los productos. Usá <b>Estilos de layout</b> o
+      tenía nada que ver con los productos. Usá <b>Layout styles</b> o
       <b>Propuestas IA</b>: componen tus fotos reales sin redibujarlas, así que
       no pierden nitidez y no tienen tope.`;
     el.classList.remove('hidden');
@@ -2077,7 +2077,7 @@ function bodUpdateAIGenNotice() {
 
 async function bodGenerateAIImage() {
   if (BOD_FILES.length > AI_GEN_MAX) {
-    toast(`Máximo ${AI_GEN_MAX} productos en Generación IA — usá Estilos de layout o Propuestas IA`);
+    toast(`Max ${AI_GEN_MAX} products in AI Generation — use Layout styles or AI proposals`);
     return;
   }
   // Confirmación solo donde el gasto duele: una generación son 3-5 min y una
@@ -2099,14 +2099,14 @@ async function bodGenerateAIImage() {
       body: JSON.stringify({session_id: BOD_SESSION, custom_prompt: input.value.trim()}),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Error generando la imagen');
+    if (!res.ok) throw new Error(data.detail || 'Image generation failed');
 
     const url = `/api/bodegon/ai-generated-file/${BOD_SESSION}?t=${Date.now()}`;
     document.getElementById('ai-gen-img').src = url;
     document.getElementById('ai-gen-download').href = url;
     document.getElementById('ai-gen-download-psd').href = `/api/bodegon/ai-generated-psd/${BOD_SESSION}?t=${Date.now()}`;
     document.getElementById('ai-gen-result').classList.remove('hidden');
-    toast('Imagen generada con IA', 'warn');
+    toast('AI image generated', 'warn');
   } catch (e) {
     toast(e.message);
   } finally {
@@ -2116,7 +2116,7 @@ async function bodGenerateAIImage() {
 }
 
 function bodSelectProposal(idx) {
-  if (isAi(idx) && !aiVariant(idx)) { toast('Genera una composición IA primero', 'warn'); return; }
+  if (isAi(idx) && !aiVariant(idx)) { toast('Generate an AI composition first', 'warn'); return; }
   BOD_SELECTED_IDX = idx;
   STRATEGIES.forEach((s, i) => {
     const c = document.getElementById(`prop-card-${i}`);
@@ -2131,7 +2131,7 @@ function bodSelectProposal(idx) {
 // ── Usar propuesta seleccionada ──────────────────────────────────────────────
 async function bodUseProposal() {
   const ai = isAi(BOD_SELECTED_IDX);
-  if (ai && !aiVariant(BOD_SELECTED_IDX)) { toast('Genera una composición IA primero', 'warn'); return; }
+  if (ai && !aiVariant(BOD_SELECTED_IDX)) { toast('Generate an AI composition first', 'warn'); return; }
 
   const btn = document.getElementById('bod-use-btn');
   btn.disabled = true;
@@ -2146,7 +2146,7 @@ async function bodUseProposal() {
       document.getElementById('bod-info-title').textContent = `✦ ${v.label}`;
       document.getElementById('bod-info-meta').textContent =
         `${BOD_LAYOUT.canvas_width.toLocaleString()} × ${BOD_LAYOUT.canvas_height.toLocaleString()} px · ` +
-        `${BOD_LAYOUT.items.length} productos · ${BOD_LAYOUT.rows_count} fila${BOD_LAYOUT.rows_count!==1?'s':''}`;
+        `${BOD_LAYOUT.items.length} products · ${BOD_LAYOUT.rows_count} row${BOD_LAYOUT.rows_count!==1?'s':''}`;
       renderBgStyleGrid();
       showBOD('bod-preview');
       return;
@@ -2156,7 +2156,7 @@ async function bodUseProposal() {
     // segundo plano desde bodShowProposals().
     const strategy = STRATEGIES[BOD_SELECTED_IDX];
     showBOD('bod-loading');
-    document.getElementById('bod-loading-msg').textContent = 'Subiendo imágenes...';
+    document.getElementById('bod-loading-msg').textContent = 'Uploading images...';
     await bodEnsureUploaded();
 
     document.getElementById('bod-loading-msg').textContent = 'Calculando layout final...';
@@ -2173,7 +2173,7 @@ async function bodUseProposal() {
     document.getElementById('bod-info-title').textContent = `${strategy.label} — ${strategy.desc}`;
     document.getElementById('bod-info-meta').textContent =
       `${layout.canvas_width.toLocaleString()} × ${layout.canvas_height.toLocaleString()} px · ` +
-      `${layout.items.length} productos · ${layout.rows_count} fila${layout.rows_count!==1?'s':''}`;
+      `${layout.items.length} products · ${layout.rows_count} row${layout.rows_count!==1?'s':''}`;
     renderBgStyleGrid();
     showBOD('bod-preview');
 
@@ -2319,8 +2319,8 @@ async function renderBgStyleGrid() {
 
   const noneCard = document.createElement('div');
   noneCard.className = _bgSwatchClass(!BOD_BACKGROUND_STYLE);
-  noneCard.title = 'Sin fondo (transparente)';
-  noneCard.innerHTML = `<div class="checker-bg w-full h-full flex items-center justify-center"><span class="text-[8px] text-gray-400 font-semibold text-center leading-tight px-1">Sin<br>fondo</span></div>`;
+  noneCard.title = 'No background (transparent)';
+  noneCard.innerHTML = `<div class="checker-bg w-full h-full flex items-center justify-center"><span class="text-[8px] text-gray-400 font-semibold text-center leading-tight px-1">No<br>background</span></div>`;
   noneCard.onclick = () => selectBgStyle(null);
   grid.appendChild(noneCard);
 
@@ -2365,14 +2365,14 @@ const BOD_RENDER_LABELS = {
 
 async function bodRender(format) {
   format = format || 'png';
-  if (!BOD_FILES.length && !BOD_SESSION) { toast('Elige una propuesta primero'); return; }
+  if (!BOD_FILES.length && !BOD_SESSION) { toast('Pick a proposal first'); return; }
   const meta = BOD_RENDER_LABELS[format];
   const btn=document.getElementById(meta.btn);
   btn.disabled=true;
   btn.innerHTML=`<div class="w-4 h-4 border-2 ${meta.spin} rounded-full spin"></div> Renderizando...`;
   try {
     await bodEnsureUploaded();
-    // Reabierta desde "Mis proyectos": el layout guardado se reusa tal cual
+    // Reabierta desde "My projects": el layout guardado se reusa tal cual
     // (misma composición, sin recalcular por STRATEGIES[BOD_SELECTED_IDX],
     // que acá no corresponde a ninguna tarjeta realmente elegida ahora).
     const body = BOD_REOPENED
@@ -2414,12 +2414,12 @@ function bodReset() {
   showBOD('bod-upload');
 }
 
-// ── Mis proyectos (panel de la barra lateral, ver panel-projects) ────────────
+// ── My projects (panel de la barra lateral, ver panel-projects) ────────────
 // Reabre una sesión propia ya subida: trae sus fotos originales del servidor
 // (no hace falta volver a subirlas) y, si ya tenía una propuesta renderizada,
 // la muestra directo. BOD_SESSION queda apuntando a esa misma sesión — "Generar
 // y descargar PNG" reusa el layout guardado tal cual (ver BOD_REOPENED en
-// bodRender); solo "Generar propuestas" (bodShowProposals) vuelve a subir,
+// bodRender); solo "Generate proposals" (bodShowProposals) vuelve a subir,
 // como con cualquier otro grupo de fotos.
 // Nota: esto SOLO se dispara al hacer clic en una tarjeta de "Proyectos" —
 // nunca automáticamente al iniciar sesión ni al entrar a "Crear" (antes sí
@@ -2427,7 +2427,7 @@ function bodReset() {
 // trabajo sin que el usuario la pidiera).
 async function bodOpenSession(id) {
   showBOD('bod-loading');
-  document.getElementById('bod-loading-msg').textContent = 'Cargando tu sesión...';
+  document.getElementById('bod-loading-msg').textContent = 'Loading your session...';
   try {
     const res = await fetch(`/api/bodegon/session/${id}`);
     if (!res.ok) { showBOD('bod-upload'); return; }
@@ -2458,10 +2458,10 @@ async function bodOpenSession(id) {
       BOD_LAYOUT = data.layout;
       BOD_REOPENED = true;
       drawBodCanvas(BOD_LAYOUT);
-      document.getElementById('bod-info-title').textContent = 'Tu última propuesta guardada';
+      document.getElementById('bod-info-title').textContent = 'Your last saved proposal';
       document.getElementById('bod-info-meta').textContent =
         `${BOD_LAYOUT.canvas_width.toLocaleString()} × ${BOD_LAYOUT.canvas_height.toLocaleString()} px · ` +
-        `${BOD_LAYOUT.items.length} productos · ${BOD_LAYOUT.rows_count} fila${BOD_LAYOUT.rows_count!==1?'s':''}`;
+        `${BOD_LAYOUT.items.length} products · ${BOD_LAYOUT.rows_count} row${BOD_LAYOUT.rows_count!==1?'s':''}`;
       renderBgStyleGrid();
       showBOD('bod-preview');
     } else {
@@ -2479,11 +2479,13 @@ async function bodOpenSessionFromProjects(id) {
 
 function relDate(ts) {
   const d = new Date(ts * 1000), now = new Date();
-  const hhmm = d.toLocaleTimeString('es', {hour:'2-digit', minute:'2-digit'});
-  if (d.toDateString() === now.toDateString()) return `Hoy ${hhmm}`;
-  const yest = new Date(now); yest.setDate(now.getDate() - 1);
-  if (d.toDateString() === yest.toDateString()) return `Ayer ${hhmm}`;
-  return d.toLocaleDateString('es', {day:'numeric', month:'short'});
+    // Locale 'en': la app esta en ingles, y con 'es' las fechas salian
+    // "1 sept" / "Ayer 21:38" en medio de una interfaz inglesa.
+    const hhmm = d.toLocaleTimeString('en', {hour:'2-digit', minute:'2-digit'});
+    if (d.toDateString() === now.toDateString()) return `Today ${hhmm}`;
+    const yest = new Date(now); yest.setDate(now.getDate() - 1);
+    if (d.toDateString() === yest.toDateString()) return `Yesterday ${hhmm}`;
+    return d.toLocaleDateString('en', {day:'numeric', month:'short'});
 }
 
 // Se llama al entrar a la pestaña "Proyectos" (switchTab) — siempre trae la
@@ -2494,13 +2496,13 @@ function loadProjectsGrid() {
   fetch('/api/bodegon/mine')
     .then(r => r.json())
     .then(d => renderProjectsGrid(d.sessions || []))
-    .catch(() => { grid.innerHTML = `<p class="col-span-full text-sm text-gray-400 text-center py-12">No se pudo cargar.</p>`; });
+    .catch(() => { grid.innerHTML = `<p class="col-span-full text-sm text-gray-400 text-center py-12">Could not load.</p>`; });
 }
 
 function renderProjectsGrid(sessions) {
   const grid = document.getElementById('projects-grid');
   if (!sessions.length) {
-    grid.innerHTML = `<p class="col-span-full text-sm text-gray-400 text-center py-12">Todavía no tienes piezas guardadas. Sube productos en "Crear" para empezar.</p>`;
+    grid.innerHTML = `<p class="col-span-full text-sm text-gray-400 text-center py-12">You have no saved pieces yet. Upload products in "Create" to get started.</p>`;
     return;
   }
   grid.innerHTML = sessions.map(s => `
@@ -2513,7 +2515,7 @@ function renderProjectsGrid(sessions) {
       </div>
       <div class="px-2.5 py-2">
         <p class="text-xs font-semibold text-gray-700">${esc(relDate(s.created))}</p>
-        <p class="text-[10px] text-gray-400">${s.product_count} producto${s.product_count!==1?'s':''}${s.has_render?'':' · sin render'}</p>
+        <p class="text-[10px] text-gray-400">${s.product_count} product${s.product_count!==1?'s':''}${s.has_render?'':' · not rendered'}</p>
       </div>
     </button>
   `).join('');
@@ -2532,7 +2534,7 @@ document.getElementById('batch-folder-input').addEventListener('change', functio
 
 function batchAddFiles(files) {
   const imgs = files.filter(f => /\.(png|jpe?g|webp|tiff?|bmp|gif)$/i.test(f.name));
-  if (!imgs.length) { toast('La carpeta no contiene imágenes válidas'); return; }
+  if (!imgs.length) { toast('That folder has no valid images'); return; }
   const groups = {};
   for (const f of imgs) {
     const path = f.webkitRelativePath || f.name;
@@ -2611,7 +2613,7 @@ function _batchCard(name) {
 }
 
 async function batchGenerate() {
-  if (!BATCH_GROUPS.length) { toast('Agrega al menos una carpeta'); return; }
+  if (!BATCH_GROUPS.length) { toast('Add at least one folder'); return; }
   const mode = document.getElementById('batch-mode').value;
   const isAImode = mode.startsWith('ai');
   const cfg = buildBatchConfig(mode);
@@ -2639,7 +2641,7 @@ async function batchGenerate() {
       const fd = new FormData();
       g.files.forEach(f => fd.append('products', f, f.name));
       const up = await (await fetch('/api/bodegon/upload', { method: 'POST', body: fd })).json();
-      if (!up.session_id) throw new Error(up.detail || 'Error al subir');
+      if (!up.session_id) throw new Error(up.detail || 'Upload failed');
       const sid = up.session_id;
 
       if (isAImode) {
@@ -2654,7 +2656,7 @@ async function batchGenerate() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sid, config: cfg }),
       });
-      if (!rd.ok) throw new Error((await rd.json()).detail || 'Error al renderizar');
+      if (!rd.ok) throw new Error((await rd.json()).detail || 'Render failed');
 
       card.done(`/api/bodegon/download/${sid}?t=${Date.now()}`);
       BATCH_RESULTS.push({ session_id: sid, name: g.name });
@@ -2680,7 +2682,7 @@ async function batchDownloadAll() {
       body: JSON.stringify({ items: BATCH_RESULTS }),
     });
     const d = await res.json();
-    if (!res.ok) throw new Error(d.detail || 'Error al empaquetar');
+    if (!res.ok) throw new Error(d.detail || 'Packaging failed');
     const a = document.createElement('a');
     a.href = `/api/batch/download/${d.batch_id}`; a.download = 'piezas.zip';
     document.body.appendChild(a); a.click(); a.remove();
@@ -2703,11 +2705,11 @@ function authToggle() {
   const reg = LOGIN_MODE === 'register';
   document.getElementById('login-title').textContent = reg ? 'Create your account' : 'Welcome';
   document.getElementById('login-btn').innerHTML = reg
-    ? 'Crear cuenta'
-    : 'Iniciar sesión <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>';
+    ? 'Create account'
+    : 'Sign in <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>';
   document.getElementById('login-toggle').innerHTML = reg
-    ? '¿Ya tienes cuenta? <button type="button" onclick="authToggle()" class="text-violet-300 font-semibold hover:underline">Inicia sesión</button>'
-    : '¿No tienes una cuenta? <button type="button" onclick="authToggle()" class="text-violet-300 font-semibold hover:underline">Contáctanos</button>';
+    ? 'Already have an account? <button type="button" onclick="authToggle()" class="text-violet-300 font-semibold hover:underline">Sign in</button>'
+    : 'No account yet? <button type="button" onclick="authToggle()" class="text-violet-300 font-semibold hover:underline">Contact us</button>';
   authErr('');
 }
 function showLogin() { document.getElementById('login-overlay').style.display = 'flex'; }
@@ -2722,7 +2724,7 @@ async function authSubmit(ev) {
   ev.preventDefault();
   const username = document.getElementById('login-user').value.trim();
   const password = document.getElementById('login-pass').value;
-  if (!username || !password) { authErr('Completa usuario y contraseña'); return; }
+  if (!username || !password) { authErr('Enter your username and password'); return; }
   const btn = document.getElementById('login-btn');
   btn.disabled = true; const old = btn.innerHTML;
   btn.innerHTML = '<div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full spin"></div>';
