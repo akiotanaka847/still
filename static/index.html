@@ -349,7 +349,7 @@
         <span id="topbar-username" class="hidden sm:block text-xs font-medium text-gray-300"></span>
         <div id="user-avatar"
              class="w-8 h-8 rounded-full brand-gradient flex items-center justify-center text-white text-[11px] font-bold ring-2 ring-white/10 select-none">·</div>
-        <button onclick="authLogout()" title="Cerrar sesión"
+        <button onclick="authLogout()" title="Sign out"
                 class="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l3 3m0 0l-3 3m3-3H2.25"/></svg>
         </button>
@@ -484,7 +484,7 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <span id="bod-prod-count">0</span> products loaded
               </span>
-              <button onclick="bodClearProducts()" class="text-xs text-red-400 hover:text-red-600">Quitar todos</button>
+              <button onclick="bodClearProducts()" class="text-xs text-red-400 hover:text-red-600">Remove all</button>
             </div>
             <div id="bod-thumb-grid" class="grid grid-cols-5 gap-2 max-h-52 overflow-y-auto"></div>
           </div>
@@ -656,7 +656,7 @@
                    placeholder="Describe a composition your way (optional) — leave empty for a free proposal"
                    class="flex-1 text-xs text-gray-900 bg-white border border-gray-200 rounded-lg px-3 py-2 focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
                    onkeydown="if(event.key==='Enter'){event.preventDefault(); bodGenerateCustomAI();}">
-            <button id="ai-custom-btn" onclick="bodGenerateCustomAI()" title="Con texto: sigue tu idea. Vacío: la IA propone otra composición distinta a las de arriba"
+            <button id="ai-custom-btn" onclick="bodGenerateCustomAI()" title="With text: follows your idea. Empty: AI proposes a different composition from the ones above"
                     class="flex-shrink-0 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-2 rounded-lg transition-all whitespace-nowrap">
               ✦ Generate proposal
             </button>
@@ -773,7 +773,7 @@
             </svg>
             Download PNG
           </button>
-          <button id="bod-render-psd-btn" onclick="bodRender('psd')" title="Each product on its own layer — abrir/editar en Photoshop sin perder calidad"
+          <button id="bod-render-psd-btn" onclick="bodRender('psd')" title="Each product on its own layer — open and edit in Photoshop without losing quality"
                   class="flex-shrink-0 px-6 bg-white/5 hover:bg-white/10 text-gray-300 font-medium py-3.5 rounded-xl
                          border border-white/15 hover:border-indigo-400/50 transition-all flex items-center justify-center gap-2">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -909,7 +909,7 @@
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
       Start over
     </button>
-    <button title="Próximamente" disabled
+    <button title="Coming soon" disabled
             class="inline-flex items-center gap-2 text-sm font-medium text-gray-400 border border-gray-200 px-4 py-2 rounded-xl cursor-not-allowed">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
       Save project <span class="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">Soon</span>
@@ -962,7 +962,7 @@
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               <span id="batch-group-count">0</span> groups · <span id="batch-file-count">0</span> images
             </span>
-            <button onclick="batchClear()" class="text-xs text-red-400 hover:text-red-600">Quitar todo</button>
+            <button onclick="batchClear()" class="text-xs text-red-400 hover:text-red-600">Remove all</button>
           </div>
           <div id="batch-groups" class="space-y-1.5 max-h-72 overflow-y-auto"></div>
         </div>
@@ -1049,7 +1049,7 @@
     <p class="text-gray-500 text-sm mt-1 max-w-xl">Your saved pieces. Reopen any of them to keep editing or download it again.</p>
   </div>
   <div id="projects-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-    <p class="col-span-full text-sm text-gray-400 text-center py-12">Cargando...</p>
+    <p class="col-span-full text-sm text-gray-400 text-center py-12">Loading...</p>
   </div>
 </div><!-- /panel-projects -->
 
@@ -1424,7 +1424,7 @@ function bodToggleMoreStyles() {
   const btn = document.getElementById('proposals-more-btn');
   const opening = more.classList.contains('hidden');
   more.classList.toggle('hidden');
-  btn.textContent = opening ? 'Ver menos estilos' : `See all styles (${STRATEGIES.length})`;
+  btn.textContent = opening ? 'See fewer styles' : `See all styles (${STRATEGIES.length})`;
 }
 
 // Las propuestas IA ocupan índices a partir de AI_BASE
@@ -1970,7 +1970,7 @@ async function bodEnsureUploaded() {
 
     const upRes = await fetch('/api/bodegon/upload', {method:'POST', body:fd});
     const upData = await upRes.json();
-    if (!upRes.ok) throw new Error(upData.detail||'Error subiendo');
+    if (!upRes.ok) throw new Error(upData.detail||'Upload failed');
     BOD_SESSION = upData.session_id;
     _warnSkipped(upData);
     return BOD_SESSION;
@@ -1985,7 +1985,7 @@ async function bodAnalyzeAI() {
   const btn = document.getElementById('ai-analyze-btn');
   const oldLabel = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = `<div class="w-3.5 h-3.5 border-2 border-purple-300 border-t-purple-600 rounded-full spin inline-block align-middle"></div> Generando...`;
+  btn.innerHTML = `<div class="w-3.5 h-3.5 border-2 border-purple-300 border-t-purple-600 rounded-full spin inline-block align-middle"></div> Generating...`;
   try {
     if (!BOD_AI_DONE || !BOD_AI_VARIANTS.length) await bodUploadAndAnalyzeAI(cfg);
     selectCurrentAIStyle();
@@ -2005,7 +2005,7 @@ async function bodUploadAndAnalyzeAI(cfg) {
       body: JSON.stringify({session_id: BOD_SESSION, config: cfg}),
     });
     const aiData = await aiRes.json();
-    if (!aiRes.ok) throw new Error(aiData.detail||'Error IA');
+    if (!aiRes.ok) throw new Error(aiData.detail||'AI error');
 
     BOD_AI_VARIANTS  = aiData.variants || [];
     BOD_AI_REASONING = (aiData.suggestion && aiData.suggestion.reasoning) || '';
@@ -2056,7 +2056,7 @@ async function bodGenerateCustomAI() {
       body: JSON.stringify({session_id: BOD_SESSION, config: cfg, custom_prompt: text}),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Error IA');
+    if (!res.ok) throw new Error(data.detail || 'AI error');
 
     const variant = {id: data.id, label: data.label, desc: data.desc, layout: data.layout};
     const existingIdx = BOD_AI_VARIANTS.findIndex(v => v.id === 'ai_custom');
@@ -2064,7 +2064,7 @@ async function bodGenerateCustomAI() {
     else BOD_AI_VARIANTS.push(variant);
 
     renderAIGrid();
-    toast('Nueva propuesta generada', 'warn');
+    toast('New proposal generated', 'warn');
   } catch (e) {
     toast(e.message);
   } finally {
@@ -2154,14 +2154,14 @@ async function bodGenerateAIImage() {
   // Confirmación solo donde el gasto duele: una generación son 3-5 min y una
   // llamada de imagen, y a esta altura el usuario ya vio el aviso ámbar.
   if (BOD_FILES.length > 30 &&
-      !confirm(`${BOD_FILES.length} productos: la generación tarda 3–5 min y consume una llamada de imagen.\n\n¿Generar igual?`)) {
+      !confirm(`${BOD_FILES.length} products: generation takes 3–5 min and uses one image call.\n\nGenerate anyway?`)) {
     return;
   }
   const input = document.getElementById('ai-gen-input');
   const btn = document.getElementById('ai-gen-btn');
   const oldLabel = btn.innerHTML;
   btn.disabled = true; input.disabled = true;
-  btn.innerHTML = `<div class="w-3.5 h-3.5 border-2 border-purple-300 border-t-purple-600 rounded-full spin inline-block align-middle"></div> generando (1-3 min)…`;
+  btn.innerHTML = `<div class="w-3.5 h-3.5 border-2 border-purple-300 border-t-purple-600 rounded-full spin inline-block align-middle"></div> generating (1–3 min)…`;
 
   try {
     await bodEnsureUploaded();
@@ -2237,7 +2237,7 @@ async function bodUseProposal() {
       body: JSON.stringify({session_id: BOD_SESSION, config: cfg}),
     });
     const layout = await compRes.json();
-    if (!compRes.ok) throw new Error(layout.detail||'Error calculando');
+    if (!compRes.ok) throw new Error(layout.detail||'Compute failed');
     BOD_LAYOUT = layout;
 
     drawBodCanvas(layout);
@@ -2775,7 +2775,7 @@ async function batchGenerate() {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ session_id: sid, config: cfg }),
         });
-        if (!ai.ok) throw new Error((await ai.json()).detail || 'Error IA');
+        if (!ai.ok) throw new Error((await ai.json()).detail || 'AI error');
       }
 
       const rd = await fetch('/api/bodegon/render', {

@@ -153,7 +153,7 @@ Responde ÚNICAMENTE con este JSON (sin texto adicional, sin markdown):
   "sizes": {{"NOMBRE_EXACTO": escala_segun_tamano_real_0.45_a_1.0, ...}} para los {len(names)} productos,
   "layouts": {{"dynamic":"impacto", "elegant":"profundidad", "editorial":"radial"}},
   "detail_crop": {{"x": 0.0_a_1.0, "y": 0.0_a_1.0, "w": 0.0_a_1.0, "h": 0.0_a_1.0}},
-  "reasoning": "explicación de 1-2 oraciones en español que mencione el orden y los tamaños"
+  "reasoning": "1-2 sentence explanation in English mentioning the order and the sizes"
 }}"""
 
 
@@ -166,8 +166,8 @@ def _parse_result(raw: str, names: list) -> dict:
     m = re.search(r"\{[\s\S]*\}", raw)
     if not m:
         raise ValueError(
-            "La IA devolvió una respuesta incompleta o vacía "
-            "(probable límite de tokens). Reintenta o usa menos productos."
+            "The AI returned an incomplete or empty response "
+            "(likely a token limit). Retry or use fewer products."
         )
     result = json.loads(m.group(0))
 
@@ -497,7 +497,7 @@ def _analyze_gemini(images: list, api_key: str) -> dict:
         from google.genai import types
     except ImportError as e:
         raise RuntimeError(
-            "Falta el SDK de Gemini. Ejecuta: pip install google-genai"
+            "Gemini SDK missing. Run: pip install google-genai"
         ) from e
 
     names = [img["name"] for img in images]
@@ -569,7 +569,7 @@ def _analyze_groq(images: list, api_key: str) -> dict:
     try:
         from groq import Groq
     except ImportError as e:
-        raise RuntimeError("Falta el SDK de Groq. Ejecuta: pip install groq") from e
+        raise RuntimeError("Groq SDK missing. Run: pip install groq") from e
 
     names = [img["name"] for img in images]
     client = Groq(api_key=api_key)
@@ -611,7 +611,7 @@ def _analyze_openai(images: list, api_key: str) -> dict:
     try:
         from openai import OpenAI
     except ImportError as e:
-        raise RuntimeError("Falta el SDK de OpenAI. Ejecuta: pip install openai") from e
+        raise RuntimeError("OpenAI SDK missing. Run: pip install openai") from e
 
     names = [img["name"] for img in images]
     client = OpenAI(api_key=api_key)
@@ -655,11 +655,11 @@ def analyze_products(
     Returns: {order, hero, sizes, layouts, detail_crop, reasoning}
     """
     if not PIL_AVAILABLE:
-        raise RuntimeError("Pillow no instalado")
+        raise RuntimeError("Pillow not installed")
 
     images = _available_images(images)
     if not images:
-        raise RuntimeError("No hay imágenes de productos accesibles para analizar")
+        raise RuntimeError("No accessible product images to analyze")
 
     # Resolver proveedor
     if not provider:
@@ -669,25 +669,25 @@ def analyze_products(
 
     if provider == "groq":
         if not groq_key:
-            raise RuntimeError("GROQ_API_KEY no configurada")
+            raise RuntimeError("GROQ_API_KEY is not set")
         return _analyze_groq(images, groq_key)
 
     if provider == "gemini":
         if not gemini_key:
-            raise RuntimeError("GEMINI_API_KEY no configurada")
+            raise RuntimeError("GEMINI_API_KEY is not set")
         return _analyze_gemini(images, gemini_key)
 
     if provider == "claude":
         if not anthropic_key:
-            raise RuntimeError("ANTHROPIC_API_KEY no configurada")
+            raise RuntimeError("ANTHROPIC_API_KEY is not set")
         return _analyze_claude(images, anthropic_key)
 
     if provider == "openai":
         if not openai_key:
-            raise RuntimeError("OPENAI_API_KEY no configurada")
+            raise RuntimeError("OPENAI_API_KEY is not set")
         return _analyze_openai(images, openai_key)
 
-    raise RuntimeError(f"Proveedor de IA desconocido: {provider}")
+    raise RuntimeError(f"Unknown AI provider: {provider}")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -749,8 +749,8 @@ def _parse_custom_result(raw: str, names: list) -> dict:
     m = re.search(r"\{[\s\S]*\}", raw)
     if not m:
         raise ValueError(
-            "La IA devolvió una respuesta incompleta o vacía "
-            "(probable límite de tokens). Probá con una descripción más corta."
+            "The AI returned an incomplete or empty response "
+            "(likely a token limit). Try a shorter description."
         )
     result = json.loads(m.group(0))
     label = str(result.get("label") or "A medida").strip()[:40] or "A medida"
@@ -778,7 +778,7 @@ def _analyze_custom_gemini(images: list, api_key: str, custom_prompt: str) -> di
         from google import genai
         from google.genai import types
     except ImportError as e:
-        raise RuntimeError("Falta el SDK de Gemini. Ejecuta: pip install google-genai") from e
+        raise RuntimeError("Gemini SDK missing. Run: pip install google-genai") from e
 
     names = [img["name"] for img in images]
     client = genai.Client(api_key=api_key)
@@ -831,7 +831,7 @@ def _analyze_custom_groq(images: list, api_key: str, custom_prompt: str) -> dict
     try:
         from groq import Groq
     except ImportError as e:
-        raise RuntimeError("Falta el SDK de Groq. Ejecuta: pip install groq") from e
+        raise RuntimeError("Groq SDK missing. Run: pip install groq") from e
 
     names = [img["name"] for img in images]
     client = Groq(api_key=api_key)
@@ -864,7 +864,7 @@ def _analyze_custom_openai(images: list, api_key: str, custom_prompt: str) -> di
     try:
         from openai import OpenAI
     except ImportError as e:
-        raise RuntimeError("Falta el SDK de OpenAI. Ejecuta: pip install openai") from e
+        raise RuntimeError("OpenAI SDK missing. Run: pip install openai") from e
 
     names = [img["name"] for img in images]
     client = OpenAI(api_key=api_key)
@@ -903,14 +903,14 @@ def analyze_custom_layout(
     aislada, no reutiliza ni compite con el análisis de analyze_products().
     Returns: {label, strategy, order, hero, sizes}."""
     if not PIL_AVAILABLE:
-        raise RuntimeError("Pillow no instalado")
+        raise RuntimeError("Pillow not installed")
     custom_prompt = (custom_prompt or "").strip()[:MAX_CUSTOM_PROMPT_LEN]
     if not custom_prompt:
-        raise RuntimeError("Escribí una descripción antes de generar")
+        raise RuntimeError("Write a description before generating")
 
     images = _available_images(images)
     if not images:
-        raise RuntimeError("No hay imágenes de productos accesibles para analizar")
+        raise RuntimeError("No accessible product images to analyze")
 
     if not provider:
         provider = ("groq" if groq_key else
@@ -919,22 +919,22 @@ def analyze_custom_layout(
 
     if provider == "groq":
         if not groq_key:
-            raise RuntimeError("GROQ_API_KEY no configurada")
+            raise RuntimeError("GROQ_API_KEY is not set")
         return _analyze_custom_groq(images, groq_key, custom_prompt)
 
     if provider == "gemini":
         if not gemini_key:
-            raise RuntimeError("GEMINI_API_KEY no configurada")
+            raise RuntimeError("GEMINI_API_KEY is not set")
         return _analyze_custom_gemini(images, gemini_key, custom_prompt)
 
     if provider == "claude":
         if not anthropic_key:
-            raise RuntimeError("ANTHROPIC_API_KEY no configurada")
+            raise RuntimeError("ANTHROPIC_API_KEY is not set")
         return _analyze_custom_claude(images, anthropic_key, custom_prompt)
 
     if provider == "openai":
         if not openai_key:
-            raise RuntimeError("OPENAI_API_KEY no configurada")
+            raise RuntimeError("OPENAI_API_KEY is not set")
         return _analyze_custom_openai(images, openai_key, custom_prompt)
 
-    raise RuntimeError(f"Proveedor de IA desconocido: {provider}")
+    raise RuntimeError(f"Unknown AI provider: {provider}")

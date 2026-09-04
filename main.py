@@ -263,12 +263,12 @@ def _cleanup_old_sessions() -> None:
                       and not any(d == x[1] for x in sobran))
 
         for _creada, d in sobran:
-            _logger.info("Retención: borrando sesión %s de %s", d.name, owner)
+            _logger.info("Retention: deleting session %s of %s", d.name, owner)
             shutil.rmtree(d, ignore_errors=True)
             borradas += 1
 
     if borradas:
-        _logger.info("Retención: %d sesiones/lotes borrados", borradas)
+        _logger.info("Retention: %d sessions/batches deleted", borradas)
 
 
 def _safe_name(name: str) -> str:
@@ -322,7 +322,7 @@ async def _cleanup_loop() -> None:
         try:
             await run_in_threadpool(_cleanup_old_sessions)
         except Exception:                      # nunca matar el loop por un fallo
-            _logger.exception("Fallo la limpieza periodica de sesiones")
+            _logger.exception("Periodic session cleanup failed")
 
 
 @asynccontextmanager
@@ -400,10 +400,10 @@ _logger = logging.getLogger("stillai")
 @app.exception_handler(Exception)
 async def _unhandled_exception(request: Request, exc: Exception):
     """Evita filtrar detalles internos: registra el error y responde genérico."""
-    _logger.exception("Error no controlado en %s", request.url.path)
+    _logger.exception("Unhandled error in %s", request.url.path)
     if DEBUG:
         return JSONResponse({"detail": f"{type(exc).__name__}: {exc}"}, status_code=500)
-    return JSONResponse({"detail": "Error interno del servidor"}, status_code=500)
+    return JSONResponse({"detail": "Internal server error"}, status_code=500)
 
 
 # ─── Rutas ────────────────────────────────────────────────────────────────────
@@ -602,15 +602,15 @@ async def bodegon_upload(
     skipped = []   # [{filename, reason}] — antes se descartaban en silencio; ahora se avisan
     seen_names: dict = {}   # red de seguridad: desambigua igual si algo llega repetido
     for i, f in enumerate(products):
-        original_name = f.filename or f"archivo_{i + 1}"
+        original_name = f.filename or f"file_{i + 1}"
         ext = Path(f.filename or "").suffix.lower()
         if ext not in VALID_IMAGE_EXTS:
-            skipped.append({"filename": original_name, "reason": "Formato no soportado"})
+            skipped.append({"filename": original_name, "reason": "Unsupported format"})
             continue
 
         data = await f.read()
         if len(data) > MAX_FILE_BYTES:
-            skipped.append({"filename": original_name, "reason": f"Supera el máximo de {MAX_FILE_MB} MB"})
+            skipped.append({"filename": original_name, "reason": f"Over the {MAX_FILE_MB} MB limit"})
             continue
 
         provided = product_names[i] if product_names and i < len(product_names) else None
@@ -651,7 +651,7 @@ async def bodegon_upload(
             w, h = get_image_dimensions(str(dest))
         except Exception as e:
             dest.unlink(missing_ok=True)
-            skipped.append({"filename": original_name, "reason": f"No se pudo leer la imagen ({e})"})
+            skipped.append({"filename": original_name, "reason": f"Could not read the image ({e})"})
             continue
 
         images.append({
@@ -968,7 +968,7 @@ async def bodegon_ai_generated_psd(session_id: str, request: Request):
         from image_gen import wrap_as_psd
         psd_bytes = wrap_as_psd(src.read_bytes())
     except Exception as e:
-        raise _public_error("Error generando PSD", e)
+        raise _public_error("PSD generation failed", e)
     return Response(
         content=psd_bytes,
         media_type="image/vnd.adobe.photoshop",
@@ -1174,8 +1174,8 @@ async def bodegon_ai_custom_layout(body: dict, request: Request):
         # Sin texto -> "generá una propuesta más, a tu criterio" (mismo botón
         # sirve para pedir algo puntual O simplemente para variedad extra
         # además de las 3 composiciones libres de /ai-proposal).
-        custom_prompt = ("Proponé una composición distinta a las que ya darías por defecto, "
-                          "con tu propio criterio artístico de director de arte.")
+        custom_prompt = ("Propose a composition different from the ones you would give "
+                          "by default, using your own art-director judgement.")
 
     groq_key = os.environ.get("GROQ_API_KEY", "").strip()
     gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()

@@ -399,7 +399,7 @@ def render_png(layout: dict, output_path: str, background_path: str = None,
         del usuario — algunas composiciones/fondos se ven mejor sin ella.
     """
     if not PIL_AVAILABLE:
-        raise RuntimeError("Pillow no instalado. Ejecuta: pip install Pillow")
+        raise RuntimeError("Pillow not installed. Run: pip install Pillow")
 
     if export_quality:
         layout = _scale_layout(layout, _compute_export_scale(layout))
@@ -421,16 +421,16 @@ def render_png(layout: dict, output_path: str, background_path: str = None,
                 canvas.paste(bg, (0, 0), bg)
                 studio_effects = True
             except Exception as e:
-                print(f"Advertencia: no se pudo cargar el fondo de estudio: {e}")
+                print(f"Warning: could not load studio background: {e}")
         else:
-            print(f"Advertencia: estilo de fondo desconocido: {background_style}")
+            print(f"Warning: unknown background style: {background_style}")
     elif background_path and Path(background_path).exists():
         try:
             bg = Image.open(background_path).convert("RGBA")
             bg = bg.resize((cw, ch), Image.LANCZOS)
             canvas.paste(bg, (0, 0), bg)
         except Exception as e:
-            print(f"Advertencia: no se pudo cargar el fondo: {e}")
+            print(f"Warning: could not load background: {e}")
 
     effects = layout.get("effects", {})
     shadow = shadow and bool(effects.get("shadow"))  # el toggle del usuario manda, pero no fuerza sombra donde la estrategia no la trae
@@ -453,7 +453,7 @@ def render_png(layout: dict, output_path: str, background_path: str = None,
                     size_scale = max(0.35, 1.0 - float(item.get("float_drop", 0.0)))
                 _draw_contact_shadow(canvas, item, shadow_opacity, shadow_blur, size_scale=size_scale)
             except Exception as e:
-                print(f"Advertencia: sombra fallida en {Path(fp).name}: {e}")
+                print(f"Warning: shadow failed on {Path(fp).name}: {e}")
 
     # Productos — recortados a su contenido real. Se guarda la imagen final ya
     # rotada/gradeada por nombre, para que el zoom de detalle (más abajo) la
@@ -478,13 +478,13 @@ def render_png(layout: dict, output_path: str, background_path: str = None,
             canvas.alpha_composite(img, (px, py))
             rendered[item["name"]] = (img, px, py)
         except Exception as e:
-            print(f"Advertencia: no se pudo renderizar {Path(fp).name}: {e}")
+            print(f"Warning: could not render {Path(fp).name}: {e}")
 
     if zoom_detail:
         try:
             _composite_zoom_detail(canvas, items, rendered, zoom_detail)
         except Exception as e:
-            print(f"Advertencia: no se pudo componer el zoom de detalle: {e}")
+            print(f"Warning: could not compose the detail zoom: {e}")
 
     # El canvas se arma con margen de sobra (para que ninguna rotación ni la
     # sombra difuminada queden cortadas contra el borde durante el compose),
@@ -524,7 +524,7 @@ def render_psd(layout: dict, output_path: str, background_path: str = None,
     shadow sí se separa en una capa "Sombras" única debajo de los productos.
     """
     if not PIL_AVAILABLE:
-        raise RuntimeError("Pillow no instalado. Ejecuta: pip install Pillow")
+        raise RuntimeError("Pillow not installed. Run: pip install Pillow")
     try:
         from psd_tools import PSDImage
     except ImportError as e:
@@ -553,16 +553,16 @@ def render_psd(layout: dict, output_path: str, background_path: str = None,
                 stack.append(("Fondo", bg, 0, 0))
                 studio_effects = True
             except Exception as e:
-                print(f"Advertencia: no se pudo cargar el fondo de estudio: {e}")
+                print(f"Warning: could not load studio background: {e}")
         else:
-            print(f"Advertencia: estilo de fondo desconocido: {background_style}")
+            print(f"Warning: unknown background style: {background_style}")
     elif background_path and Path(background_path).exists():
         try:
             bg = Image.open(background_path).convert("RGBA").resize((cw, ch), Image.LANCZOS)
             canvas.paste(bg, (0, 0), bg)
             stack.append(("Fondo", bg, 0, 0))
         except Exception as e:
-            print(f"Advertencia: no se pudo cargar el fondo: {e}")
+            print(f"Warning: could not load background: {e}")
 
     effects = layout.get("effects", {})
     shadow = shadow and bool(effects.get("shadow"))
@@ -584,7 +584,7 @@ def render_psd(layout: dict, output_path: str, background_path: str = None,
                     size_scale = max(0.35, 1.0 - float(item.get("float_drop", 0.0)))
                 _draw_contact_shadow(shadow_canvas, item, shadow_opacity, shadow_blur, size_scale=size_scale)
             except Exception as e:
-                print(f"Advertencia: sombra fallida en {Path(fp).name}: {e}")
+                print(f"Warning: shadow failed on {Path(fp).name}: {e}")
         canvas.alpha_composite(shadow_canvas)
         stack.append(("Sombras", shadow_canvas, 0, 0))
 
@@ -601,10 +601,10 @@ def render_psd(layout: dict, output_path: str, background_path: str = None,
             canvas.alpha_composite(img, (px, py))
             stack.append((item["name"], img, px, py))
         except Exception as e:
-            print(f"Advertencia: no se pudo renderizar {Path(fp).name} para PSD: {e}")
+            print(f"Warning: could not render {Path(fp).name} for PSD: {e}")
 
     if not any(name not in ("Fondo", "Sombras") for name, *_ in stack):
-        raise ValueError("No hay productos para exportar")
+        raise ValueError("No products to export")
 
     # Mismo criterio de recorte que render_png — el PSD debe terminar exacto
     # donde termina el contenido real, igual que el PNG.
@@ -644,7 +644,7 @@ def compose_psd(layers: list, size: tuple, output, preview=None) -> None:
     con el PNG que ve el usuario.
     """
     if not PIL_AVAILABLE:
-        raise RuntimeError("Pillow no instalado. Ejecuta: pip install Pillow")
+        raise RuntimeError("Pillow not installed. Run: pip install Pillow")
     try:
         from psd_tools import PSDImage
     except ImportError as e:
@@ -680,7 +680,7 @@ def compose_psd(layers: list, size: tuple, output, preview=None) -> None:
 def get_image_dimensions(filepath: str) -> tuple:
     """Retorna (width, height) del contenido real (recortado) de una imagen."""
     if not PIL_AVAILABLE:
-        raise RuntimeError("Pillow no instalado")
+        raise RuntimeError("Pillow not installed")
     with Image.open(filepath) as img:
         img = img.convert("RGBA")
         l, t, r, b = _content_bbox(img)

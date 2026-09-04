@@ -314,7 +314,7 @@ def compute_layout(
 ) -> dict:
     n = len(images)
     if n == 0:
-        raise ValueError("No se proporcionaron imágenes")
+        raise ValueError("No images provided")
 
     # Forzar padding = 0 para canvas exacto
     internal_padding = 0
@@ -585,7 +585,7 @@ def compute_layout_cascada(
     producto (mismo SKU en variantes) más que para un héroe puntual."""
     n = len(images)
     if n == 0:
-        raise ValueError("No se proporcionaron imágenes")
+        raise ValueError("No images provided")
 
     if preserve_order:
         growth = min(growth, 1.12)
@@ -673,7 +673,7 @@ def compute_layout_radial(
     Pensado para grupos de 3+ productos distintos entre sí."""
     n = len(images)
     if n == 0:
-        raise ValueError("No se proporcionaron imágenes")
+        raise ValueError("No images provided")
 
     if preserve_order:
         overlap = max(overlap, 0.10)
@@ -783,7 +783,7 @@ def compute_layout_flotante(
     'lejos' flota cada uno (ver float_drop → renderer._draw_contact_shadow)."""
     n = len(images)
     if n == 0:
-        raise ValueError("No se proporcionaron imágenes")
+        raise ValueError("No images provided")
 
     if preserve_order:
         overlap = max(overlap, 0.06)
@@ -1027,7 +1027,7 @@ def compute_layout_ai_freeform(
     """
     n = len(images)
     if n == 0:
-        raise ValueError("No se proporcionaron imágenes")
+        raise ValueError("No images provided")
     free_layout = free_layout or {}
 
     items = _scale_items(images, base_height, max_vertical_boost)

@@ -87,12 +87,12 @@ def generate_bodegon_image(images: list, api_key: str, custom_prompt: str = "", 
     try:
         from openai import OpenAI
     except ImportError as e:
-        raise RuntimeError("Falta el SDK de OpenAI. Ejecuta: pip install openai") from e
+        raise RuntimeError("OpenAI SDK missing. Run: pip install openai") from e
 
     if len(images) > MAX_PRODUCTS_FOR_GENERATION:
         raise RuntimeError(
-            f"Este modo es experimental — probalo con hasta {MAX_PRODUCTS_FOR_GENERATION} "
-            f"productos por ahora (tenés {len(images)})."
+            f"This mode is experimental — try up to {MAX_PRODUCTS_FOR_GENERATION} "
+            f"products for now (you have {len(images)})."
         )
 
     names = [img["name"] for img in images]
@@ -127,7 +127,7 @@ def generate_bodegon_image(images: list, api_key: str, custom_prompt: str = "", 
     return buf.getvalue()
 
 
-def wrap_as_psd(png_bytes: bytes, layer_name: str = "Bodegón (IA)") -> bytes:
+def wrap_as_psd(png_bytes: bytes, layer_name: str = "AI composition") -> bytes:
     """Envuelve el PNG de Generación IA como PSD de UNA sola capa. A
     diferencia de renderer.render_psd (una capa por producto), acá no hay
     productos separados que envolver — la IA redibujó la escena entera
