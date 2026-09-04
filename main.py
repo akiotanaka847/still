@@ -375,6 +375,19 @@ async def security_headers(request: Request, call_next):
     resp.headers["Content-Security-Policy"] = _CSP
     if COOKIE_SECURE:
         resp.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
+    # El CSS compilado tiene que revalidar. StaticFiles manda ETag pero no
+    # Cache-Control, y sin directivas el navegador puede servir su copia sin
+    # preguntar: una hoja vieja deja la interfaz sin las utilidades nuevas
+    # (pb-4, drop-shadow...) y el resultado es una pantalla descuadrada que
+    # no se explica mirando el codigo. Con no-cache revalida por ETag, asi
+    # que cuando no ha cambiado la respuesta es un 304 vacio.
+    #
+    # Las imagenes NO llevan esto a proposito: pesan mucho mas y cuando
+    # cambian se cambia su nombre.
+    if request.url.path.endswith(".css"):
+        resp.headers["Cache-Control"] = "no-cache, must-revalidate"
+
     return resp
 
 
@@ -410,10 +423,30 @@ async def _unhandled_exception(request: Request, exc: Exception):
 # ─── Rutas ────────────────────────────────────────────────────────────────────
 @app.get("/", response_class=HTMLResponse)
 async def frontend() -> HTMLResponse:
+    """La pagina entera. Toda la aplicacion vive en este HTML.
+
+    Va con no-cache por una razon concreta: esta respuesta no llevaba NINGUNA
+    directiva de cache, y sin directivas el navegador aplica cache heuristica
+    y puede servir su copia guardada sin preguntar. El efecto es que despues
+    de desplegar te sigues viendo la version anterior — paso justo con el
+    logo: la marca aparecia como un cuadrado con una "S" de texto, que es
+    como se dibujaba antes de tener la imagen real.
+
+    no-cache no significa "no guardes": significa "pregunta antes de usar".
+    El navegador conserva la copia y revalida con el ETag, asi que si el HTML
+    no ha cambiado la respuesta es un 304 vacio. Es una peticion por carga,
+    a cambio de no volver a servir una interfaz vieja.
+
+    Los ficheros de /static (imagenes, CSS) no llevan esto: los sirve
+    StaticFiles con su propio ETag y ahi si conviene que se guarden.
+    """
     html_path = STATIC_DIR / "index.html"
     if not html_path.exists():
         raise HTTPException(404, "Frontend not found")
-    return HTMLResponse(html_path.read_text(encoding="utf-8"))
+    return HTMLResponse(
+        html_path.read_text(encoding="utf-8"),
+        headers={"Cache-Control": "no-cache, must-revalidate"},
+    )
 
 
 @app.get("/api/status")
