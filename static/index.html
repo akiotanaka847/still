@@ -15,10 +15,52 @@
 <link rel="shortcut icon" href="/static/favicon.ico?v=2">
 <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon-180.png?v=2">
 <link rel="stylesheet" href="/static/css/tailwind.css?v=14">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- Tipografia de marca del Q.Strauss Design System, servida desde aqui y no
+     desde un CDN: son fuentes con licencia, no publicas. Los dos cortes que
+     se ven primero van precargados; el resto llega con la hoja de estilo.
+     Convertidas y recortadas con tools/fuentes.py (519 KB -> 130 KB). -->
+<link rel="preload" href="/static/fonts/goldplay-600.woff2?v=1" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/static/fonts/goldplay-alt-900.woff2?v=1" as="font" type="font/woff2" crossorigin>
 <style>
-  * { font-family: 'Inter', system-ui, sans-serif; }
+  /* ─── Tipografia de marca ────────────────────────────────────────────────
+     Los tokens del design system reparten asi:
+         --font-display  "Goldplay Alt"   titulares, logotipos
+         --font-body     "Goldplay"       texto corrido
+     Antes toda la aplicacion iba con Inter desde Google Fonts.
+
+     font-display:swap en todos: el texto se pinta ya con la fuente de
+     sistema y cambia a Goldplay al llegar. La alternativa (block) deja la
+     pantalla en blanco hasta que descargue, y aqui hay 130 KB de fuentes. */
+  @font-face { font-family:'Goldplay'; src:url('/static/fonts/goldplay-400.woff2?v=1') format('woff2');
+               font-weight:400; font-style:normal; font-display:swap; }
+  @font-face { font-family:'Goldplay'; src:url('/static/fonts/goldplay-500.woff2?v=1') format('woff2');
+               font-weight:500; font-style:normal; font-display:swap; }
+  @font-face { font-family:'Goldplay'; src:url('/static/fonts/goldplay-600.woff2?v=1') format('woff2');
+               font-weight:600; font-style:normal; font-display:swap; }
+  @font-face { font-family:'Goldplay'; src:url('/static/fonts/goldplay-700.woff2?v=1') format('woff2');
+               font-weight:700; font-style:normal; font-display:swap; }
+  @font-face { font-family:'Goldplay Alt'; src:url('/static/fonts/goldplay-alt-700.woff2?v=1') format('woff2');
+               font-weight:700; font-style:normal; font-display:swap; }
+  @font-face { font-family:'Goldplay Alt'; src:url('/static/fonts/goldplay-alt-900.woff2?v=1') format('woff2');
+               font-weight:900; font-style:normal; font-display:swap; }
+
+  :root {
+    --font-display: 'Goldplay Alt', 'Goldplay', system-ui, sans-serif;
+    --font-body: 'Goldplay', system-ui, sans-serif;
+    /* Escala de tamanos del design system, tal cual */
+    --text-xs: 12px;  --text-sm: 14px;  --text-base: 16px; --text-md: 18px;
+    --text-lg: 22px;  --text-xl: 28px;  --text-2xl: 36px;  --text-3xl: 48px;
+    --text-4xl: 64px; --text-5xl: 88px;
+  }
+
+  * { font-family: var(--font-body); }
+
+  /* Display donde el design system lo pide: titulares y logotipo. De Goldplay
+     Alt solo se convirtieron 700 y 900, asi que se aplica donde el peso
+     acompana — un titular en Alt Regular pediria un septimo fichero para
+     nada. */
+  h1, h2, h3,
+  .font-display { font-family: var(--font-display); }
 
   /* Still by Ravel brand system */
   :root {
@@ -567,7 +609,7 @@
               Regenerate
             </button>
             <button onclick="showBOD('bod-upload')"
-                    class="text-xs text-gray-400 hover:text-indigo-600 px-2 py-1.5 rounded-lg hover:bg-indigo-50 transition-all">← Back</button>
+                    class="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-indigo-600 px-2 py-1.5 rounded-lg hover:bg-indigo-50 transition-all"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M11 17l-5-5m0 0l5-5m-5 5h12"/></svg>Back</button>
           </div>
         </div>
 
@@ -729,7 +771,7 @@
             <p class="text-xs text-gray-400 mt-0.5" id="bod-info-meta"></p>
           </div>
           <button onclick="showBOD('bod-proposals')"
-                  class="text-xs text-gray-400 hover:text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-all whitespace-nowrap">← Proposals</button>
+                  class="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-all whitespace-nowrap"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M11 17l-5-5m0 0l5-5m-5 5h12"/></svg>Proposals</button>
         </div>
 
         <div class="bg-white border border-gray-200 rounded-2xl p-4 mb-4">
@@ -1031,7 +1073,7 @@
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
           Download all (ZIP)
         </button>
-        <button onclick="batchBackToConfig()" class="text-xs text-gray-400 hover:text-indigo-600 px-2 py-1.5 rounded-lg hover:bg-indigo-50 transition-all">← Back</button>
+        <button onclick="batchBackToConfig()" class="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-indigo-600 px-2 py-1.5 rounded-lg hover:bg-indigo-50 transition-all"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M11 17l-5-5m0 0l5-5m-5 5h12"/></svg>Back</button>
       </div>
     </div>
     <div id="batch-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"></div>
