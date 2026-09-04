@@ -1072,7 +1072,7 @@ async def bodegon_ai_generated_file(session_id: str, request: Request):
     out = session_dir / "output" / "bodegon_ai.png"
     if not out.exists():
         raise HTTPException(404, "PNG not found. Generate it first.")
-    return FileResponse(str(out), filename="bodegon_ai.png", media_type="image/png")
+    return FileResponse(str(out), filename="composition_ai.png", media_type="image/png")
 
 
 @app.get("/api/bodegon/ai-generated-psd/{session_id}")
@@ -1093,7 +1093,7 @@ async def bodegon_ai_generated_psd(session_id: str, request: Request):
     return Response(
         content=psd_bytes,
         media_type="image/vnd.adobe.photoshop",
-        headers={"Content-Disposition": 'attachment; filename="bodegon_ai.psd"'},
+        headers={"Content-Disposition": 'attachment; filename="composition_ai.psd"'},
     )
 
 
@@ -1115,7 +1115,7 @@ async def bodegon_download(session_id: str, request: Request):
     out = session_dir / "output" / "bodegon.png"
     if not out.exists():
         raise HTTPException(404, "PNG not found. Run the render first.")
-    return FileResponse(str(out), filename="bodegon.png", media_type="image/png")
+    return FileResponse(str(out), filename="composition.png", media_type="image/png")
 
 
 @app.get("/api/bodegon/download-psd/{session_id}")
@@ -1125,7 +1125,7 @@ async def bodegon_download_psd(session_id: str, request: Request):
     out = session_dir / "output" / "bodegon.psd"
     if not out.exists():
         raise HTTPException(404, "PSD not found. Run the render first.")
-    return FileResponse(str(out), filename="bodegon.psd", media_type="image/vnd.adobe.photoshop")
+    return FileResponse(str(out), filename="composition.psd", media_type="image/vnd.adobe.photoshop")
 
 
 @app.get("/api/bodegon/mine")

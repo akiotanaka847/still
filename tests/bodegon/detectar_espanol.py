@@ -51,18 +51,38 @@ def es_espanol(t):
     return hits > 0
 
 def revisar_html(ruta):
+    """Quita las etiquetas y lee el texto que queda, en vez de buscar entre
+    '>' y '<' en la MISMA linea. La version anterior se perdia todo nodo de
+    texto que viviera en su propia linea —asi se le escapo "Recordarme en este
+    dispositivo"— porque sus delimitadores estaban en las lineas de al lado.
+    Revisa tambien los atributos con JS inline (onclick y compania), que antes
+    quedaban fuera: el extractor de JS solo miraba los bloques <script>.
+    """
     s = open(ruta, encoding='utf-8').read()
     s = re.sub(r'<(script|style)\b[^>]*>.*?</\1>', lambda m: '\n'*m.group(0).count('\n'), s, flags=re.S)
     s = re.sub(r'<!--.*?-->', lambda m: '\n'*m.group(0).count('\n'), s, flags=re.S)
-    out=[]
+    out = []
     for i, ln in enumerate(s.splitlines(), 1):
-        for t in re.findall(r'>([^<>]{2,})<', ln):
-            t=t.strip()
-            if t and es_espanol(t): out.append((i, 'texto', t))
-        for a in ('placeholder','title','alt','aria-label','label'):
-            for t in re.findall(a+r'="([^"]{2,})"', ln):
+        # atributos que llevan texto visible o JS con mensajes
+        for a in ('placeholder', 'title', 'alt', 'aria-label', 'label', 'download'):
+            for t in re.findall(a + r'="([^"]{2,})"', ln):
                 if es_espanol(t): out.append((i, a, t))
+        for ev in re.findall(r'on\w+="([^"]+)"', ln):
+            for t in re.findall(r"""['"]([^'"]{3,})['"]""", ev):
+                # 'bodegon' y 'crea' son claves internas (pestana, modo de IA),
+                # no texto: se ven en el codigo, nunca en pantalla.
+                if re.fullmatch(r'[a-z_]+', t): continue
+                if es_espanol(t): out.append((i, 'js-inline', t))
+        # texto visible: fuera las etiquetas, queda el contenido. Una etiqueta
+        # partida en varias lineas deja un fragmento sin '>' que no es texto:
+        # se descarta, o cada atributo con un identificador espanol (como
+        # onclick="setAIMode('crea')") saldria como falso positivo.
+        txt = re.sub(r'<[^>]*>', ' ', ln)
+        if '<' in txt or '>' in txt: continue
+        txt = re.sub(r'&[a-z]+;|&#\d+;', ' ', txt).strip()
+        if txt and es_espanol(txt): out.append((i, 'texto', txt))
     return out
+
 
 def revisar_js(ruta):
     s = open(ruta, encoding='utf-8').read()
