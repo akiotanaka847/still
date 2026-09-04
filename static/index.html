@@ -242,15 +242,6 @@
         </button>
       </form>
 
-      <div class="flex items-center gap-4 my-7">
-        <div class="h-px flex-1 bg-white/10"></div>
-        <span class="text-xs text-slate-500">o continúa con</span>
-        <div class="h-px flex-1 bg-white/10"></div>
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <button onclick="toast('Google próximamente','warn')" class="h-12 rounded-xl border border-white/12 bg-white/5 hover:bg-white/8 text-sm font-semibold text-white transition-all">Google</button>
-        <button onclick="toast('Microsoft próximamente','warn')" class="h-12 rounded-xl border border-white/12 bg-white/5 hover:bg-white/8 text-sm font-semibold text-white transition-all">Microsoft</button>
-      </div>
 
       <p id="login-toggle" class="text-sm text-slate-400 text-center mt-8">
         ¿No tienes una cuenta? <button type="button" onclick="authToggle()" class="text-violet-300 font-semibold hover:underline">Contáctanos</button>
@@ -262,51 +253,52 @@
     </div>
   </section>
 
+  <!-- Panel derecho del login. Dice lo que la herramienta HACE, en el orden en
+       que se hace, y no promete nada que no exista: se quitaron el bloque "Tus
+       activos" (plantillas, reglas de marca y datos son modulos que aun no
+       estan) y el contador "1,000+ piezas generadas", que era un numero
+       inventado y ademas se solapaba con las etiquetas de las barras. -->
   <section class="relative z-10 hidden lg:flex flex-1 min-h-screen items-center px-12 xl:px-16">
-    <div class="w-full max-w-5xl">
-      <div class="flex justify-between text-[11px] uppercase tracking-[.45em] text-slate-400 mb-14">
-        <span>De datos a experiencias reales</span>
-        <span class="text-right">Una plataforma.<br>Infinitas posibilidades.</span>
-      </div>
-      <h1 class="text-5xl xl:text-6xl font-black leading-[1.05] tracking-tight text-white max-w-2xl">
-        De la lógica creativa<br>a la producción<br><span class="brand-text">a escala.</span>
-      </h1>
-      <p class="mt-5 text-xl text-slate-300 max-w-2xl leading-snug">Automatiza, personaliza y multiplica tu contenido visual con inteligencia que produce resultados.</p>
+    <div class="w-full max-w-3xl">
+      <p class="text-[11px] uppercase tracking-[.45em] text-slate-400 mb-8">Fotos de producto &rarr; piezas listas</p>
 
-      <div class="mt-12 grid xl:grid-cols-[220px_1fr] gap-8 items-center">
-        <div class="ravel-panel rounded-2xl p-5">
-          <p class="text-xs uppercase tracking-widest text-white font-bold mb-4">Tus activos</p>
-          <div class="space-y-3 text-sm text-slate-300">
-            <div class="flex items-center gap-3"><span class="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center">SKU</span>Productos</div>
-            <div class="flex items-center gap-3"><span class="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center">TPL</span>Plantillas</div>
-            <div class="flex items-center gap-3"><span class="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center">BR</span>Reglas de marca</div>
-            <div class="flex items-center gap-3"><span class="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center">DAT</span>Datos y promociones</div>
+      <h1 class="text-5xl xl:text-6xl font-black leading-[1.05] tracking-tight text-white">
+        Tus productos,<br>compuestos<br><span class="brand-text">por inteligencia.</span>
+      </h1>
+      <p class="mt-6 text-xl text-slate-300 max-w-xl leading-snug">
+        Sube las fotos. Still las organiza en composiciones profesionales y te las
+        entrega listas para publicar o para seguir editando.
+      </p>
+
+      <ol class="mt-12 space-y-5 max-w-xl">
+        <li class="flex gap-4">
+          <span class="flex-shrink-0 w-8 h-8 rounded-full bg-violet-500/20 border border-violet-400/40 text-violet-200 text-sm font-bold flex items-center justify-center">1</span>
+          <div>
+            <p class="text-white font-semibold">Sube tus productos</p>
+            <p class="text-sm text-slate-400">Cada foto se recorta sola a su contenido real, sin márgenes vacíos.</p>
           </div>
-        </div>
-        <div class="relative min-h-[330px]">
-          <div class="absolute left-0 top-1/2 -translate-y-1/2 w-40 h-40 rounded-3xl border border-cyan-300/50 bg-[#10182d] flex flex-col items-center justify-center shadow-[0_0_45px_rgba(19,214,192,.35)]">
-            <div class="w-16 h-16 still-mark-box text-4xl mb-3"><img src="/static/still-mark.png" alt="Still" width="512" height="512"></div>
-            <div class="text-3xl font-black text-white leading-none">St<span class="dotless">ı</span>ll</div>
-            <div class="text-xs text-slate-300">by <span class="text-violet-400 font-bold">Ravel</span></div>
+        </li>
+        <li class="flex gap-4">
+          <span class="flex-shrink-0 w-8 h-8 rounded-full bg-violet-500/20 border border-violet-400/40 text-violet-200 text-sm font-bold flex items-center justify-center">2</span>
+          <div>
+            <p class="text-white font-semibold">Elige entre varias composiciones</p>
+            <p class="text-sm text-slate-400">18 estilos geométricos, o deja que la IA mire tus fotos y proponga el orden y los tamaños.</p>
           </div>
-          <div class="absolute left-36 right-0 top-0 bottom-0">
-            <div class="absolute inset-y-14 left-0 right-10 rounded-full bg-gradient-to-r from-cyan-400/25 via-violet-500/25 to-transparent blur-xl"></div>
-            <div class="relative ml-20 grid grid-cols-5 gap-3 items-end h-full">
-              <div class="h-32 rounded-xl ravel-panel p-3 flex items-end text-xs text-white">In-store</div>
-              <div class="h-44 rounded-xl ravel-panel p-3 flex items-end text-xs text-white">E-commerce</div>
-              <div class="h-56 rounded-xl ravel-panel p-3 flex items-end text-xs text-white">Social</div>
-              <div class="h-64 rounded-xl ravel-panel p-3 flex items-end text-xs text-white">Marketplace</div>
-              <div class="h-48 rounded-xl ravel-panel p-3 flex items-end text-xs text-white">Print</div>
-            </div>
+        </li>
+        <li class="flex gap-4">
+          <span class="flex-shrink-0 w-8 h-8 rounded-full bg-violet-500/20 border border-violet-400/40 text-violet-200 text-sm font-bold flex items-center justify-center">3</span>
+          <div>
+            <p class="text-white font-semibold">Descarga y sigue trabajando</p>
+            <p class="text-sm text-slate-400">PNG con fondo transparente, o PSD con cada producto en su propia capa.</p>
           </div>
-          <div class="absolute right-0 bottom-0 ravel-panel rounded-2xl px-6 py-4">
-            <p class="text-2xl font-black text-white">1,000+</p>
-            <p class="text-xs uppercase tracking-widest text-slate-400">piezas generadas</p>
-          </div>
-        </div>
-      </div>
-      <div class="mt-12 grid grid-cols-4 gap-5 text-[11px] uppercase tracking-widest text-slate-400">
-        <span>Más velocidad</span><span>Consistencia de marca</span><span>Listo para cada canal</span><span>Mayor impacto</span>
+        </li>
+      </ol>
+
+      <div class="mt-12 flex flex-wrap gap-8 text-[11px] uppercase tracking-widest text-slate-400">
+        <span>PNG transparente</span>
+        <span>PSD por capas</span>
+        <span>Hasta 60 productos</span>
+        <span>Generación por lotes</span>
       </div>
     </div>
   </section>
