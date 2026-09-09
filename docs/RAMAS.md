@@ -10,19 +10,28 @@ bodegones. `layout.py`, `ai_proposal.py`, `renderer.py`, `image_gen.py`.
 > `git checkout -b promos promos-archivo-2026-09-03`.
 > El origen del código es `github.com/lominet2020/Generador-de-Promo`.
 
-## Las tres ramas
+## Las ramas
 
 | rama | para qué | quién la mueve |
 |---|---|---|
 | `bodegon` | trabajo en curso del módulo de Bodegón | commits directos |
 | `master` | integración: lo terminado y probado | solo por merge |
 | `production` | lo que corre para el cliente | solo fast-forward desde `master` |
+| `gpt-image-2.5` | evaluar Sunburst y Flare como motor generativo | commits directos |
 
 El flujo es siempre en un solo sentido:
 
 ```
-bodegon ─→ master ─→ production
+gpt-image-2.5 ─┐
+               ├─→ bodegon ─→ master ─→ production
+   (otras)    ─┘
 ```
+
+`gpt-image-2.5` es una **rama de evaluación**, no de entrega: existe para medir
+si los modelos nuevos de imagen mejoran el motor generativo antes de tocar nada
+que se use. Se fusiona a `bodegon` solo si las mediciones lo justifican; si no,
+se archiva con un tag y se borra. Lo que se aprenda queda escrito en
+`tests/bodegon/README.md` aunque el código no sobreviva.
 
 **`production` no es una rama de desarrollo, es un puntero de despliegue.**
 Nunca se commitea ahí ni se fusiona nada que no venga de `master`. Si alguna vez
