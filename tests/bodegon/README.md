@@ -89,6 +89,77 @@ abierto.
 
 ---
 
+## Sunburst 2.5 — el muro de 60 desaparece (2026-09-09, rama `gpt-image-2.5`)
+
+Medido con `sunburst_25.py`, `gpt-image-2.5-sunburst` a 1536×1024, calidad
+alta, fondo transparente, productos de `set_de()`.
+
+| n | distintos | tiempo | resultado |
+|---|---|---|---|
+| 45 | 42 | 90 s | compone los 45 |
+| 52 | 43 | 90 s | compone los 52 |
+| 60 | 55 | 91 s | compone los 60 |
+| 60 (2.ª) | 55 | 95 s | compone los 60 |
+| 70 | 66 | 94 s | compone los 70 |
+| 80 | 80 | 109 s | compone los 80 |
+
+**No hay acantilado en todo el rango medible.** El tope de la prueba no es del
+modelo: es que el catálogo solo tiene 82 productos distintos.
+
+Compárese con `gpt-image-2` en la tabla de arriba: a n=60 no se degrada, sino
+que **abandona** — descarta el pedido y devuelve una foto de stock ajena,
+opaca, sin un solo producto, reproducido 2 de 2. Sunburst compone los 60 dos
+de dos, y sigue componiendo a 70 y a 80.
+
+### Lo que sí se degrada, y cómo se mide
+
+La degradación es gradual y se ve en los errores de marca. La forma limpia de
+medirla son los SKU **ficticios** del banco (VORPLIX, QUENZORA, ZUNKO,
+LUMORA): el modelo no los puede recordar, solo leerlos.
+
+| n | los SKU ficticios | errores en marcas reales |
+|---|---|---|
+| 45 | correctos, códigos incluidos | pocos, en texto secundario |
+| 52 | correctos | "Modello", "landatti", "MENNICK Dip" |
+| 60 | correctos | 4-6: "Ravana Club", "PANTENS", "CRIVS REGAL", "Sumbites" |
+| 70 | **"BERRY ROSA" en vez de "BERRY NOVA"** | más: "Affligen", "Superia", "Jack Däniel" |
+| 80 | inconsistentes | muchos: "LaReonás", "Diamjande", "XOT ENERY", "Jovano Club" |
+
+A 45 y 52 los errores están al nivel de `gpt-image-2`. **La ganancia no es
+"comete menos errores": es que 60 y más deja de ser un muro.**
+
+### Dos trampas de acceso, ambas encontradas gastando llamadas
+
+1. Los modelos **no aparecen en `/v1/models`**. Buscar ahí da falso negativo.
+
+2. Por `images.edit` —la vía del motor— devuelven **403: "Your organization
+   must be verified"**. Por Responses API con la herramienta
+   `image_generation` funcionan sin verificar, y por eso el script usa
+   Responses.
+
+3. La vía Responses impone un límite que `images.edit` no tiene: **30000
+   patches por imagen**. El catálogo tiene una Fanta de 6600×10200 (67 Mpx,
+   24 MB) que pide 33354 y tumba la petición ENTERA con un 400 — no degrada,
+   rechaza. Hay que reducir la entrada; el script la baja a 1024 px de lado
+   mayor conservando PNG con alfa.
+
+### Un error de montaje que costó dos generaciones
+
+No usar `products/` de una sesión como banco de prueba. La carpeta de una
+sesión de 60 tiene **4 imágenes distintas repetidas once veces cada una**, así
+que `products/[:45]` prueba 4 productos repetidos, no 45 — y el modelo
+devuelve una rejilla ordenada que parece un fallo y no lo es. `set_de()` existe
+para esto: deduplica por SKU entre todas las sesiones.
+
+### Lo que falta antes de decidir
+
+- Una sola muestra en 45, 52, 70 y 80 (en 60 hay dos).
+- Flare sin probar por encima de 5 productos.
+- La vía `images.edit` sin probar, por el 403.
+- **Si la calidad a 60-80 es entregable es un juicio de negocio, no una
+  medición.** Los errores de marca existen; cuántos son tolerables lo decide
+  quien entrega la pieza.
+
 ## Escala del camino determinista (2026-09-03)
 
 La pregunta era si los productos podían encoger con gracia al crecer la
