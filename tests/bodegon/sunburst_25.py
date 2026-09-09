@@ -61,6 +61,23 @@ ANFITRION = "gpt-6-astra"
 # blanco porque sirve para analizar, no para generar.
 LADO_MAX_ENTRADA = 1024
 
+# Lo que la 2.5 abre respecto a gpt-image-2, y que el motor todavia no usa:
+#
+#   calidad   low, medium, high, XHIGH, MAX, auto   (xhigh y max son nuevos)
+#   tamano    multiplos de 16, proporcion 1:3 a 3:1, hasta 3840 px por lado
+#             y 8.294.400 px totales
+#
+# El motor esta fijo en 1536x1024 = 1,57 Mpx, o sea el 19% del maximo, y pide
+# "high", el tercer nivel de seis. Toda la curva de 45 a 80 se midio con ESE
+# ajuste conservador, asi que el techo de productos puede no ser del modelo
+# sino de los pixeles que le dimos para dibujar las etiquetas.
+TAMANOS = {
+    "actual": "1536x1024",     # 1,57 Mpx — lo que usa el motor hoy
+    "medio":  "2048x1360",     # 2,79 Mpx — 1,8x
+    "alto":   "3072x2048",     # 6,29 Mpx — 4x
+    "maximo": "3840x2160",     # 8,29 Mpx — el techo de la API
+}
+
 
 def _png_reducido(ruta: Path) -> bytes:
     from io import BytesIO
@@ -110,7 +127,7 @@ def generar(n: int, modelo: str, size: str = "1536x1024", quality: str = "high")
         estado = llamadas[0].status if llamadas else "sin llamada"
         return seg, None, f"SIN IMAGEN (status {estado})"
 
-    ruta = Path(f"/tmp/{modelo.split('-')[-1]}_{n}.png")
+    ruta = Path(f"/tmp/{modelo.split('-')[-1]}_{n}_{size}_{quality}.png")
     ruta.write_bytes(base64.b64decode(llamadas[0].result))
     im = Image.open(ruta)
 
@@ -136,17 +153,26 @@ if __name__ == "__main__":
     ns = [int(a) for a in sys.argv[1:] if a.isdigit()] or [45, 52, 60]
     modelo = ("gpt-image-2.5-flare" if "--flare" in sys.argv
               else "gpt-image-2.5-sunburst")
+    size = TAMANOS["actual"]
+    for clave, valor in TAMANOS.items():
+        if f"--{clave}" in sys.argv:
+            size = valor
+    quality = "high"
+    for q in ("medium", "xhigh", "max"):
+        if f"--{q}" in sys.argv:
+            quality = q
 
     if "--go" not in sys.argv:
         print(f"Generaria {len(ns)} imagenes con {modelo} (n = {', '.join(map(str, ns))}),")
-        print("a 1536x1024 y calidad alta. Cada una gasta una llamada de imagen.")
+        print(f"a {size} y calidad {quality}. Cada una gasta una llamada de imagen.")
+        print("Se cobra por token de salida, asi que subir el tamano sube el coste.")
         print("Agrega --go para ejecutarlo.")
         sys.exit(0)
 
-    print(f"modelo: {modelo} · anfitrion: {ANFITRION}\n")
+    print(f"modelo: {modelo} · {size} · calidad {quality} · anfitrion: {ANFITRION}\n")
     for n in ns:
         try:
-            seg, ruta, diag = generar(n, modelo)
+            seg, ruta, diag = generar(n, modelo, size=size, quality=quality)
             print(f"  n={n:<3} {seg:6.0f}s  {diag}")
             if ruta:
                 print(f"        {ruta}")

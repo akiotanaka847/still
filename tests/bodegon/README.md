@@ -151,6 +151,87 @@ que `products/[:45]` prueba 4 productos repetidos, no 45 — y el modelo
 devuelve una rejilla ordenada que parece un fallo y no lo es. `set_de()` existe
 para esto: deduplica por SKU entre todas las sesiones.
 
+### Lo que la 2.5 abre y el motor todavía no usa (de la documentación)
+
+Dos cosas que no se ven midiendo, solo leyendo la documentación, y que cambian
+el tamaño de la oportunidad:
+
+| | `gpt-image-2` | 2.5 |
+|---|---|---|
+| calidad | low, medium, high | low, medium, high, **xhigh**, **max**, auto |
+| tamaño | tamaños fijos | múltiplos de 16, proporción 1:3 a 3:1, **hasta 3840 px por lado y 8.294.400 px totales** |
+
+El motor está fijo en **1536×1024 = 1,57 Mpx**, o sea el **19% del máximo**, y
+pide `high`, el tercer nivel de seis. **Toda la curva de arriba se midió con
+ese ajuste conservador**, así que el techo de productos puede no ser del modelo
+sino de los píxeles que le dimos para dibujar las etiquetas.
+
+Esto ataca además la debilidad estructural del modo generativo: daba
+1536×1024 mientras Layout y Visora llegan a 4000 px. A 3840×2160 deja de ser
+el motor de baja resolución.
+
+Cuidado con el coste: se cobra **por token de salida**, así que subir el lienzo
+sube el precio de cada pieza casi en proporción.
+
+**Precio, con las fuentes en desacuerdo:** los dos modelos cobran igual entre
+sí ($5/1M texto entrada, $8/1M imagen entrada, $30/1M imagen salida). Si eso es
+igual o el doble que `gpt-image-2` depende de la fuente que se lea. La forma de
+saberlo es mirar la facturación real.
+
+**Flare vs Sunburst:** Flare es el que OpenAI pone por defecto (rápido, 50%
+menos latencia **que gpt-image-2**, no que Sunburst); Sunburst es para
+precisión de edición. Medido aquí, Flare fue solo 13% más rápido que Sunburst
+— no contradice el 50%, porque ese número es contra el modelo viejo. Para
+imagen de producto pulida el perfil correcto es Sunburst.
+
+### Medido: más lienzo arregla las marcas grandes, no el texto chico
+
+n=60, mismo modelo, misma calidad `high`, **cambiando solo el lienzo**:
+
+| lienzo | píxeles | tiempo | peso |
+|---|---|---|---|
+| 1536×1024 | 1,57 Mpx | 95 s | 3,0 MB |
+| 3072×2048 | 6,29 Mpx | **102 s** | 11,6 MB |
+
+**Cuatro veces los píxeles por un 7% más de tiempo.** El coste sí sube casi en
+proporción, porque se cobra por token de salida.
+
+Comparando productos cuya marca se podía leer en las dos:
+
+| producto | 1536×1024 | 3072×2048 |
+|---|---|---|
+| Chivas Regal | "CAITS REGAL" | **"CHIVAS REGAL"** ✓ |
+| Havana Club | "Ravana Club" / "Warong Club" | **"Havana Club 7"** ✓ |
+| Bohemia | "Bohemia" | **"Bohemia CRISTAL est. 1905"** ✓ |
+| Passport Scotch | "Passport Sootch" | "PASSPORT GOGTCH" ✗ sigue mal |
+| VORPLIX (ficticio) | correcto | correcto ✓ |
+
+**SESGO DE OBSERVACIÓN, importante para no engañarse:** contar errores en las
+dos y compararlos NO es válido. A 1536 mucho texto chico es ilegible, y lo
+ilegible no se puede juzgar mal. A 3072 se leen más cosas, así que aparecen
+"más errores" que en realidad ya estaban. La comparación honesta es producto
+por producto entre los que se leían en ambas.
+
+Conclusión: la resolución arregla **la marca principal** de los productos
+prominentes, y no arregla el texto secundario. Los errores que quedan a 3072
+son de lectura del modelo, no de píxeles: "Superion" por Superior, "OJOE
+TIGRE", "FUND·ONDR", "AOeS" por AdeS, "Jemesse Honey" por Tennessee.
+
+Sin probar todavía: `xhigh` y `max`, que es la otra palanca y la única que
+queda para el texto chico.
+
+### Por qué hace falta verificar la organización
+
+`images.edit` con los 2.5 devuelve 403 hasta que la organización esté
+verificada. Es un trámite de identidad, gratis, operado por Persona (un
+tercero) que cruza contra listas de sanciones de más de 220 países. Pide
+documento oficial y **un documento solo verifica una organización cada 90
+días**. No hay endpoint: `/v1/organization` da 404.
+
+`verificar_25.py` dice si ya se activó **sin gastar una generación**, mandando
+un `size` inválido a propósito: el 403 de verificación salta antes de validar
+parámetros, así que 403 = no verificada y 400 = disponible.
+
 ### Lo que falta antes de decidir
 
 - Una sola muestra en 45, 52, 70 y 80 (en 60 hay dos).
