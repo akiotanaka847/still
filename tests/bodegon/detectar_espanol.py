@@ -46,6 +46,7 @@ PERMITIDAS = {
     "ancho", "alto", "tope", "escala", "reparto", "aspecto", "orden",
     "miniatura", "miniaturas", "borrador", "borradores", "fotos", "origen",
     # ingles moderno que el diccionario de 1934 de macOS no conoce
+    "plugin", "plugins",
     "email", "emails", "uploaded", "uploads", "uploading", "upload", "reset",
     "click", "clicks", "clicked", "online", "offline", "website", "workflow",
     "workfront", "adobe", "google", "microsoft", "dark", "lightweight",
