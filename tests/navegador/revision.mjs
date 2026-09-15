@@ -140,6 +140,27 @@ chk('sin checkerboard en borradores', !home.checkerEnBorrador);
 chk('titulares del Home en Goldplay Alt',
   await p.evaluate(() => getComputedStyle(document.querySelector('#panel-home h1')).fontFamily.includes('Goldplay Alt')));
 
+const pluginsHome = await p.evaluate(() => {
+  const secs = [...document.querySelectorAll('#panel-home section')];
+  const ultima = secs[secs.length - 1];
+  const cards = [...ultima.querySelectorAll('button')];
+  const grid = ultima.querySelector('.grid');
+  return {
+    titulo: ultima.querySelector('h2')?.textContent,
+    nombres: cards.map((c) => c.querySelector('h3')?.textContent),
+    // Tantas columnas como tarjetas: declarar de mas es lo que dejaba el
+    // hueco de la derecha que ya hubo que arreglar una vez.
+    columnas: grid ? getComputedStyle(grid).gridTemplateColumns.split(' ').length : 0,
+    mismaAltura: new Set(cards.map((c) => Math.round(c.getBoundingClientRect().height))).size === 1,
+  };
+});
+chk('los plugins también están en el Home',
+  pluginsHome.titulo === 'Plugins' && pluginsHome.nombres.length === 2,
+  pluginsHome.nombres.join(', '));
+chk('sin columnas de mas ni tarjetas descuadradas',
+  pluginsHome.columnas === pluginsHome.nombres.length && pluginsHome.mismaAltura,
+  `${pluginsHome.columnas} columnas para ${pluginsHome.nombres.length} tarjetas`);
+
 console.log('\n── LAS DEMÁS PESTAÑAS ──');
 for (const [tab, panel] of [['bodegon', 'panel-bodegon'], ['batch', 'panel-batch'],
                             ['projects', 'panel-projects'], ['settings', 'panel-settings']]) {

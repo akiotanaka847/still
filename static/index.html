@@ -490,6 +490,50 @@
     </div>
 
   </section>
+
+  <!-- Plugins, tambien en el Home. En el menu lateral ya estan, pero ahi solo
+       los ve quien sabe que existen; aqui se topa con ellos quien entra a
+       producir. Dos tarjetas para dos plugins: si algun dia hay tres se cambia
+       a tres columnas — declarar mas columnas que tarjetas es lo que dejaba el
+       hueco de la derecha que ya hubo que arreglar una vez. -->
+  <section class="mt-7">
+    <div class="mb-4">
+      <h2 class="text-lg font-bold text-gray-900">Plugins</h2>
+      <p class="text-sm text-gray-500">Tools that pick up where a composition leaves off.</p>
+    </div>
+    <div class="grid md:grid-cols-2 gap-4">
+      <button onclick="switchTab('visor')"
+              class="group text-left ravel-panel rounded-2xl p-5 card hover:border-cyan-300/40 transition-all">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl bg-cyan-400/10 border border-cyan-300/20 text-cyan-200 flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h5A1.5 1.5 0 0 1 12 7.5v2A1.5 1.5 0 0 1 10.5 11h-5A1.5 1.5 0 0 1 4 9.5v-2ZM12 14.5A1.5 1.5 0 0 1 13.5 13h5A1.5 1.5 0 0 1 20 14.5v2a1.5 1.5 0 0 1-1.5 1.5h-5a1.5 1.5 0 0 1-1.5-1.5v-2ZM8 11v3.5a1 1 0 0 0 1 1h3"/></svg>
+          </div>
+          <div>
+            <h3 class="font-bold text-gray-900 text-base leading-tight">Visor</h3>
+            <p class="text-[11px] text-gray-500 mt-0.5">Element injector</p>
+          </div>
+        </div>
+        <p class="text-sm text-gray-500">Drop your composition into a template: background, vectors and promo.</p>
+        <span class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 group-hover:gap-2.5 transition-all">Open <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg></span>
+      </button>
+
+      <button onclick="switchTab('promos')"
+              class="group text-left ravel-panel rounded-2xl p-5 card hover:border-violet-300/40 transition-all">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl bg-violet-400/10 border border-violet-300/20 text-violet-200 flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h9.2a1.5 1.5 0 0 1 1.06.44l5.3 5.3a1.5 1.5 0 0 1 0 2.12l-5.2 5.2a1.5 1.5 0 0 1-2.12 0l-5.3-5.3A1.5 1.5 0 0 1 7 13.7V8.5Z"/><circle cx="7.5" cy="11.5" r="1.1"/></svg>
+          </div>
+          <div>
+            <h3 class="font-bold text-gray-900 text-base leading-tight">Promos</h3>
+            <p class="text-[11px] text-gray-500 mt-0.5">Promo generator</p>
+          </div>
+        </div>
+        <p class="text-sm text-gray-500">Build promo pieces from your data and export them as PNG, SVG or ZIP.</p>
+        <span class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-purple-600 group-hover:gap-2.5 transition-all">Open <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg></span>
+      </button>
+    </div>
+  </section>
+
 </div><!-- /panel-home -->
 
 <!-- ═══════════════════════════════════════════════════════
