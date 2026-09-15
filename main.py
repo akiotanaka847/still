@@ -354,6 +354,20 @@ app.add_middleware(
 
 # Content-Security-Policy (permite lo que la app necesita: Tailwind local, Google Fonts,
 # imágenes data:/blob: y código inline). 'unsafe-inline' es necesario por el JS/CSS inline.
+# Plugins: herramientas de terceros que se abren DENTRO de Still, en un iframe.
+# Son las unicas excepciones a default-src 'self', y se listan una por una a
+# proposito: un frame-src abierto dejaria incrustar cualquier cosa.
+#
+# Lo que se acepta al hacer esto: el codigo de esos dominios corre dentro de
+# nuestra pagina. No puede leer nuestro DOM ni nuestras cookies —son otro
+# origen y el navegador los aisla— pero si podria intentar navegar la pestana
+# entera a otro sitio. Eso se corta en el HTML con el sandbox del iframe, que
+# NO concede allow-top-navigation.
+PLUGINS_PERMITIDOS = (
+    "https://automatizador-plantillas-production.up.railway.app "
+    "https://6aa1c2baebddef319658c42c--legendary-pie-3f4d8e.netlify.app"
+)
+
 _CSP = (
     "default-src 'self'; "
     "script-src 'self' 'unsafe-inline'; "
@@ -361,6 +375,7 @@ _CSP = (
     "font-src 'self' https://fonts.gstatic.com; "
     "img-src 'self' data: blob:; "
     "connect-src 'self'; "
+    f"frame-src 'self' {PLUGINS_PERMITIDOS}; "
     "frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 )
 

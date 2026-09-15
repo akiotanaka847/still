@@ -73,18 +73,23 @@ const nav = await p.evaluate(() => {
   const menu = aside.querySelector('nav');
   const set = document.getElementById('nav-settings');
   return {
-    // Los <button> son las secciones de Still; los <a class="plugin-item"> son
-    // herramientas externas. Se piden por separado a proposito: si se mezclan,
-    // anadir un plugin rompe la comprobacion del menu sin que nada este mal.
-    items: [...menu.querySelectorAll('button.nav-item span')].map((s) => s.textContent),
-    plugins: [...menu.querySelectorAll('a.plugin-item')].map((a) => ({
-      nombre: a.querySelector('span')?.textContent,
-      destino: a.getAttribute('href'),
-      pestanaNueva: a.getAttribute('target') === '_blank',
-      relSeguro: (a.getAttribute('rel') || '').includes('noopener')
-        && (a.getAttribute('rel') || '').includes('noreferrer'),
-      avisaQueSale: !!a.querySelector('.ext-ico'),
-    })),
+    // Las secciones de Still y los plugins de terceros se piden por separado:
+    // si se mezclan, anadir un plugin rompe la comprobacion del menu sin que
+    // nada este mal. La clase plugin-item es lo que los separa.
+    items: [...menu.querySelectorAll('.nav-item:not(.plugin-item) span')].map((s) => s.textContent),
+    plugins: [...menu.querySelectorAll('.plugin-item')].map((a) => {
+      const marco = document.getElementById('frame-' + (a.id || '').replace('nav-', ''));
+      return {
+        nombre: a.querySelector('span')?.textContent,
+        // Se cargan al abrirlos, no antes: traer dos aplicaciones de terceros
+        // en cada carga de Still seria caro y casi siempre inutil.
+        perezoso: !!marco && !!marco.dataset.src,
+        destino: marco ? marco.dataset.src : null,
+        // Sin allow-top-navigation el sitio incrustado no puede llevarse la
+        // pestana entera de Still a otra parte.
+        noSeLlevaLaPestana: !!marco && !(marco.getAttribute('sandbox') || '').includes('top-navigation'),
+      };
+    }),
     settingsEnMenu: !!menu.querySelector('#nav-settings'),
     aireAbajo: Math.round(aside.getBoundingClientRect().bottom - set.getBoundingClientRect().bottom),
     separador: getComputedStyle(set.parentElement).borderTopWidth,
@@ -94,14 +99,12 @@ chk('el menú deja las 4 de uso diario', nav.items.join(',') === 'Home,Create,Ba
 chk('Settings fuera del menú', !nav.settingsEnMenu);
 chk('Settings al pie, con aire', nav.aireAbajo > 4 && nav.aireAbajo < 40, nav.aireAbajo + 'px del borde');
 chk('con separador arriba', nav.separador !== '0px', nav.separador);
-chk('los plugins externos están', nav.plugins.length === 2,
+chk('los plugins están', nav.plugins.length === 2,
   nav.plugins.map((x) => x.nombre).join(', '));
 for (const pl of nav.plugins) {
-  // Un enlace externo con target="_blank" sin rel="noopener" deja que la
-  // pagina abierta toque window.opener. Es barato de poner y facil de perder.
-  chk(`${pl.nombre}: abre fuera, con rel seguro y avisa`,
-    pl.pestanaNueva && pl.relSeguro && pl.avisaQueSale && /^https:\/\//.test(pl.destino || ''),
-    pl.destino);
+  chk(`${pl.nombre}: carga perezosa y no se lleva la pestaña`,
+    pl.perezoso && pl.noSeLlevaLaPestana && /^https:\/\//.test(pl.destino || ''),
+    (pl.destino || '').slice(8, 46));
 }
 
 console.log('\n── HOME ──');
