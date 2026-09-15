@@ -381,9 +381,9 @@
         <span>Projects</span>
       </button>
       <p class="nav-label">Plugins</p>
-      <button id="nav-nexo" onclick="switchTab('nexo')" class="nav-item plugin-item">
+      <button id="nav-visor" onclick="switchTab('visor')" class="nav-item plugin-item">
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h5A1.5 1.5 0 0 1 12 7.5v2A1.5 1.5 0 0 1 10.5 11h-5A1.5 1.5 0 0 1 4 9.5v-2ZM12 14.5A1.5 1.5 0 0 1 13.5 13h5A1.5 1.5 0 0 1 20 14.5v2a1.5 1.5 0 0 1-1.5 1.5h-5a1.5 1.5 0 0 1-1.5-1.5v-2ZM8 11v3.5a1 1 0 0 0 1 1h3"/></svg>
-        <span>Nexo</span>
+        <span>Visor</span>
       </button>
       <button id="nav-promos" onclick="switchTab('promos')" class="nav-item plugin-item">
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h9.2a1.5 1.5 0 0 1 1.06.44l5.3 5.3a1.5 1.5 0 0 1 0 2.12l-5.2 5.2a1.5 1.5 0 0 1-2.12 0l-5.3-5.3A1.5 1.5 0 0 1 7 13.7V8.5Z"/><circle cx="7.5" cy="11.5" r="1.1"/></svg>
@@ -503,16 +503,16 @@
      allow-top-navigation: sin eso, el sitio incrustado podría llevarse la
      pestaña entera de Still a otra parte.
 ═══════════════════════════════════════════════════════ -->
-<div id="panel-nexo" class="hidden">
+<div id="panel-visor" class="hidden">
   <div class="mb-4">
-    <h1 class="text-2xl font-bold text-gray-900">Nexo</h1>
+    <h1 class="text-2xl font-bold text-gray-900">Visor</h1>
     <p class="text-gray-500 text-sm mt-1">Drop your composition into a template: background, vectors and promo.</p>
   </div>
   <div class="ravel-panel rounded-2xl overflow-hidden" style="height:calc(100vh - 12rem);min-height:520px">
-    <iframe id="frame-nexo" class="w-full h-full block" style="border:0;background:#fff"
+    <iframe id="frame-visor" class="w-full h-full block" style="border:0;background:#fff"
             data-src="https://automatizador-plantillas-production.up.railway.app"
             sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-popups allow-popups-to-escape-sandbox"
-            title="Nexo"></iframe>
+            title="Visor"></iframe>
   </div>
 </div>
 
@@ -1243,12 +1243,12 @@
 // TABS
 // ═══════════════════════════════════════════════════════
 function switchTab(name) {
-  ['so', 'bodegon', 'batch', 'home', 'projects', 'settings', 'nexo', 'promos'].forEach(p => {
+  ['so', 'bodegon', 'batch', 'home', 'projects', 'settings', 'visor', 'promos'].forEach(p => {
     const el = document.getElementById('panel-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
   });
   // Estado activo del menú lateral
-  [['nav-home', 'home'], ['nav-bodegon', 'bodegon'], ['nav-batch', 'batch'], ['nav-projects', 'projects'], ['nav-settings', 'settings'], ['nav-nexo', 'nexo'], ['nav-promos', 'promos']].forEach(([id, n]) => {
+  [['nav-home', 'home'], ['nav-bodegon', 'bodegon'], ['nav-batch', 'batch'], ['nav-projects', 'projects'], ['nav-settings', 'settings'], ['nav-visor', 'visor'], ['nav-promos', 'promos']].forEach(([id, n]) => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('nav-item-active', name === n);
   });
@@ -1258,7 +1258,7 @@ function switchTab(name) {
   // La tira de fondos del paso 2 vive fuera del flujo de vista previa, asi que
   // hay que pintarla al entrar a Create y no solo al llegar al preview.
   if (name === 'bodegon') renderBgStyleGrid();
-  if (name === 'nexo' || name === 'promos') abrirPlugin(name);
+  if (name === 'visor' || name === 'promos') abrirPlugin(name);
   window.scrollTo({ top: 0 });
 }
 

@@ -1,6 +1,6 @@
 """La CSP deja entrar a los plugins, y a nadie mas.
 
-Los plugins (Nexo, Promos) son aplicaciones de terceros que se abren DENTRO de
+Los plugins (Visor, Promos) son aplicaciones de terceros que se abren DENTRO de
 Still, en un iframe. Eso obliga a abrir `frame-src`, que es la unica excepcion
 a `default-src 'self'` en toda la politica.
 
