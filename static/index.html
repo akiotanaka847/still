@@ -476,27 +476,18 @@
       </div>
     </div>
   </section>
+  <!-- Plugins. En el menu lateral ya estan, pero ahi solo los ve quien sabe
+       que existen; aqui se topa con ellos quien entra a producir.
 
-  <section>
-    <div class="ravel-panel rounded-2xl p-5">
-      <div class="flex items-center justify-between mb-4">
-        <div>
-          <h2 class="text-lg font-bold text-gray-900">Recent projects</h2>
-          <p class="text-sm text-gray-500">Your latest compositions and batches.</p>
-        </div>
-        <button onclick="switchTab('projects')" class="text-sm font-semibold text-indigo-600 hover:text-indigo-400">See all</button>
-      </div>
-        <div id="home-recent" class="grid grid-cols-2 lg:grid-cols-4 gap-3"></div>
-    </div>
+       Van ARRIBA, pegados a la fila de acciones, para que se vean sin
+       desplazar: al final de la pagina quedaban detras de ocho tarjetas de
+       proyectos y casi nadie llegaba. Las acciones propias de Still siguen
+       primero, que es el orden que importa.
 
-  </section>
-
-  <!-- Plugins, tambien en el Home. En el menu lateral ya estan, pero ahi solo
-       los ve quien sabe que existen; aqui se topa con ellos quien entra a
-       producir. Dos tarjetas para dos plugins: si algun dia hay tres se cambia
-       a tres columnas — declarar mas columnas que tarjetas es lo que dejaba el
+       Dos tarjetas para dos plugins: si algun dia hay tres se cambia a tres
+       columnas — declarar mas columnas que tarjetas es lo que dejaba el
        hueco de la derecha que ya hubo que arreglar una vez. -->
-  <section class="mt-7">
+  <section class="mb-7">
     <div class="mb-4">
       <h2 class="text-lg font-bold text-gray-900">Plugins</h2>
       <p class="text-sm text-gray-500">Tools that pick up where a composition leaves off.</p>
@@ -533,6 +524,22 @@
       </button>
     </div>
   </section>
+
+
+  <section>
+    <div class="ravel-panel rounded-2xl p-5">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-lg font-bold text-gray-900">Recent projects</h2>
+          <p class="text-sm text-gray-500">Your latest compositions and batches.</p>
+        </div>
+        <button onclick="switchTab('projects')" class="text-sm font-semibold text-indigo-600 hover:text-indigo-400">See all</button>
+      </div>
+        <div id="home-recent" class="grid grid-cols-2 lg:grid-cols-4 gap-3"></div>
+    </div>
+
+  </section>
+
 
 </div><!-- /panel-home -->
 

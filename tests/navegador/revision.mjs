@@ -141,16 +141,25 @@ chk('titulares del Home en Goldplay Alt',
   await p.evaluate(() => getComputedStyle(document.querySelector('#panel-home h1')).fontFamily.includes('Goldplay Alt')));
 
 const pluginsHome = await p.evaluate(() => {
+  // Se busca por el titulo, NO por la posicion. Antes se cogia la ultima
+  // seccion del Home y al mover Plugins arriba la comprobacion empezo a medir
+  // "Recent projects": daba 4 columnas para 9 tarjetas sin que nada estuviera
+  // mal. La posicion es una decision de diseno y va a cambiar; el titulo no.
   const secs = [...document.querySelectorAll('#panel-home section')];
-  const ultima = secs[secs.length - 1];
-  const cards = [...ultima.querySelectorAll('button')];
-  const grid = ultima.querySelector('.grid');
+  const sec = secs.find((x) => x.querySelector('h2')?.textContent === 'Plugins');
+  if (!sec) return { titulo: null, nombres: [], columnas: 0, mismaAltura: false };
+  const cards = [...sec.querySelectorAll('button')];
+  const grid = sec.querySelector('.grid');
   return {
-    titulo: ultima.querySelector('h2')?.textContent,
+    titulo: sec.querySelector('h2')?.textContent,
     nombres: cards.map((c) => c.querySelector('h3')?.textContent),
     // Tantas columnas como tarjetas: declarar de mas es lo que dejaba el
     // hueco de la derecha que ya hubo que arreglar una vez.
     columnas: grid ? getComputedStyle(grid).gridTemplateColumns.split(' ').length : 0,
+    // Arriba, no al final: si vuelve a quedar detras de Recent projects,
+    // casi nadie va a llegar.
+    antesDeProyectos: secs.indexOf(sec)
+      < secs.findIndex((x) => x.querySelector('h2')?.textContent === 'Recent projects'),
     mismaAltura: new Set(cards.map((c) => Math.round(c.getBoundingClientRect().height))).size === 1,
   };
 });
@@ -160,6 +169,7 @@ chk('los plugins también están en el Home',
 chk('sin columnas de mas ni tarjetas descuadradas',
   pluginsHome.columnas === pluginsHome.nombres.length && pluginsHome.mismaAltura,
   `${pluginsHome.columnas} columnas para ${pluginsHome.nombres.length} tarjetas`);
+chk('los plugins van arriba, antes de Recent projects', pluginsHome.antesDeProyectos);
 
 console.log('\n── LAS DEMÁS PESTAÑAS ──');
 for (const [tab, panel] of [['bodegon', 'panel-bodegon'], ['batch', 'panel-batch'],
