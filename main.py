@@ -363,9 +363,15 @@ app.add_middleware(
 # origen y el navegador los aisla— pero si podria intentar navegar la pestana
 # entera a otro sitio. Eso se corta en el HTML con el sandbox del iframe, que
 # NO concede allow-top-navigation.
+# Se usan las URL CANONICAS, no las de un despliegue concreto. La de Promos
+# apuntaba antes a
+# https://6aa1c2baebddef319658c42c--legendary-pie-3f4d8e.netlify.app, que
+# lleva el hash del deploy delante: eso clava el plugin a ESA version y no ve
+# ninguna actualizacion posterior. Con la canonica sigue siempre al ultimo
+# deploy, que es lo que se quiere de un plugin.
 PLUGINS_PERMITIDOS = (
     "https://automatizador-plantillas-production.up.railway.app "
-    "https://6aa1c2baebddef319658c42c--legendary-pie-3f4d8e.netlify.app"
+    "https://legendary-pie-3f4d8e.netlify.app"
 )
 
 _CSP = (
