@@ -19,7 +19,7 @@ import webbrowser
 import zipfile
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 import uuid
 
 from dotenv import load_dotenv
@@ -107,7 +107,20 @@ def _client_ip(request: Request) -> str:
 
 
 def _rate_identity(request: Request) -> str:
-    return request.session.get("user") or _client_ip(request)
+    """A quien se le cuentan las peticiones.
+
+    Cada clave de API cuenta por SEPARADO, no junta con su dueno: si n8n se
+    desboca, el limite frena a n8n y la persona sigue pudiendo trabajar en el
+    navegador. Juntarlas haria que un automatismo roto dejara fuera a quien lo
+    creo, que es lo contrario de lo que se quiere.
+    """
+    clave = getattr(request.state, "api_key", None)
+    if clave:
+        try:
+            return f"key:{clave.split('_')[1]}"
+        except Exception:
+            return "key:?"
+    return _usuario(request) or _client_ip(request)
 
 
 def _require_rate_limit(request: Request, bucket: str, limit: int, window_s: int) -> None:
@@ -169,6 +182,111 @@ def _verify_pw(pw: str, stored: str) -> bool:
         return hmac.compare_digest(dk.hex(), dk_hex)
     except Exception:
         return False
+
+
+# ─── Claves de API: acceso de MÁQUINAS ────────────────────────────────────────
+# Still nacio con un solo modo de entrar: cookie de sesion. Eso vale para una
+# persona con navegador y no vale para un automatismo (n8n, un script, una
+# integracion), que tendria que guardar la contrasena de alguien y actuar en su
+# nombre — si esa herramienta se compromete, se llevan una cuenta real y en el
+# registro todo parece hecho por esa persona.
+#
+# Una clave de API arregla eso: es por integracion, se revoca sola sin tocar a
+# nadie, y deja rastro propio.
+#
+# FORMATO   still_<id de 8>_<secreto de 32>
+#
+#   El id va DENTRO de la clave a proposito. Sin el habria que recorrer todas
+#   las claves guardadas y comparar el hash de cada una en cada peticion; con
+#   el, la busqueda es directa.
+#
+# HASH      SHA-256 de una pasada, NO pbkdf2 como las contrasenas.
+#
+#   No es un descuido ni una inconsistencia. pbkdf2 con 200.000 iteraciones
+#   existe para que adivinar una contrasena humana —corta, con patrones— cueste
+#   caro. Un secreto de 128 bits aleatorios no se adivina por fuerza bruta: no
+#   hay diccionario que lo contenga. Y esto se verifica en CADA peticion, asi
+#   que pbkdf2 aqui anadiria ~100 ms a todas. SHA-256 sobre entropia alta es la
+#   practica correcta.
+API_KEYS_FILE = DATA_DIR / "api_keys.json"
+API_KEY_PREFIX = "still"
+MAX_API_KEYS_POR_USUARIO = int(os.environ.get("MAX_API_KEYS_POR_USUARIO", "10"))
+
+
+def _load_api_keys() -> dict:
+    if API_KEYS_FILE.exists():
+        try:
+            return json.loads(API_KEYS_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+    return {}
+
+
+def _save_api_keys(claves: dict) -> None:
+    API_KEYS_FILE.write_text(json.dumps(claves, indent=2), encoding="utf-8")
+
+
+def _nueva_api_key() -> Tuple[str, str, str]:
+    """Devuelve (clave_completa, id, hash). La clave completa NO se guarda."""
+    ident = secrets.token_hex(4)          # 8 caracteres
+    secreto = secrets.token_hex(16)       # 32 caracteres = 128 bits
+    clave = f"{API_KEY_PREFIX}_{ident}_{secreto}"
+    return clave, ident, hashlib.sha256(secreto.encode()).hexdigest()
+
+
+def _usuario_de_api_key(clave: str) -> Optional[str]:
+    """Dueño de la clave, o None si no vale. Nunca explica por que falla."""
+    if not clave or not clave.startswith(API_KEY_PREFIX + "_"):
+        return None
+    partes = clave.split("_")
+    if len(partes) != 3:
+        return None
+    _, ident, secreto = partes
+
+    registro = _load_api_keys().get(ident)
+    if not registro or registro.get("revocada"):
+        return None
+    # compare_digest y no ==: comparar hashes con == filtra por tiempo cuantos
+    # caracteres coinciden.
+    if not hmac.compare_digest(hashlib.sha256(secreto.encode()).hexdigest(),
+                               registro.get("hash", "")):
+        return None
+    return registro.get("owner")
+
+
+def _marcar_uso_api_key(clave: str) -> None:
+    """Anota cuando se uso, para poder ver cual sobra y revocarla.
+
+    Se escribe como mucho una vez por hora por clave: con cada peticion seria
+    un fichero reescrito por llamada, y esto corre en el camino de TODAS las
+    peticiones autenticadas por clave.
+    """
+    try:
+        ident = clave.split("_")[1]
+        claves = _load_api_keys()
+        reg = claves.get(ident)
+        if not reg:
+            return
+        ahora = time.time()
+        if ahora - reg.get("ultimo_uso", 0) < 3600:
+            return
+        reg["ultimo_uso"] = ahora
+        _save_api_keys(claves)
+    except Exception:
+        pass   # anotar el uso nunca puede tumbar una peticion
+
+
+def _usuario(request: Request) -> Optional[str]:
+    """Quien hace la peticion: la persona de la cookie, o la maquina de la clave.
+
+    Todo lo que hay debajo —propiedad de sesiones, cuotas, limites— trabaja con
+    un nombre de usuario. Una clave de API pertenece a un usuario, asi que
+    resolverla aqui hace que el resto del codigo no tenga que enterarse.
+    """
+    de_sesion = request.session.get("user")
+    if de_sesion:
+        return de_sesion
+    return getattr(request.state, "usuario_api", None)
 
 
 # ─── Helpers internos ─────────────────────────────────────────────────────────
@@ -414,10 +532,34 @@ async def security_headers(request: Request, call_next):
 
 @app.middleware("http")
 async def auth_guard(request: Request, call_next):
-    """Bloquea las rutas protegidas si no hay sesión iniciada."""
-    if request.url.path.startswith(PROTECTED_PREFIXES) and not request.session.get("user"):
+    """Bloquea las rutas protegidas si no hay ni sesión ni clave de API válida.
+
+    Resolver la clave AQUI y no en cada endpoint es lo que hace que el resto
+    del código no cambie: guarda el usuario en request.state y _usuario() lo
+    encuentra igual que encontraría el de la cookie.
+
+    A propósito NO se escribe en request.session: eso haría que una respuesta a
+    una máquina se llevara una cookie de sesión, que no pidió y no necesita.
+    """
+    cabecera = request.headers.get("authorization", "")
+    if cabecera.lower().startswith("bearer "):
+        clave = cabecera[7:].strip()
+        # El trabajo de disco va a un hilo: leer y comparar corre en el camino
+        # de TODAS las peticiones con clave, y un handler async lo haría dentro
+        # del bucle de eventos.
+        duenyo = await run_in_threadpool(_usuario_de_api_key, clave)
+        if duenyo:
+            request.state.usuario_api = duenyo
+            request.state.api_key = clave
+
+    if request.url.path.startswith(PROTECTED_PREFIXES) and not _usuario(request):
         return JSONResponse({"detail": "Sign in to continue"}, status_code=401)
-    return await call_next(request)
+
+    resp = await call_next(request)
+
+    if getattr(request.state, "api_key", None):
+        await run_in_threadpool(_marcar_uso_api_key, request.state.api_key)
+    return resp
 
 
 # La sesión (cookie firmada) debe envolver al guard → se agrega de último (outermost)
@@ -587,7 +729,7 @@ def _perfil(user: str, users: dict = None) -> dict:
 
 @app.get("/api/auth/me")
 async def auth_me(request: Request):
-    u = request.session.get("user")
+    u = _usuario(request)
     if not u:
         raise HTTPException(401, "Not authenticated")
     return _perfil(u)
@@ -602,7 +744,7 @@ async def auth_profile(body: dict, request: Request):
     dejaria sesiones huerfanas sin dueno. El nombre visible es un campo aparte
     que no rompe nada.
     """
-    u = request.session.get("user")
+    u = _usuario(request)
     if not u:
         raise HTTPException(401, "Not authenticated")
     nombre = (body.get("display_name") or "").strip()
@@ -620,7 +762,7 @@ async def auth_profile(body: dict, request: Request):
 async def auth_password(body: dict, request: Request):
     """Cambia la contrasena. Exige la actual: sin eso, una sesion robada o un
     equipo desatendido bastarian para quedarse con la cuenta."""
-    u = request.session.get("user")
+    u = _usuario(request)
     if not u:
         raise HTTPException(401, "Not authenticated")
     _require_rate_limit(request, "pwchange", 10, 3600)
@@ -643,7 +785,7 @@ async def auth_avatar_upload(request: Request, avatar: UploadFile = File(...)):
     """Sube la foto de perfil. Se normaliza a PNG cuadrado de AVATAR_PX: asi
     da igual que suban un JPEG de 8000px o un WebP raro, y el tamano en disco
     queda acotado por usuario sin necesidad de cuota aparte."""
-    u = request.session.get("user")
+    u = _usuario(request)
     if not u:
         raise HTTPException(401, "Not authenticated")
     _require_rate_limit(request, "avatar", 20, 3600)
@@ -685,7 +827,7 @@ def _normalizar_avatar(data: bytes, destino: Path) -> None:
 
 @app.get("/api/auth/avatar")
 async def auth_avatar_get(request: Request):
-    u = request.session.get("user")
+    u = _usuario(request)
     if not u:
         raise HTTPException(401, "Not authenticated")
     fp = _avatar_path(u)
@@ -696,11 +838,113 @@ async def auth_avatar_get(request: Request):
 
 @app.delete("/api/auth/avatar")
 async def auth_avatar_delete(request: Request):
-    u = request.session.get("user")
+    u = _usuario(request)
     if not u:
         raise HTTPException(401, "Not authenticated")
     _avatar_path(u).unlink(missing_ok=True)
     return _perfil(u)
+
+
+# ─── Gestionar claves de API ──────────────────────────────────────────────────
+# REGLA QUE NO SE PUEDE RELAJAR: estos tres endpoints exigen SESION DE PERSONA,
+# no valen con clave de API. Si una clave pudiera crear mas claves, revocarla
+# dejaria de servir de nada — quien la robo se habria hecho otras antes. Por eso
+# aqui se pregunta por request.session y NO por _usuario().
+def _usuario_humano(request: Request) -> str:
+    u = request.session.get("user")
+    if not u:
+        raise HTTPException(401, "Sign in with your account to manage API keys")
+    return u
+
+
+@app.get("/api/auth/api-keys")
+async def api_keys_list(request: Request):
+    """Las claves del usuario. El secreto NO se devuelve: no se guarda."""
+    u = _usuario_humano(request)
+    claves = await run_in_threadpool(_load_api_keys)
+    salida = []
+    for ident, reg in claves.items():
+        if reg.get("owner") != u or reg.get("revocada"):
+            continue
+        salida.append({
+            "id": ident,
+            "label": reg.get("label", ""),
+            "created": reg.get("created"),
+            "last_used": reg.get("ultimo_uso"),
+            # Suficiente para reconocerla en una lista, inútil para usarla.
+            "hint": f"{API_KEY_PREFIX}_{ident}_…",
+        })
+    salida.sort(key=lambda x: x.get("created") or 0, reverse=True)
+    return {"keys": salida}
+
+
+@app.post("/api/auth/api-keys")
+async def api_keys_create(body: dict, request: Request):
+    """Crea una clave y la devuelve UNA sola vez.
+
+    Se guarda el hash, nunca la clave. Si el usuario la pierde, no hay forma de
+    recuperarla — se revoca y se crea otra. Es a proposito: una clave que el
+    servidor puede leer es una clave que alguien mas puede leer.
+    """
+    u = _usuario_humano(request)
+    _require_rate_limit(request, "api-keys", 10, 3600)
+
+    label = (body.get("label") or "").strip()[:60]
+    if not label:
+        raise HTTPException(400, "Give the key a name so you can recognise it later")
+
+    claves = await run_in_threadpool(_load_api_keys)
+    vivas = [k for k, v in claves.items()
+             if v.get("owner") == u and not v.get("revocada")]
+    if len(vivas) >= MAX_API_KEYS_POR_USUARIO:
+        raise HTTPException(
+            400,
+            f"You already have {MAX_API_KEYS_POR_USUARIO} active keys. "
+            "Revoke one before creating another."
+        )
+
+    clave, ident, h = _nueva_api_key()
+    claves[ident] = {
+        "owner": u,
+        "label": label,
+        "hash": h,
+        "created": time.time(),
+        "ultimo_uso": 0,
+        "revocada": False,
+    }
+    await run_in_threadpool(_save_api_keys, claves)
+
+    return {
+        "id": ident,
+        "label": label,
+        # La unica vez que esto viaja.
+        "key": clave,
+        "warning": "Copy it now — it will not be shown again.",
+    }
+
+
+@app.delete("/api/auth/api-keys/{key_id}")
+async def api_keys_revoke(key_id: str, request: Request):
+    """Revoca una clave. No se borra el registro: se marca.
+
+    Asi queda el rastro de que existio y cuando se uso por ultima vez, que es
+    justo lo que hace falta mirar si algo raro paso.
+    """
+    u = _usuario_humano(request)
+    if not re.match(r"^[0-9a-f]{8}$", key_id):
+        raise HTTPException(400, "Invalid key id")
+
+    claves = await run_in_threadpool(_load_api_keys)
+    reg = claves.get(key_id)
+    # Mismo 404 si no existe que si es de otro: no se confirma la existencia de
+    # claves ajenas.
+    if not reg or reg.get("owner") != u:
+        raise HTTPException(404, "Key not found")
+
+    reg["revocada"] = True
+    reg["revocada_en"] = time.time()
+    await run_in_threadpool(_save_api_keys, claves)
+    return {"ok": True, "id": key_id}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -784,7 +1028,7 @@ def _owned_by(info: dict, request: Request) -> bool:
     """True si la sesión es del usuario actual, o si es una sesión vieja sin
     dueño (de antes de este campo) — nunca bloquea lo que ya funcionaba."""
     owner = info.get("owner")
-    return owner is None or owner == request.session.get("user")
+    return owner is None or owner == _usuario(request)
 
 
 def _tilt_angle_from_cfg(cfg: dict):
@@ -913,7 +1157,7 @@ async def bodegon_upload(
         "session_id": session_id,
         "images": images,
         "background_path": bg_path,
-        "owner": request.session.get("user"),
+        "owner": _usuario(request),
         "created": time.time(),
     }
     (session_dir / "bodegon.json").write_text(json.dumps(info, indent=2), encoding="utf-8")
@@ -1244,7 +1488,7 @@ async def bodegon_mine(request: Request):
     """Lista las sesiones (grupos de productos) del usuario actual, más
     reciente primero — para la galería 'Mis proyectos' y para precargar
     automáticamente los últimos productos al entrar."""
-    user = request.session.get("user")
+    user = _usuario(request)
     out = []
     for d in SESSIONS_DIR.iterdir():
         if not d.is_dir() or d.name == "_batch":
@@ -1598,7 +1842,7 @@ async def batch_zip(body: dict, request: Request):
         raise HTTPException(404, "No rendered pieces to package")
 
     (batch_dir / "batch.json").write_text(
-        json.dumps({"owner": request.session.get("user"), "created": time.time()}, indent=2),
+        json.dumps({"owner": _usuario(request), "created": time.time()}, indent=2),
         encoding="utf-8",
     )
     return {"batch_id": batch_id, "count": len(used)}
@@ -1616,7 +1860,7 @@ async def batch_download(batch_id: str, request: Request):
         meta = json.loads(meta_file.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         raise HTTPException(404, "ZIP not found")
-    if meta.get("owner") != request.session.get("user"):
+    if meta.get("owner") != _usuario(request):
         raise HTTPException(404, "ZIP not found")
     z = batch_dir / "piezas.zip"
     if not z.exists():
