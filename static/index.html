@@ -389,6 +389,10 @@
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h9.2a1.5 1.5 0 0 1 1.06.44l5.3 5.3a1.5 1.5 0 0 1 0 2.12l-5.2 5.2a1.5 1.5 0 0 1-2.12 0l-5.3-5.3A1.5 1.5 0 0 1 7 13.7V8.5Z"/><circle cx="7.5" cy="11.5" r="1.1"/></svg>
         <span>Promos</span>
       </button>
+      <button id="nav-pdf" onclick="switchTab('pdf')" class="nav-item plugin-item">
+        <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M6.5 3.5h6.8L18.5 8.7V19a1.5 1.5 0 0 1-1.5 1.5H6.5A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5Z"/><path d="M13 3.6v5.2h5.3"/><path d="M8.3 13h7M8.3 16.3h4.4"/></svg>
+        <span>PDF</span>
+      </button>
     </nav>
 
     <!-- Settings al pie, fuera del menu de trabajo. No se visita a diario como
@@ -484,15 +488,15 @@
        proyectos y casi nadie llegaba. Las acciones propias de Still siguen
        primero, que es el orden que importa.
 
-       Dos tarjetas para dos plugins: si algun dia hay tres se cambia a tres
-       columnas — declarar mas columnas que tarjetas es lo que dejaba el
-       hueco de la derecha que ya hubo que arreglar una vez. -->
+       Tres tarjetas, tres columnas. La regla es que el numero de columnas
+       siga al numero de tarjetas: declarar mas columnas que tarjetas es lo
+       que dejaba el hueco de la derecha que ya hubo que arreglar una vez. -->
   <section class="mb-7">
     <div class="mb-4">
       <h2 class="text-lg font-bold text-gray-900">Plugins</h2>
       <p class="text-sm text-gray-500">Tools that pick up where a composition leaves off.</p>
     </div>
-    <div class="grid md:grid-cols-2 gap-4">
+    <div class="grid md:grid-cols-3 gap-4">
       <button onclick="switchTab('visor')"
               class="group text-left ravel-panel rounded-2xl p-5 card hover:border-cyan-300/40 transition-all">
         <div class="flex items-center gap-3 mb-4">
@@ -522,6 +526,21 @@
         <p class="text-sm text-gray-500">Build promo pieces from your data and export them as PNG, SVG or ZIP.</p>
         <span class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-purple-600 group-hover:gap-2.5 transition-all">Open <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg></span>
       </button>
+
+      <button onclick="switchTab('pdf')"
+              class="group text-left ravel-panel rounded-2xl p-5 card hover:border-amber-300/40 transition-all">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-300/20 text-amber-200 flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M6.5 3.5h6.8L18.5 8.7V19a1.5 1.5 0 0 1-1.5 1.5H6.5A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5Z"/><path d="M13 3.6v5.2h5.3"/><path d="M8.3 13h7M8.3 16.3h4.4"/></svg>
+          </div>
+          <div>
+            <h3 class="font-bold text-gray-900 text-base leading-tight">PDF</h3>
+            <p class="text-[11px] text-gray-500 mt-0.5">Deck builder</p>
+          </div>
+        </div>
+        <p class="text-sm text-gray-500">Turn a spreadsheet into a paginated deck and export it as a searchable PDF.</p>
+        <span class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-amber-600 group-hover:gap-2.5 transition-all">Open <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg></span>
+      </button>
     </div>
   </section>
 
@@ -544,10 +563,13 @@
 </div><!-- /panel-home -->
 
 <!-- ═══════════════════════════════════════════════════════
-     PLUGINS — herramientas de terceros, dentro de Still
+     PLUGINS — herramientas que se abren dentro de Still
+     Visor y Promos son de terceros y viven en su dominio; PDF es nuestro
+     y lo sirve el propio Still desde /static/plugins/.
      El src NO se pone aquí: se rellena la primera vez que se abre la pestaña
-     (ver abrirPlugin). Si fuera fijo, cada carga de Still descargaría dos
-     aplicaciones enteras que casi nadie va a abrir.
+     (ver abrirPlugin). Si fuera fijo, cada carga de Still descargaría tres
+     aplicaciones enteras que casi nadie va a abrir. PDF pesa 916 KB él
+     solo, así que ahí la carga perezosa importa todavía más.
 
      El sandbox concede lo justo para que funcionen —scripts, su propio
      origen, formularios, descargas, ventanas— y a propósito NO concede
@@ -577,6 +599,24 @@
             data-src="https://legendary-pie-3f4d8e.netlify.app"
             sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-popups allow-popups-to-escape-sandbox"
             title="Promos"></iframe>
+  </div>
+</div>
+
+<!-- PDF es nuestro, no de un tercero: se sirve desde el propio Still
+     (/static/plugins/pdf.html), asi que 'self' de la CSP ya lo cubre y no
+     hace falta abrir frame-src para el. Mantiene el sandbox igual que los
+     otros: al compartir origen no aisla de verdad, pero sin
+     allow-top-navigation sigue sin poder llevarse la pestana. -->
+<div id="panel-pdf" class="hidden">
+  <div class="mb-4">
+    <h1 class="text-2xl font-bold text-gray-900">PDF</h1>
+    <p class="text-gray-500 text-sm mt-1">Turn a spreadsheet into a paginated deck and export it as a searchable PDF.</p>
+  </div>
+  <div class="ravel-panel rounded-2xl overflow-hidden" style="height:calc(100vh - 12rem);min-height:520px">
+    <iframe id="frame-pdf" class="w-full h-full block" style="border:0;background:#fff"
+            data-src="/static/plugins/pdf.html"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-popups allow-popups-to-escape-sandbox"
+            title="PDF"></iframe>
   </div>
 </div>
 
@@ -1294,12 +1334,12 @@
 // TABS
 // ═══════════════════════════════════════════════════════
 function switchTab(name) {
-  ['so', 'bodegon', 'batch', 'home', 'projects', 'settings', 'visor', 'promos'].forEach(p => {
+  ['so', 'bodegon', 'batch', 'home', 'projects', 'settings', 'visor', 'promos', 'pdf'].forEach(p => {
     const el = document.getElementById('panel-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
   });
   // Estado activo del menú lateral
-  [['nav-home', 'home'], ['nav-bodegon', 'bodegon'], ['nav-batch', 'batch'], ['nav-projects', 'projects'], ['nav-settings', 'settings'], ['nav-visor', 'visor'], ['nav-promos', 'promos']].forEach(([id, n]) => {
+  [['nav-home', 'home'], ['nav-bodegon', 'bodegon'], ['nav-batch', 'batch'], ['nav-projects', 'projects'], ['nav-settings', 'settings'], ['nav-visor', 'visor'], ['nav-promos', 'promos'], ['nav-pdf', 'pdf']].forEach(([id, n]) => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('nav-item-active', name === n);
   });
@@ -1309,7 +1349,7 @@ function switchTab(name) {
   // La tira de fondos del paso 2 vive fuera del flujo de vista previa, asi que
   // hay que pintarla al entrar a Create y no solo al llegar al preview.
   if (name === 'bodegon') renderBgStyleGrid();
-  if (name === 'visor' || name === 'promos') abrirPlugin(name);
+  if (name === 'visor' || name === 'promos' || name === 'pdf') abrirPlugin(name);
   window.scrollTo({ top: 0 });
 }
 

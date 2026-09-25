@@ -81,7 +81,7 @@ const nav = await p.evaluate(() => {
       const marco = document.getElementById('frame-' + (a.id || '').replace('nav-', ''));
       return {
         nombre: a.querySelector('span')?.textContent,
-        // Se cargan al abrirlos, no antes: traer dos aplicaciones de terceros
+        // Se cargan al abrirlos, no antes: traer tres aplicaciones enteras
         // en cada carga de Still seria caro y casi siempre inutil.
         perezoso: !!marco && !!marco.dataset.src,
         destino: marco ? marco.dataset.src : null,
@@ -99,12 +99,18 @@ chk('el menú deja las 4 de uso diario', nav.items.join(',') === 'Home,Create,Ba
 chk('Settings fuera del menú', !nav.settingsEnMenu);
 chk('Settings al pie, con aire', nav.aireAbajo > 4 && nav.aireAbajo < 40, nav.aireAbajo + 'px del borde');
 chk('con separador arriba', nav.separador !== '0px', nav.separador);
-chk('los plugins están', nav.plugins.length === 2,
+chk('los plugins están', nav.plugins.length === 3,
   nav.plugins.map((x) => x.nombre).join(', '));
 for (const pl of nav.plugins) {
+  // Dos destinos validos y ninguno mas. Los de terceros van por https a su
+  // dominio; los propios van por ruta relativa a /static/plugins/, que es lo
+  // que los mantiene en nuestro origen y fuera de frame-src. Cualquier otra
+  // cosa —http pelado, otra carpeta— es un fallo.
+  const d = pl.destino || '';
+  const destinoValido = /^https:\/\//.test(d) || d.startsWith('/static/plugins/');
   chk(`${pl.nombre}: carga perezosa y no se lleva la pestaña`,
-    pl.perezoso && pl.noSeLlevaLaPestana && /^https:\/\//.test(pl.destino || ''),
-    (pl.destino || '').slice(8, 46));
+    pl.perezoso && pl.noSeLlevaLaPestana && destinoValido,
+    d.replace(/^https:\/\//, '').slice(0, 46));
 }
 
 console.log('\n── HOME ──');
@@ -164,7 +170,7 @@ const pluginsHome = await p.evaluate(() => {
   };
 });
 chk('los plugins también están en el Home',
-  pluginsHome.titulo === 'Plugins' && pluginsHome.nombres.length === 2,
+  pluginsHome.titulo === 'Plugins' && pluginsHome.nombres.length === 3,
   pluginsHome.nombres.join(', '));
 chk('sin columnas de mas ni tarjetas descuadradas',
   pluginsHome.columnas === pluginsHome.nombres.length && pluginsHome.mismaAltura,

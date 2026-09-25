@@ -369,10 +369,31 @@ app.add_middleware(
 # lleva el hash del deploy delante: eso clava el plugin a ESA version y no ve
 # ninguna actualizacion posterior. Con la canonica sigue siempre al ultimo
 # deploy, que es lo que se quiere de un plugin.
+#
+# Aqui solo van los plugins de TERCEROS. PDF no esta y no tiene que estar: es
+# nuestro y se sirve desde el propio Still (/static/plugins/pdf.html), asi que
+# el 'self' de frame-src ya lo cubre. La contrapartida de esa decision es que
+# la CSP de Still tambien gobierna al plugin: con connect-src 'self' e
+# img-src sin dominios externos, su funcion de "descargar imagenes por URL"
+# no puede funcionar y hay que arrastrar los archivos. Se acepto a sabiendas
+# —esa descarga ya fallaba contra Pinterest por CORS— a cambio de no montar
+# otro despliegue ni abrir un tercer origen.
 PLUGINS_PERMITIDOS = (
     "https://automatizador-plantillas-production.up.railway.app "
     "https://legendary-pie-3f4d8e.netlify.app"
 )
+
+# Los plugins propios viven bajo /static/plugins/ y se abren DENTRO de Still,
+# en un iframe. La politica general dice frame-ancestors 'none' —que nadie nos
+# incruste— y resulta que eso tambien nos impide incrustarnos a NOSOTROS
+# mismos: el navegador bloquea el marco aunque el padre sea del mismo origen.
+# Se comprobo en el navegador: suelto el plugin arranca, dentro del iframe el
+# marco no llega a cargar.
+#
+# Por eso esa carpeta, y solo esa, lleva frame-ancestors 'self': se puede
+# incrustar desde Still y desde ningun otro sitio. Todo lo demas —la app, la
+# API— sigue con 'none' y sin poder incrustarse en ninguna parte.
+_PLUGINS_PROPIOS = "/static/plugins/"
 
 _CSP = (
     "default-src 'self'; "
@@ -385,15 +406,18 @@ _CSP = (
     "frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 )
 
+_CSP_PLUGIN_PROPIO = _CSP.replace("frame-ancestors 'none'", "frame-ancestors 'self'")
+
 
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     resp = await call_next(request)
+    propio = request.url.path.startswith(_PLUGINS_PROPIOS)
     resp.headers["X-Content-Type-Options"] = "nosniff"
-    resp.headers["X-Frame-Options"] = "DENY"
+    resp.headers["X-Frame-Options"] = "SAMEORIGIN" if propio else "DENY"
     resp.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     resp.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
-    resp.headers["Content-Security-Policy"] = _CSP
+    resp.headers["Content-Security-Policy"] = _CSP_PLUGIN_PROPIO if propio else _CSP
     if COOKIE_SECURE:
         resp.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
 
