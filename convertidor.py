@@ -500,6 +500,8 @@ def a_html(estructura: dict, fondo_b64: str, titulo: Optional[str] = None) -> st
   .hueco.texto:focus {{ outline:2px solid #4a5bff !important;
                         background:rgba(74,91,255,.06) }}
   .mandos {{ display:flex; gap:16px; margin-left:auto; align-items:center }}
+  body.solo-lienzo > section, body.solo-lienzo > header {{ display:none }}
+  body.solo-lienzo main {{ padding:12px }}
   .mandos label {{ display:flex; gap:6px; align-items:center; font-size:12.5px;
                    color:#4b5563; cursor:pointer; user-select:none }}
   table {{ border-collapse:collapse; width:100%; background:#fff; font-size:13px }}
@@ -554,6 +556,10 @@ def a_html(estructura: dict, fondo_b64: str, titulo: Optional[str] = None) -> st
   }}
   addEventListener('resize', ajustar); ajustar();
 
+  // Incrustada en Still, la cabecera y el inventario estarian dos veces en
+  // pantalla. Con #solo-lienzo la plantilla se queda con lo suyo: la pieza.
+  if (location.hash === '#solo-lienzo') document.body.classList.add('solo-lienzo');
+
   // Dos interruptores, dos preguntas distintas: "muestrame donde van las cosas"
   // y "muestrame tambien los modos que este PSD trae apagados".
   const pintar = () => {{
@@ -573,9 +579,17 @@ def _esc(s: Any) -> str:
 
 
 # ─── Todo junto ──────────────────────────────────────────────────────────────
-def convertir(ruta_psd: str | Path, api_key: Optional[str] = None) -> tuple[str, dict]:
-    """PSD -> (html, estructura). Los tres pasos en orden."""
+def convertir(ruta_psd: str | Path, api_key: Optional[str] = None,
+              nombre: Optional[str] = None) -> tuple[str, dict]:
+    """PSD -> (html, estructura). Los tres pasos en orden.
+
+    `nombre` es el del archivo que subio la persona. Hace falta porque el
+    servidor guarda la subida con un nombre propio, y sin esto la plantilla
+    se acabaria llamando "origen.psd" en vez de "Cabecera 5 Central B".
+    """
     estructura = analizar(ruta_psd)
+    if nombre:
+        estructura["archivo"] = nombre
     estructura = proponer_roles(estructura, api_key)
     fondo = _fondo_png(ruta_psd, estructura)
     return a_html(estructura, fondo), estructura

@@ -56,6 +56,11 @@ ALLOWED_ORIGINS = [
 MAX_FILE_MB = int(os.environ.get("MAX_FILE_MB", "25"))
 MAX_FILES = int(os.environ.get("MAX_FILES", "60"))
 MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024
+# Un PSD de punto de venta no se parece a una foto de producto: el ejemplo
+# del cliente pesa 65 MB y hay plantillas de 400. Con el limite de 25 MB de
+# las fotos no entraria ninguna, asi que lleva el suyo.
+MAX_PSD_MB = int(os.environ.get("MAX_PSD_MB", "300"))
+MAX_PSD_BYTES = MAX_PSD_MB * 1024 * 1024
 SESSION_TTL_HOURS = int(os.environ.get("SESSION_TTL_HOURS", "24"))
 BATCH_TTL_HOURS = int(os.environ.get("BATCH_TTL_HOURS", "24"))
 
@@ -132,7 +137,7 @@ USERS_FILE = DATA_DIR / "users.json"
 SECRET_FILE = DATA_DIR / ".secret"
 
 # Prefijos de rutas que requieren sesión iniciada
-PROTECTED_PREFIXES = ("/api/bodegon", "/api/batch")
+PROTECTED_PREFIXES = ("/api/bodegon", "/api/batch", "/api/convertidor")
 
 
 def _get_secret() -> str:
@@ -393,7 +398,10 @@ PLUGINS_PERMITIDOS = (
 # Por eso esa carpeta, y solo esa, lleva frame-ancestors 'self': se puede
 # incrustar desde Still y desde ningun otro sitio. Todo lo demas —la app, la
 # API— sigue con 'none' y sin poder incrustarse en ninguna parte.
-_PLUGINS_PROPIOS = "/static/plugins/"
+# Rutas cuyo contenido es NUESTRO y se abre dentro de Still en un iframe.
+# Ademas de los plugins propios entra la vista previa del Convertidor, que
+# es un documento HTML completo generado a partir del PSD.
+_PLUGINS_PROPIOS = ("/static/plugins/", "/api/convertidor/plantilla/")
 
 _CSP = (
     "default-src 'self'; "
@@ -1562,6 +1570,119 @@ async def bodegon_ai_custom_layout(body: dict, request: Request):
         "desc": "Art direction from your own description",
         "layout": layout,
     }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MÓDULO: CONVERTIDOR (un PSD de produccion -> una plantilla HTML)
+#
+# Las plantillas llegan como las nombra un disenador —"49", "2x", "SUAJE"— y no
+# con una convencion legible por codigo. El modulo las lee, decide con ayuda de
+# IA que es cada capa, y devuelve una plantilla HTML con un hueco editable por
+# elemento variable. Ver convertidor.py para el detalle de los tres pasos.
+#
+# Esta ruta hace todo el trabajo DENTRO de la peticion: leer el PSD, llamar a la
+# IA y aplanar el fondo suman entre 5 y 30 segundos segun el archivo. Sirve para
+# probar en local; el dia que esto se llame desde fuera hay que partirlo en
+# trabajo asincrono, igual que la generacion de imagen.
+# ══════════════════════════════════════════════════════════════════════════════
+CONVERTIDOR_DIR = SESSIONS_DIR / "_convertidor"
+
+
+def _convertir_psd(ruta_psd: Path, destino: Path, nombre: str) -> dict:
+    """Los tres pasos del convertidor. Aparte para poder mandarla a un hilo:
+    psd-tools y Pillow son CPU pura y bloquearian el bucle de eventos."""
+    import convertidor
+
+    clave = os.environ.get("OPENAI_API_KEY", "").strip() or None
+    html, estructura = convertidor.convertir(ruta_psd, clave, nombre)
+    (destino / "plantilla.html").write_text(html, encoding="utf-8")
+    (destino / "estructura.json").write_text(
+        json.dumps(estructura, indent=2, ensure_ascii=False), encoding="utf-8")
+    return estructura
+
+
+@app.post("/api/convertidor/subir")
+async def convertidor_subir(request: Request, archivo: UploadFile = File(...)):
+    """Recibe un PSD y devuelve el resumen de la plantilla extraida."""
+    _require_rate_limit(request, "convertidor", 20, 3600)
+
+    if Path(archivo.filename or "").suffix.lower() not in (".psd", ".psb"):
+        raise HTTPException(400, "Only .psd and .psb files are supported")
+
+    datos = await archivo.read()
+    if not datos:
+        raise HTTPException(400, "Empty file")
+    if len(datos) > MAX_PSD_BYTES:
+        raise HTTPException(413, f"Over the {MAX_PSD_MB} MB limit")
+
+    pieza_id = str(uuid.uuid4())
+    destino = CONVERTIDOR_DIR / pieza_id
+    destino.mkdir(parents=True)
+    ruta_psd = destino / "origen.psd"
+    ruta_psd.write_bytes(datos)
+    (destino / "meta.json").write_text(json.dumps({
+        "owner": request.session.get("user"), "created": time.time(),
+        "filename": archivo.filename,
+    }, indent=2), encoding="utf-8")
+
+    try:
+        estructura = await run_in_threadpool(
+            _convertir_psd, ruta_psd, destino, archivo.filename or "plantilla.psd")
+    except Exception as e:
+        shutil.rmtree(destino, ignore_errors=True)
+        raise HTTPException(422, f"Could not read the template: {e}") from e
+
+    huecos = [c for c in estructura["capas"] if c.get("editable")]
+    return {
+        "id": pieza_id,
+        "archivo": estructura["archivo"],
+        "lienzo": estructura["lienzo"],
+        "asistido_por_ia": estructura.get("asistido_por_ia", False),
+        "aviso_ia": estructura.get("aviso_ia"),
+        "total_capas": len(estructura["capas"]),
+        "variantes": estructura.get("variantes", []),
+        "huecos": [{
+            "nombre": c["nombre_limpio"], "rol": c["rol"], "clase": c["clase"],
+            "confianza": c["confianza"], "porque": c.get("porque", ""),
+            "capa_original": c["nombre"], "texto": c.get("texto"),
+            "sku": c.get("sku"),
+        } for c in sorted(huecos, key=lambda x: (x["caja"]["y"], x["caja"]["x"]))],
+    }
+
+
+def _pieza_convertidor(pieza_id: str, request: Request) -> Path:
+    """Carpeta de una conversion, comprobando que sea de quien pregunta."""
+    if not re.fullmatch(r"[0-9a-f-]{36}", pieza_id or ""):
+        raise HTTPException(400, "Bad id")
+    destino = CONVERTIDOR_DIR / pieza_id
+    meta = destino / "meta.json"
+    if not meta.exists():
+        raise HTTPException(404, "Not found")
+    duenyo = json.loads(meta.read_text(encoding="utf-8")).get("owner")
+    if duenyo and duenyo != request.session.get("user"):
+        raise HTTPException(403, "Not yours")
+    return destino
+
+
+@app.get("/api/convertidor/plantilla/{pieza_id}", response_class=HTMLResponse)
+async def convertidor_plantilla(pieza_id: str, request: Request):
+    """La plantilla HTML. Se abre en un iframe dentro de Still, por eso esta
+    ruta lleva frame-ancestors 'self' (ver _PLUGINS_PROPIOS)."""
+    html = _pieza_convertidor(pieza_id, request) / "plantilla.html"
+    if not html.exists():
+        raise HTTPException(404, "Not found")
+    return HTMLResponse(html.read_text(encoding="utf-8"),
+                        headers={"Cache-Control": "no-store"})
+
+
+@app.get("/api/convertidor/estructura/{pieza_id}")
+async def convertidor_estructura(pieza_id: str, request: Request):
+    """El JSON completo: toda capa, no solo los huecos."""
+    ruta = _pieza_convertidor(pieza_id, request) / "estructura.json"
+    if not ruta.exists():
+        raise HTTPException(404, "Not found")
+    return FileResponse(ruta, media_type="application/json",
+                        filename="estructura.json")
 
 
 # ══════════════════════════════════════════════════════════════════════════════

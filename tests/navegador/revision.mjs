@@ -95,7 +95,7 @@ const nav = await p.evaluate(() => {
     separador: getComputedStyle(set.parentElement).borderTopWidth,
   };
 });
-chk('el menú deja las 4 de uso diario', nav.items.join(',') === 'Home,Create,Batch,Projects', nav.items.join(', '));
+chk('el menú deja las de uso diario', nav.items.join(',') === 'Home,Create,Batch,Projects,Convert', nav.items.join(', '));
 chk('Settings fuera del menú', !nav.settingsEnMenu);
 chk('Settings al pie, con aire', nav.aireAbajo > 4 && nav.aireAbajo < 40, nav.aireAbajo + 'px del borde');
 chk('con separador arriba', nav.separador !== '0px', nav.separador);

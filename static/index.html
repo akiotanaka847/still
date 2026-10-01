@@ -380,6 +380,10 @@
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h4.1a1.5 1.5 0 0 1 1.07.45l1.33 1.33h7.5A1.5 1.5 0 0 1 20 9.28v8.22A1.5 1.5 0 0 1 18.5 19h-14A1.5 1.5 0 0 1 3 17.5v-10Z"/></svg>
         <span>Projects</span>
       </button>
+      <button id="nav-convertidor" onclick="switchTab('convertidor')" class="nav-item">
+        <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h5A1.5 1.5 0 0 1 12 5.5v5A1.5 1.5 0 0 1 10.5 12h-5A1.5 1.5 0 0 1 4 10.5v-5Z"/><path d="M15.5 12h3A1.5 1.5 0 0 1 20 13.5v5a1.5 1.5 0 0 1-1.5 1.5h-5A1.5 1.5 0 0 1 12 18.5v-3"/><path d="M14.2 8.2h5.3m0 0-2-2m2 2-2 2"/></svg>
+        <span>Convert</span>
+      </button>
       <p class="nav-label">Plugins</p>
       <button id="nav-visor" onclick="switchTab('visor')" class="nav-item plugin-item">
         <svg class="nav-ico" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h5A1.5 1.5 0 0 1 12 7.5v2A1.5 1.5 0 0 1 10.5 11h-5A1.5 1.5 0 0 1 4 9.5v-2ZM12 14.5A1.5 1.5 0 0 1 13.5 13h5A1.5 1.5 0 0 1 20 14.5v2a1.5 1.5 0 0 1-1.5 1.5h-5a1.5 1.5 0 0 1-1.5-1.5v-2ZM8 11v3.5a1 1 0 0 0 1 1h3"/></svg>
@@ -617,6 +621,61 @@
             data-src="/static/plugins/pdf.html"
             sandbox="allow-scripts allow-same-origin allow-forms allow-downloads allow-popups allow-popups-to-escape-sandbox"
             title="PDF"></iframe>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     CONVERT — un PSD de produccion se vuelve plantilla HTML
+     El PSD se sube entero y el servidor hace los tres pasos (leer, decidir
+     roles con IA, aplanar el fondo). Tarda entre 5 y 30 segundos segun el
+     archivo, asi que la pantalla avisa en vez de quedarse muda.
+═══════════════════════════════════════════════════════ -->
+<div id="panel-convertidor" class="hidden">
+  <div class="mb-4">
+    <h1 class="text-2xl font-bold text-gray-900">Convert</h1>
+    <p class="text-gray-500 text-sm mt-1">Drop a Photoshop template and get an HTML template with one editable slot per element.</p>
+  </div>
+
+  <div id="cv-drop" class="ravel-panel rounded-2xl p-10 text-center cursor-pointer transition-all"
+       style="border:2px dashed rgba(148,163,184,.35)">
+    <svg class="w-10 h-10 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0L8 8m4-4 4 4M4 16v2.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V16"/></svg>
+    <p class="font-semibold text-gray-900">Drop a .psd or .psb file</p>
+    <p class="text-sm text-gray-500 mt-1">or click to choose one &middot; up to 300 MB</p>
+    <input type="file" id="cv-file" accept=".psd,.psb" hidden>
+  </div>
+
+  <div id="cv-working" class="hidden ravel-panel rounded-2xl p-8 text-center mt-4">
+    <div class="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full spin mx-auto mb-4"></div>
+    <p class="font-semibold text-gray-900" id="cv-step">Reading the template&hellip;</p>
+    <p class="text-sm text-gray-500 mt-1">Large print templates can take up to half a minute.</p>
+  </div>
+
+  <div id="cv-error" class="hidden rounded-2xl p-4 mt-4"
+       style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3)">
+    <p class="text-sm" style="color:#fca5a5" id="cv-error-text"></p>
+  </div>
+
+  <div id="cv-result" class="hidden mt-5">
+    <div class="flex items-baseline gap-5 flex-wrap mb-4">
+      <h2 class="text-lg font-bold text-gray-900" id="cv-name"></h2>
+      <span class="text-sm text-gray-500" id="cv-facts"></span>
+      <div class="ml-auto flex gap-2">
+        <a id="cv-open" target="_blank" rel="noopener" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">Open full size</a>
+        <a id="cv-json" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">Download JSON</a>
+        <button onclick="cvReset()" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">Convert another</button>
+      </div>
+    </div>
+    <div class="ravel-panel rounded-2xl overflow-hidden mb-5" style="height:min(60vh,620px)">
+      <iframe id="cv-frame" class="w-full h-full block" style="border:0;background:#fff"
+              sandbox="allow-scripts allow-same-origin" title="Template preview"></iframe>
+    </div>
+    <div class="ravel-panel rounded-2xl overflow-hidden">
+      <div class="px-5 py-3.5" style="border-bottom:1px solid rgba(148,163,184,.15)">
+        <h3 class="font-bold text-gray-900 text-sm">Slots found</h3>
+        <p class="text-xs text-gray-500 mt-0.5">Roles proposed by AI. Low confidence means it needs a human look.</p>
+      </div>
+      <div style="overflow-x:auto"><table class="w-full text-sm" id="cv-table"></table></div>
+    </div>
   </div>
 </div>
 
@@ -1334,12 +1393,12 @@
 // TABS
 // ═══════════════════════════════════════════════════════
 function switchTab(name) {
-  ['so', 'bodegon', 'batch', 'home', 'projects', 'settings', 'visor', 'promos', 'pdf'].forEach(p => {
+  ['so', 'bodegon', 'batch', 'home', 'projects', 'settings', 'visor', 'promos', 'pdf', 'convertidor'].forEach(p => {
     const el = document.getElementById('panel-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
   });
   // Estado activo del menú lateral
-  [['nav-home', 'home'], ['nav-bodegon', 'bodegon'], ['nav-batch', 'batch'], ['nav-projects', 'projects'], ['nav-settings', 'settings'], ['nav-visor', 'visor'], ['nav-promos', 'promos'], ['nav-pdf', 'pdf']].forEach(([id, n]) => {
+  [['nav-home', 'home'], ['nav-bodegon', 'bodegon'], ['nav-batch', 'batch'], ['nav-projects', 'projects'], ['nav-settings', 'settings'], ['nav-visor', 'visor'], ['nav-promos', 'promos'], ['nav-pdf', 'pdf'], ['nav-convertidor', 'convertidor']].forEach(([id, n]) => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('nav-item-active', name === n);
   });
@@ -1360,6 +1419,109 @@ function abrirPlugin(nombre) {
   const f = document.getElementById('frame-' + nombre);
   if (!f || f.src) return;
   f.src = f.dataset.src;
+}
+
+// ═══════════════════════════════════════════════════════
+// CONVERT — un PSD de produccion se vuelve plantilla HTML
+// ═══════════════════════════════════════════════════════
+const cvDrop = document.getElementById('cv-drop');
+const cvFile = document.getElementById('cv-file');
+
+function cvMostrar(cual) {
+  ['cv-drop', 'cv-working', 'cv-result', 'cv-error'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden', !cual.includes(id));
+  });
+}
+function cvReset() { cvFile.value = ''; cvMostrar(['cv-drop']); }
+
+function cvError(msg) {
+  document.getElementById('cv-error-text').textContent = msg;
+  cvMostrar(['cv-drop', 'cv-error']);
+}
+
+async function cvSubir(file) {
+  if (!file) return;
+  if (!/\.psb?$|\.psd$/i.test(file.name)) { cvError('Only .psd and .psb files are supported.'); return; }
+  cvMostrar(['cv-working']);
+  // Tres fases, para que la espera no sea una pantalla muda. Son estimadas: el
+  // servidor no informa su avance todavia — cuando el convertidor pase a
+  // trabajo asincrono, esto se reemplaza por el estado real.
+  const paso = document.getElementById('cv-step');
+  const fases = ['Reading the template\u2026', 'Working out what each layer is\u2026', 'Flattening the background\u2026'];
+  let i = 0;
+  const reloj = setInterval(() => { if (++i < fases.length) paso.textContent = fases[i]; }, 6000);
+
+  try {
+    const fd = new FormData();
+    fd.append('archivo', file);
+    const r = await fetch('/api/convertidor/subir', { method: 'POST', body: fd });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'Could not read the template');
+    cvPintar(data);
+  } catch (e) {
+    cvError(e.message || String(e));
+  } finally {
+    clearInterval(reloj);
+  }
+}
+
+function cvPintar(d) {
+  document.getElementById('cv-name').textContent = d.archivo;
+  const avisoIA = d.asistido_por_ia ? '' : ' \u00b7 roles by rules, not AI';
+  document.getElementById('cv-facts').textContent =
+    `${d.lienzo.ancho} \u00d7 ${d.lienzo.alto} px \u00b7 ${d.lienzo.modo} \u00b7 ` +
+    `${d.huecos.length} slots of ${d.total_capas} layers` +
+    (d.variantes.length ? ` \u00b7 ${d.variantes.length} variants` : '') + avisoIA;
+
+  // El marco sigue la proporcion de la pieza. Con alto fijo, una cenefa de
+  // 6850x1004 dejaba media pantalla en blanco y una pieza vertical no cabia.
+  const marco = document.getElementById('cv-frame').parentElement;
+  const alto = Math.round(Math.min(620, Math.max(220,
+    (marco.clientWidth - 24) * d.lienzo.alto / d.lienzo.ancho + 24)));
+  marco.style.height = alto + 'px';
+  document.getElementById('cv-frame').src = `/api/convertidor/plantilla/${d.id}#solo-lienzo`;
+  document.getElementById('cv-open').href = `/api/convertidor/plantilla/${d.id}`;
+  const json = document.getElementById('cv-json');
+  json.href = `/api/convertidor/estructura/${d.id}`;
+  json.setAttribute('download', 'estructura.json');
+
+  const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const filas = d.huecos.map(h => {
+    // La confianza baja es la senal de "mirame": se marca en la fila para que
+    // no haya que leer el numero columna por columna.
+    const dudoso = h.confianza < 0.8;
+    const col = dudoso ? '#d97706' : '#64748b';
+    return `<tr style="border-top:1px solid rgba(148,163,184,.12)">
+      <td class="px-5 py-2.5 font-semibold text-gray-900">${esc(h.nombre)}</td>
+      <td class="px-3 py-2.5"><code style="font-size:11.5px;background:rgba(99,102,241,.1);color:#818cf8;padding:2px 7px;border-radius:4px">${esc(h.rol)}</code></td>
+      <td class="px-3 py-2.5 text-gray-500">${esc(h.clase)}</td>
+      <td class="px-3 py-2.5 text-right" style="font-variant-numeric:tabular-nums;color:${col};font-weight:${dudoso ? 600 : 400}">${h.confianza.toFixed(2)}</td>
+      <td class="px-3 py-2.5 text-gray-500" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(h.capa_original)}">${esc(h.capa_original)}</td>
+      <td class="px-5 py-2.5 text-gray-500" style="font-size:12px">${esc(h.porque)}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('cv-table').innerHTML =
+    `<thead><tr style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8">
+      <th class="px-5 py-2.5 text-left">Name</th><th class="px-3 py-2.5 text-left">Role</th>
+      <th class="px-3 py-2.5 text-left">Kind</th><th class="px-3 py-2.5 text-right">Conf.</th>
+      <th class="px-3 py-2.5 text-left">Layer in the PSD</th><th class="px-5 py-2.5 text-left">Why</th>
+    </tr></thead><tbody>${filas}</tbody>`;
+
+  cvMostrar(['cv-result']);
+}
+
+if (cvDrop) {
+  cvDrop.addEventListener('click', () => cvFile.click());
+  cvFile.addEventListener('change', e => cvSubir(e.target.files[0]));
+  ['dragenter', 'dragover'].forEach(ev => cvDrop.addEventListener(ev, e => {
+    e.preventDefault(); cvDrop.style.borderColor = 'rgba(99,102,241,.7)';
+  }));
+  ['dragleave', 'drop'].forEach(ev => cvDrop.addEventListener(ev, e => {
+    e.preventDefault(); cvDrop.style.borderColor = 'rgba(148,163,184,.35)';
+  }));
+  cvDrop.addEventListener('drop', e => cvSubir(e.dataTransfer.files[0]));
 }
 
 // ═══════════════════════════════════════════════════════
