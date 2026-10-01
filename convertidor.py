@@ -6,9 +6,15 @@ que una expresion regular pueda leer. El extractor que vive en
 Automatizador-Promos exige nombres tipo TEXT_PRECIO_ y por eso saca 0 campos de
 un PSD real de produccion (medido: 0 de 42 capas en "Cabecera 5 Central B").
 
-La salida es un HTML autocontenido: el fondo estatico aplanado como imagen y,
-encima, un elemento posicionado por cada hueco editable. Desde ahi se convierte
-a lo que haga falta, porque un navegador ya sabe llevarlo a PNG o a PDF.
+La salida es un HTML autocontenido donde cada capa del PSD es un elemento
+posicionado, apilado en el mismo orden que en Photoshop. La pieza se ve igual
+que el original —eso es lo que la vuelve reconocible— y ademas cada elemento
+variable queda marcado y es editable. Desde ahi se convierte a lo que haga
+falta, porque un navegador ya sabe llevarlo a PNG o a PDF.
+
+Un fondo unico aplanado NO sirve, y no por teoria: en "Cabecera 5 Central B" la
+capa FileName vive debajo de ESTRUCTURA, que la tapa. Aplanando lo fijo en una
+imagen, FileName acababa pintada encima del precio.
 
 TRES PASOS, SEPARADOS A PROPOSITO
 ---------------------------------
@@ -371,83 +377,137 @@ def proponer_roles(estructura: dict, api_key: Optional[str] = None,
 
 
 # ─── Paso 3: componer la plantilla HTML ──────────────────────────────────────
-def _fondo_png(ruta_psd: str | Path, estructura: dict, ancho_max: int = 2400) -> str:
-    """Aplana el PSD con los huecos editables apagados y lo devuelve en base64.
+def rasterizar(ruta_psd: str | Path, estructura: dict,
+               ancho_max: int = 2000) -> dict[str, str]:
+    """Cada capa por separado, en PNG con transparencia, lista para el HTML.
 
-    Lo que queda es el decorado: estructura, fondo y marca. Los huecos se pintan
-    despues como elementos HTML encima, que es lo que los vuelve editables.
+    La primera version aplanaba todo lo no editable en UNA imagen de fondo y
+    pintaba los huecos encima. Eso rompe el orden de pintado, y no de forma
+    teorica: en "Cabecera 5 Central B" la capa FileName vive DEBAJO de
+    ESTRUCTURA, que la tapa por completo. Con un fondo plano, ESTRUCTURA
+    quedaba en el fondo y FileName se colaba encima del precio.
+
+    Aqui cada capa es su propio elemento y el HTML las apila en el mismo orden
+    que Photoshop, asi que lo que tapa sigue tapando. `estructura["capas"]` ya
+    viene en orden de pintado —de abajo hacia arriba— porque psd-tools recorre
+    los hijos en ese orden y analizar() respeta el recorrido.
     """
     from psd_tools import PSDImage
 
     psd = PSDImage.open(ruta_psd)
-    apagar = {c["ruta"] for c in estructura["capas"]
-              if c.get("editable") or c.get("rol") == "imprenta"}
+    escala = min(1.0, ancho_max / psd.width)
+    por_ruta: dict[str, Any] = {}
 
-    def recorrer(grupo, camino):
+    def recoger(grupo, camino):
         for capa in grupo:
             ruta = " / ".join(camino + [capa.name or ""])
-            if ruta in apagar:
-                capa.visible = False
-            elif capa.is_group():
-                recorrer(capa, camino + [capa.name or ""])
+            por_ruta[ruta] = capa
+            if capa.is_group():
+                recoger(capa, camino + [capa.name or ""])
 
-    recorrer(psd, [])
-    img = psd.composite()
-    if img is None:
-        img = Image.new("RGB", (psd.width, psd.height), "white")
-    img = img.convert("RGB")
-    if img.width > ancho_max:                       # el fondo viaja dentro del HTML
-        alto = round(img.height * ancho_max / img.width)
-        img = img.resize((ancho_max, alto), Image.LANCZOS)
-    buf = io.BytesIO()
-    img.save(buf, "JPEG", quality=86, optimize=True)
-    return base64.b64encode(buf.getvalue()).decode()
+    recoger(psd, [])
+
+    salida: dict[str, str] = {}
+    for c in estructura["capas"]:
+        if c["clase"] == "group":
+            continue
+        capa = por_ruta.get(c["ruta"])
+        if capa is None:
+            continue
+        try:
+            img = capa.composite()                  # con sus efectos aplicados
+        except Exception:
+            img = None
+        if img is None or img.width < 1 or img.height < 1:
+            continue
+        img = img.convert("RGBA")
+        if escala < 1:
+            img = img.resize((max(1, round(img.width * escala)),
+                              max(1, round(img.height * escala))), Image.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, "PNG", optimize=True)
+        salida[c["id"]] = base64.b64encode(buf.getvalue()).decode()
+        # La caja que vale es la del render, no la declarada: una capa con
+        # sombra o resplandor ocupa mas de lo que dice su bbox.
+        c["caja_render"] = {"x": float(capa.left), "y": float(capa.top),
+                            "w": float(capa.width), "h": float(capa.height)}
+    estructura["escala_render"] = escala
+    return salida
 
 
-def a_html(estructura: dict, fondo_b64: str, titulo: Optional[str] = None) -> str:
-    """Compone la plantilla. Un div por hueco, posicionado en px del PSD.
+def a_html(estructura: dict, rasters: dict[str, str],
+           titulo: Optional[str] = None) -> str:
+    """Compone la plantilla: una capa por elemento, en orden de pintado.
 
-    El lienzo se escala con una variable CSS, asi que la plantilla se ve igual
-    a cualquier tamano y las coordenadas del HTML siguen siendo las del PSD —
-    que es lo que permite volver al PSD, o salir a PDF, sin recalcular nada.
+    La pieza se ve igual que el PSD porque cada capa va con sus propios pixeles
+    y en su misma posicion de la pila. Los huecos editables no se vacian —se
+    marcan—, que es lo que permite reconocer la pieza y cambiarla a la vez.
+
+    El lienzo conserva las coordenadas del PSD y solo se escala para verse, asi
+    que un hueco sigue valiendo lo mismo al volver al PSD o al salir a PDF.
     """
     L = estructura["lienzo"]
     titulo = titulo or Path(estructura["archivo"]).stem
 
-    huecos, fijos = [], []
+    capas, huecos = [], []
     for c in estructura["capas"]:
-        if c["clase"] == "group" or c.get("rol") == "imprenta":
+        if c["clase"] == "group":
             continue
         # Una capa puede estar apagada por si misma o por el grupo que la
         # contiene. Mirar solo lo primero dejaba las dos vigencias del ejemplo
         # —Multiple y Simple— pintadas una encima de otra.
         c["_variante"] = (not c["visible"]) or c.get("oculto_por_grupo", False)
-        (huecos if c.get("editable") else fijos).append(c)
-    variantes = [c for c in huecos if c["_variante"]]
+        capas.append(c)
+        if c.get("editable"):
+            huecos.append(c)
+    variantes = [c for c in capas if c["_variante"]]
 
     def bloque(c: dict) -> str:
-        b = c["caja"]
-        est = (f'left:{b["x"]:.1f}px; top:{b["y"]:.1f}px; '
-               f'width:{b["w"]:.1f}px; height:{b["h"]:.1f}px')
+        png = rasters.get(c["id"])
+        caja = c.get("caja_render") or c["caja"]
+        est = (f'left:{caja["x"]:.1f}px; top:{caja["y"]:.1f}px; '
+               f'width:{caja["w"]:.1f}px; height:{caja["h"]:.1f}px')
+        editable = c.get("editable")
+        clases = "capa" + (" hueco" if editable else "")
         attrs = (f'data-rol="{c["rol"]}" data-nombre="{c["nombre_limpio"]}" '
                  f'data-capa="{_esc(c["nombre"])}" data-confianza="{c["confianza"]:.2f}"')
         if c.get("_variante"):
             attrs += ' data-variante="oculta"'
+        # El suaje define el contorno real de la pieza: quitarlo deja un
+        # rectangulo donde el original tiene una silueta troquelada. Se pinta
+        # por defecto y se puede apagar, en vez de decidir por quien mira.
+        if c.get("rol") == "imprenta":
+            attrs += ' data-imprenta="1"'
         if c.get("sku"):
             attrs += f' data-sku="{c["sku"]}"'
+        if c.get("opacidad"):
+            est += f'; opacity:{c["opacidad"]}'
 
+        # El texto viaja dos veces: como pixeles, que es lo fiel, y como texto
+        # vivo con su tipografia y color, que es lo editable. La tipografia del
+        # PSD casi nunca esta instalada en quien mira, asi que mostrar solo lo
+        # segundo deformaria la pieza. El interruptor decide cual se ve.
         if c["clase"] == "type":
             tam = c.get("tamano") or 16
             fam = c.get("fuente") or "sans-serif"
             col = c.get("color") or "#000"
-            est += (f'; font-size:{tam:.1f}px; font-family:"{fam}",sans-serif; '
-                    f'color:{col}; line-height:1.05')
-            return (f'    <div class="hueco texto" style="{est}" {attrs}'
-                    f' contenteditable="true">{_esc(c.get("texto") or "")}</div>')
-        return (f'    <div class="hueco imagen" style="{est}" {attrs}>'
-                f'<span>{c["nombre_limpio"]}</span></div>')
+            b = c["caja"]
+            vivo = (f'<div class="texto-vivo" contenteditable="true" '
+                    f'style="left:{b["x"]:.1f}px; top:{b["y"]:.1f}px; '
+                    f'width:{b["w"]:.1f}px; font-size:{tam:.1f}px; '
+                    f'font-family:\'{fam}\',sans-serif; color:{col}; '
+                    f'line-height:1.08" {attrs}>{_esc(c.get("texto") or "")}</div>')
+            img = (f'<img class="{clases} pixeles" style="{est}" {attrs} alt="" '
+                   f'src="data:image/png;base64,{png}">') if png else ""
+            return "    " + img + "\n    " + vivo
 
-    filas = "\n".join(bloque(c) for c in huecos)
+        if not png:
+            return (f'    <div class="{clases} sin-pixeles" style="{est}" {attrs}>'
+                    f'<span>{c["nombre_limpio"]}</span></div>')
+        return (f'    <img class="{clases}" style="{est}" {attrs} alt="" '
+                f'src="data:image/png;base64,{png}">')
+
+    filas = "\n".join(bloque(c) for c in capas)
     inventario = "\n".join(
         f'      <tr><td>{c["nombre_limpio"]}</td><td><code>{c["rol"]}</code></td>'
         f'<td>{c["clase"]}</td><td class="n">{c["confianza"]:.2f}</td>'
@@ -476,29 +536,35 @@ def a_html(estructura: dict, fondo_b64: str, titulo: Optional[str] = None) -> st
             border-radius:6px; font-size:13px }}
   main {{ padding:24px; overflow-x:auto }}
   .lienzo {{ position:relative; width:var(--ancho); height:var(--alto);
-             transform:scale(var(--escala)); transform-origin:0 0;
-             background-size:100% 100%; background-repeat:no-repeat;
+             transform:scale(var(--escala)); transform-origin:0 0; background:#fff;
              box-shadow:0 2px 24px -8px rgba(0,0,0,.35); outline:1px solid #cfd3da }}
   .marco {{ overflow:hidden; margin:0 auto }}
-  .hueco {{ position:absolute }}
-  .hueco.texto {{ white-space:pre-wrap; overflow:hidden }}
-  .hueco.imagen {{ display:flex; align-items:center; justify-content:center }}
-  .hueco.imagen span {{ font:600 12px/1.2 ui-monospace,monospace; color:#3b49c9;
-                        background:#fff; padding:4px 8px; border-radius:4px;
-                        max-width:92%; overflow:hidden; text-overflow:ellipsis;
-                        white-space:nowrap; opacity:0 }}
+  /* Cada capa en su sitio y en su orden. El apilado lo da el orden del
+     documento, que es el mismo de Photoshop: lo que tapa, sigue tapando. */
+  .capa {{ position:absolute; display:block }}
+  img.capa {{ image-rendering:auto }}
+  .sin-pixeles {{ display:flex; align-items:center; justify-content:center;
+                  background:rgba(74,91,255,.07) }}
+  .sin-pixeles span {{ font:600 12px/1.2 ui-monospace,monospace; color:#3b49c9;
+                       background:#fff; padding:4px 8px; border-radius:4px }}
+  /* El texto vivo se superpone al rasterizado. Oculto por defecto: la
+     tipografia del PSD casi nunca esta instalada y la pieza se deformaria. */
+  .texto-vivo {{ position:absolute; white-space:pre-wrap; display:none;
+                 overflow-wrap:break-word }}
+  body.texto-editable .texto-vivo {{ display:block }}
+  body.texto-editable img.pixeles {{ visibility:hidden }}
+  .texto-vivo:focus {{ outline:2px solid #4a5bff; background:rgba(74,91,255,.07) }}
   /* Las variantes son modos alternos de la MISMA plantilla —en este PSD,
      "Vigencias" trae una version Multiple y otra Simple—. Pintarlas a la vez
      deja la pieza ilegible, asi que por defecto solo se ve la activa. */
-  .hueco[data-variante] {{ display:none }}
-  body.con-variantes .hueco[data-variante] {{ display:block }}
+  [data-variante] {{ display:none !important }}
+  body.con-variantes [data-variante] {{ display:block !important }}
+  body.con-variantes.texto-editable img.pixeles[data-variante] {{ visibility:hidden }}
   /* El contorno es andamio, no plantilla: apagado, esto es la pieza limpia. */
-  body.con-huecos .hueco {{ outline:1.5px dashed rgba(70,90,255,.55) }}
-  body.con-huecos .hueco.imagen {{ background:rgba(74,91,255,.07) }}
-  body.con-huecos .hueco.imagen span {{ opacity:1 }}
-  body.con-huecos .hueco[data-variante] {{ outline-color:rgba(190,120,0,.75) }}
-  .hueco.texto:focus {{ outline:2px solid #4a5bff !important;
-                        background:rgba(74,91,255,.06) }}
+  body.con-huecos .hueco {{ outline:1.5px dashed rgba(70,90,255,.6);
+                            outline-offset:1px }}
+  body.con-huecos .hueco[data-variante] {{ outline-color:rgba(190,120,0,.8) }}
+  body.sin-imprenta [data-imprenta] {{ display:none !important }}
   .mandos {{ display:flex; gap:16px; margin-left:auto; align-items:center }}
   body.solo-lienzo > section, body.solo-lienzo > header {{ display:none }}
   body.solo-lienzo main {{ padding:12px }}
@@ -519,16 +585,16 @@ def a_html(estructura: dict, fondo_b64: str, titulo: Optional[str] = None) -> st
 <header>
   <h1>{_esc(titulo)}</h1>
   <span class="dato">Lienzo <b>{L["ancho"]} x {L["alto"]}</b> px · {L["modo"]}</span>
-  <span class="dato">Huecos editables <b>{len(huecos)}</b></span>
-  <span class="dato">Elementos fijos <b>{len(fijos)}</b></span>
+  <span class="dato">Capas <b>{len(capas)}</b> · editables <b>{len(huecos)}</b></span>
   {aviso}
   <div class="mandos">
     <label><input type="checkbox" id="vh" checked> Ver huecos</label>
     <label><input type="checkbox" id="vv"> Ver variantes ({len(variantes)})</label>
+    <label><input type="checkbox" id="te"> Texto editable</label>
+    <label><input type="checkbox" id="vi" checked> Ver suaje</label>
   </div>
 </header>
-<main><div class="marco"><div class="lienzo" id="lienzo"
-     style="background-image:url(data:image/jpeg;base64,{fondo_b64})">
+<main><div class="marco"><div class="lienzo" id="lienzo">
 {filas}
   </div></div></main>
 <section>
@@ -563,11 +629,12 @@ def a_html(estructura: dict, fondo_b64: str, titulo: Optional[str] = None) -> st
   // Dos interruptores, dos preguntas distintas: "muestrame donde van las cosas"
   // y "muestrame tambien los modos que este PSD trae apagados".
   const pintar = () => {{
-    document.body.classList.toggle('con-huecos',    vh.checked);
-    document.body.classList.toggle('con-variantes', vv.checked);
+    document.body.classList.toggle('con-huecos',     vh.checked);
+    document.body.classList.toggle('con-variantes',  vv.checked);
+    document.body.classList.toggle('texto-editable', te.checked);
+    document.body.classList.toggle('sin-imprenta',   !vi.checked);
   }};
-  vh.addEventListener('change', pintar);
-  vv.addEventListener('change', pintar);
+  [vh, vv, te, vi].forEach(x => x.addEventListener('change', pintar));
   pintar();
 </script>
 </body></html>"""
@@ -591,8 +658,8 @@ def convertir(ruta_psd: str | Path, api_key: Optional[str] = None,
     if nombre:
         estructura["archivo"] = nombre
     estructura = proponer_roles(estructura, api_key)
-    fondo = _fondo_png(ruta_psd, estructura)
-    return a_html(estructura, fondo), estructura
+    rasters = rasterizar(ruta_psd, estructura)
+    return a_html(estructura, rasters), estructura
 
 
 if __name__ == "__main__":
