@@ -1594,10 +1594,15 @@ def _convertir_psd(ruta_psd: Path, destino: Path, nombre: str) -> dict:
     import convertidor
 
     clave = os.environ.get("OPENAI_API_KEY", "").strip() or None
-    html, estructura = convertidor.convertir(ruta_psd, clave, nombre)
+    html, estructura, rasters = convertidor.convertir(ruta_psd, clave, nombre)
     (destino / "plantilla.html").write_text(html, encoding="utf-8")
     (destino / "estructura.json").write_text(
         json.dumps(estructura, indent=2, ensure_ascii=False), encoding="utf-8")
+    # El paquete se escribe ahora y no al descargarlo: rehacerlo despues
+    # obligaria a volver a leer el PSD y a pagar otra llamada a la IA.
+    (destino / "paquete.json").write_text(
+        json.dumps(convertidor.paquete(estructura, rasters), ensure_ascii=False),
+        encoding="utf-8")
     return estructura
 
 
@@ -1673,6 +1678,54 @@ async def convertidor_plantilla(pieza_id: str, request: Request):
         raise HTTPException(404, "Not found")
     return HTMLResponse(html.read_text(encoding="utf-8"),
                         headers={"Cache-Control": "no-store"})
+
+
+_SALIDAS = {
+    # nombre -> (archivo, tipo MIME, extension del archivo que se descarga)
+    "html":    ("plantilla.html",  "text/html",        "html"),
+    "paquete": ("paquete.json",    "application/json", "still.json"),
+}
+
+
+@app.get("/api/convertidor/descargar/{pieza_id}/{formato}")
+async def convertidor_descargar(pieza_id: str, formato: str, request: Request):
+    """Los cuatro formatos de salida.
+
+    html y paquete ya estan escritos desde la conversion. psd y pdf se generan
+    la primera vez que se piden y se guardan: ambos vuelven a leer el PSD a
+    resolucion real, que es lo caro, y nadie los pide una sola vez.
+
+    El paquete (.still.json) es el formato de intercambio: un unico archivo con
+    la pieza entera —geometria, orden de pintado, tipografia y los pixeles de
+    cada capa— para subirlo a donde haga falta.
+    """
+    destino = _pieza_convertidor(pieza_id, request)
+    meta = json.loads((destino / "meta.json").read_text(encoding="utf-8"))
+    base = re.sub(r"[^\w.-]+", "_", Path(meta.get("filename") or "plantilla").stem)
+
+    if formato in _SALIDAS:
+        archivo, mime, ext = _SALIDAS[formato]
+        ruta = destino / archivo
+        if not ruta.exists():
+            raise HTTPException(404, "Not generated")
+        return FileResponse(ruta, media_type=mime, filename=f"{base}.{ext}")
+
+    if formato not in ("psd", "pdf"):
+        raise HTTPException(400, "Unknown format")
+
+    ruta = destino / f"pieza.{formato}"
+    if not ruta.exists():
+        import convertidor
+        estructura = json.loads(
+            (destino / "estructura.json").read_text(encoding="utf-8"))
+        fn = convertidor.a_psd if formato == "psd" else convertidor.a_pdf
+        try:
+            await run_in_threadpool(fn, destino / "origen.psd", estructura, ruta)
+        except Exception as e:
+            raise HTTPException(422, f"Could not build the {formato.upper()}: {e}") from e
+
+    mime = "image/vnd.adobe.photoshop" if formato == "psd" else "application/pdf"
+    return FileResponse(ruta, media_type=mime, filename=f"{base}.{formato}")
 
 
 @app.get("/api/convertidor/estructura/{pieza_id}")

@@ -640,6 +640,146 @@ def a_html(estructura: dict, rasters: dict[str, str],
 </body></html>"""
 
 
+# ─── Salidas: el paquete portable y los tres formatos ────────────────────────
+FORMATO = "still.plantilla"
+FORMATO_VERSION = 1
+
+
+def paquete(estructura: dict, rasters: dict[str, str]) -> dict:
+    """La plantilla en un solo JSON autocontenido.
+
+    Es el formato de intercambio: lleva TODO lo necesario para reconstruir la
+    pieza —geometria, orden de pintado, tipografia y los pixeles de cada capa—
+    sin depender de archivos sueltos ni de rutas. Un unico archivo que se sube
+    a donde haga falta.
+
+    Va versionado porque es un contrato con quien lo consuma: cuando cambie la
+    forma, `version` sube y el otro lado puede decidir si entiende o no.
+
+    `capas` viene en orden de pintado, de abajo hacia arriba. Quien lo dibuje
+    solo tiene que recorrerlo en orden; ahi esta todo el apilado.
+    """
+    capas = []
+    for c in estructura["capas"]:
+        if c["clase"] == "group":
+            continue
+        d = {
+            "id": c["id"],
+            "nombre": c.get("nombre_limpio") or _limpiar_nombre(c["nombre"]),
+            "nombre_psd": c["nombre"],
+            "rol": c.get("rol", "decorativo"),
+            "clase": c["clase"],
+            "editable": bool(c.get("editable")),
+            "variante": bool(c.get("_variante") or (not c["visible"])
+                             or c.get("oculto_por_grupo")),
+            "confianza": c.get("confianza", 0.0),
+            "caja": c.get("caja_render") or c["caja"],
+        }
+        if c.get("sku"):
+            d["sku"] = c["sku"]
+        if c["clase"] == "type":
+            d["texto"] = c.get("texto") or ""
+            d["caja_texto"] = c["caja"]
+            d["fuente"] = c.get("fuente")
+            d["tamano"] = c.get("tamano")
+            d["color"] = c.get("color")
+        png = rasters.get(c["id"])
+        if png:
+            d["pixeles"] = "data:image/png;base64," + png
+        capas.append(d)
+
+    return {
+        "formato": FORMATO,
+        "version": FORMATO_VERSION,
+        "origen": {"archivo": estructura["archivo"],
+                   "modo": estructura["lienzo"]["modo"]},
+        "lienzo": {"ancho": estructura["lienzo"]["ancho"],
+                   "alto": estructura["lienzo"]["alto"]},
+        # Los PNG vienen reducidos para que el paquete sea manejable. Quien lo
+        # dibuje debe estirarlos a la caja, que SI va en pixeles del original.
+        "escala_pixeles": estructura.get("escala_render", 1.0),
+        "asistido_por_ia": estructura.get("asistido_por_ia", False),
+        "capas": capas,
+    }
+
+
+def _capas_resolucion_real(ruta_psd: str | Path, estructura: dict) -> list[tuple]:
+    """Las capas a tamano original, en orden, listas para compose_psd.
+
+    Aparte del rasterizado del HTML porque ahi los pixeles van reducidos para
+    que el archivo pese poco. Un PSD que sale a imprenta no admite eso.
+    """
+    from psd_tools import PSDImage
+
+    psd = PSDImage.open(ruta_psd)
+    por_ruta: dict[str, Any] = {}
+
+    def recoger(grupo, camino):
+        for capa in grupo:
+            ruta = " / ".join(camino + [capa.name or ""])
+            por_ruta[ruta] = capa
+            if capa.is_group():
+                recoger(capa, camino + [capa.name or ""])
+
+    recoger(psd, [])
+
+    salida = []
+    for c in estructura["capas"]:
+        if c["clase"] == "group" or c.get("_variante"):
+            continue
+        capa = por_ruta.get(c["ruta"])
+        if capa is None:
+            continue
+        try:
+            img = capa.composite()
+        except Exception:
+            img = None
+        if img is None or img.width < 1:
+            continue
+        nombre = c.get("nombre_limpio") or c["nombre"]
+        salida.append((nombre, img.convert("RGBA"),
+                       int(capa.left), int(capa.top)))
+    return salida
+
+
+def a_psd(ruta_psd: str | Path, estructura: dict, salida: str | Path) -> None:
+    """Un PSD nuevo con una capa por elemento y el nombre ya limpio.
+
+    No es el PSD original: es el mismo contenido con la nomenclatura que
+    decidio el convertidor, que es lo que lo vuelve manejable despues. Las
+    capas van rasterizadas —ni texto editable ni vectores—, igual que hace el
+    export del Visor.
+    """
+    from renderer import compose_psd
+
+    capas = _capas_resolucion_real(ruta_psd, estructura)
+    L = estructura["lienzo"]
+    lienzo = (L["ancho"], L["alto"])
+    vista = Image.new("RGBA", lienzo, (255, 255, 255, 255))
+    for _n, img, x, y in capas:
+        try:
+            vista.alpha_composite(img, (max(0, x), max(0, y)))
+        except ValueError:
+            pass                                # capa que se sale del lienzo
+    compose_psd(capas, lienzo, str(salida), preview=vista)
+
+
+def a_pdf(ruta_psd: str | Path, estructura: dict, salida: str | Path) -> None:
+    """La pieza aplanada en PDF, a la resolucion del PSD.
+
+    Es un PDF de imagen, no de vectores: el texto va rasterizado y no se puede
+    seleccionar ni buscar. Sirve para revisar y aprobar; para imprenta de
+    verdad hace falta la salida con el texto en curvas.
+    """
+    from psd_tools import PSDImage
+
+    img = PSDImage.open(ruta_psd).composite()
+    if img is None:
+        L = estructura["lienzo"]
+        img = Image.new("RGB", (L["ancho"], L["alto"]), "white")
+    img.convert("RGB").save(str(salida), "PDF", resolution=150.0)
+
+
 def _esc(s: Any) -> str:
     return (str(s or "").replace("&", "&amp;").replace("<", "&lt;")
             .replace(">", "&gt;").replace('"', "&quot;"))
@@ -647,8 +787,8 @@ def _esc(s: Any) -> str:
 
 # ─── Todo junto ──────────────────────────────────────────────────────────────
 def convertir(ruta_psd: str | Path, api_key: Optional[str] = None,
-              nombre: Optional[str] = None) -> tuple[str, dict]:
-    """PSD -> (html, estructura). Los tres pasos en orden.
+              nombre: Optional[str] = None) -> tuple[str, dict, dict]:
+    """PSD -> (html, estructura, rasters). Los tres pasos en orden.
 
     `nombre` es el del archivo que subio la persona. Hace falta porque el
     servidor guarda la subida con un nombre propio, y sin esto la plantilla
@@ -659,14 +799,14 @@ def convertir(ruta_psd: str | Path, api_key: Optional[str] = None,
         estructura["archivo"] = nombre
     estructura = proponer_roles(estructura, api_key)
     rasters = rasterizar(ruta_psd, estructura)
-    return a_html(estructura, rasters), estructura
+    return a_html(estructura, rasters), estructura, rasters
 
 
 if __name__ == "__main__":
     import sys
     if len(sys.argv) < 2:
         raise SystemExit("uso: python convertidor.py <archivo.psd> [salida.html]")
-    html, est = convertir(sys.argv[1])
+    html, est, ras = convertir(sys.argv[1])
     destino = Path(sys.argv[2] if len(sys.argv) > 2 else "plantilla.html")
     destino.write_text(html, encoding="utf-8")
     destino.with_suffix(".json").write_text(

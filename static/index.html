@@ -659,9 +659,14 @@
     <div class="flex items-baseline gap-5 flex-wrap mb-4">
       <h2 class="text-lg font-bold text-gray-900" id="cv-name"></h2>
       <span class="text-sm text-gray-500" id="cv-facts"></span>
-      <div class="ml-auto flex gap-2">
+      <div class="ml-auto flex gap-2 items-center flex-wrap">
+        <span class="text-xs text-gray-500 mr-1">Download</span>
+        <a id="cv-html" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">HTML</a>
+        <a id="cv-psd"  class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all" title="One Photoshop layer per element, with the clean names">PSD</a>
+        <a id="cv-pdf"  class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all" title="Flattened at the PSD resolution. Image, not vector">PDF</a>
+        <a id="cv-pack" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all" title="The whole piece in one file, ready to upload elsewhere">Package</a>
+        <span style="width:1px;height:20px;background:rgba(148,163,184,.25)"></span>
         <a id="cv-open" target="_blank" rel="noopener" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">Open full size</a>
-        <a id="cv-json" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">Download JSON</a>
         <button onclick="cvReset()" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">Convert another</button>
       </div>
     </div>
@@ -1482,9 +1487,14 @@ function cvPintar(d) {
   marco.style.height = alto + 'px';
   document.getElementById('cv-frame').src = `/api/convertidor/plantilla/${d.id}#solo-lienzo`;
   document.getElementById('cv-open').href = `/api/convertidor/plantilla/${d.id}`;
-  const json = document.getElementById('cv-json');
-  json.href = `/api/convertidor/estructura/${d.id}`;
-  json.setAttribute('download', 'estructura.json');
+  // PSD y PDF se generan la primera vez que se piden: vuelven a leer el PSD a
+  // resolucion real. El navegador muestra la descarga pendiente mientras tanto.
+  [['cv-html','html'], ['cv-psd','psd'], ['cv-pdf','pdf'], ['cv-pack','paquete']]
+    .forEach(([id, fmt]) => {
+      const a = document.getElementById(id);
+      a.href = `/api/convertidor/descargar/${d.id}/${fmt}`;
+      a.setAttribute('download', '');
+    });
 
   const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
