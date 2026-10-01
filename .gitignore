@@ -24,3 +24,6 @@ node_modules/
 # macOS
 .DS_Store
 avatars/
+
+# Credenciales de maquinas (hashes): nunca al repo
+api_keys.json

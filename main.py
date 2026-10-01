@@ -15,6 +15,7 @@ import secrets
 import shutil
 import threading
 import time
+import urllib.parse
 import webbrowser
 import zipfile
 from contextlib import asynccontextmanager
@@ -52,6 +53,27 @@ ALLOWED_ORIGINS = [
         "ALLOWED_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000"
     ).split(",") if o.strip()
 ]
+# El Visor es donde una plantilla convertida se edita de verdad (mover capas,
+# cambiar textos, exportar). Vive aparte, en su propio servidor, asi que Still
+# solo necesita su direccion para poder mandarle la pieza de un clic: abre
+# <VISOR_URL>?plantilla=<url del paquete> y el Visor se lo descarga solo.
+#
+# Sin configurar, el boton no aparece y queda el camino manual, que funciona
+# igual: descargar el .still.json y subirlo alla.
+VISOR_URL = os.environ.get("VISOR_URL", "").strip().rstrip("/")
+# Cuanto vale el enlace que se le pasa al Visor. Es el tiempo de un clic, no el
+# de una sesion: en cuanto caduca, el enlace no abre nada.
+TRASPASO_TTL_SEG = int(os.environ.get("TRASPASO_TTL_SEG", "600"))
+# Esa descarga es de origen cruzado y va con la cookie de sesion (el paquete es
+# privado de su dueño), asi que el origen del Visor tiene que estar permitido
+# por CORS. Se añade solo, para no obligar a configurar la misma direccion en
+# dos variables distintas y que una se quede atras.
+if VISOR_URL:
+    _visor = urllib.parse.urlsplit(VISOR_URL)
+    _origen_visor = f"{_visor.scheme}://{_visor.netloc}"
+    if _origen_visor not in ALLOWED_ORIGINS:
+        ALLOWED_ORIGINS.append(_origen_visor)
+
 # Límites de subida
 MAX_FILE_MB = int(os.environ.get("MAX_FILE_MB", "25"))
 MAX_FILES = int(os.environ.get("MAX_FILES", "60"))
@@ -1640,6 +1662,7 @@ async def convertidor_subir(request: Request, archivo: UploadFile = File(...)):
     huecos = [c for c in estructura["capas"] if c.get("editable")]
     return {
         "id": pieza_id,
+        "visor": _enlace_visor(pieza_id, request),
         "archivo": estructura["archivo"],
         "lienzo": estructura["lienzo"],
         "asistido_por_ia": estructura.get("asistido_por_ia", False),
@@ -1653,6 +1676,58 @@ async def convertidor_subir(request: Request, archivo: UploadFile = File(...)):
             "sku": c.get("sku"),
         } for c in sorted(huecos, key=lambda x: (x["caja"]["y"], x["caja"]["x"]))],
     }
+
+
+def _firmar_traspaso(pieza_id: str) -> str:
+    """Permiso corto y firmado para que el Visor recoja UN paquete.
+
+    El Visor vive en otro dominio. Lo natural seria que pidiera el paquete con
+    la cookie de sesion, pero esa cookie es SameSite=lax a proposito: entre
+    dominios distintos el navegador no la manda, y ponerla en SameSite=None
+    seria bajarle la guardia anti-CSRF a TODO Still a cambio de una sola
+    funcion. Mal negocio.
+
+    Asi que no viaja la sesion: viaja esto. Una firma que solo sirve para esta
+    pieza, que caduca en minutos y que no abre ninguna otra cosa de Still. Si
+    el enlace se filtra, lo que se filtro es una plantilla durante diez
+    minutos, no una cuenta.
+    """
+    exp = int(time.time()) + TRASPASO_TTL_SEG
+    firma = hmac.new(_get_secret().encode(), f"{pieza_id}|{exp}".encode(),
+                     hashlib.sha256).hexdigest()[:32]
+    return f"{pieza_id}.{exp}.{firma}"
+
+
+def _leer_traspaso(token: str) -> str:
+    """La pieza a la que da acceso el token. Levanta si no es valido."""
+    partes = (token or "").split(".")
+    if len(partes) != 3:
+        raise HTTPException(403, "Bad link")
+    pieza_id, exp, firma = partes
+    if not re.fullmatch(r"[0-9a-f-]{36}", pieza_id) or not exp.isdigit():
+        raise HTTPException(403, "Bad link")
+    esperada = hmac.new(_get_secret().encode(), f"{pieza_id}|{exp}".encode(),
+                        hashlib.sha256).hexdigest()[:32]
+    # compare_digest y no ==: comparar firmas byte a byte filtra por el tiempo
+    # de respuesta cuantos caracteres acerto quien lo intenta.
+    if not hmac.compare_digest(firma, esperada):
+        raise HTTPException(403, "Bad link")
+    if int(exp) < time.time():
+        raise HTTPException(410, "This link expired. Send it to the Viewer again")
+    return pieza_id
+
+
+def _enlace_visor(pieza_id: str, request: Request) -> Optional[str]:
+    """Enlace que abre esta pieza ya cargada en el Visor, o None si no hay Visor.
+
+    Lleva la direccion del paquete, no el paquete: el Visor lo recoge el solo
+    con el permiso firmado que va dentro de esa direccion.
+    """
+    if not VISOR_URL:
+        return None
+    paquete = str(request.url_for(
+        "convertidor_traspaso", token=_firmar_traspaso(pieza_id)))
+    return f"{VISOR_URL}?plantilla={urllib.parse.quote(paquete, safe='')}"
 
 
 def _pieza_convertidor(pieza_id: str, request: Request) -> Path:
@@ -1685,6 +1760,22 @@ _SALIDAS = {
     "html":    ("plantilla.html",  "text/html",        "html"),
     "paquete": ("paquete.json",    "application/json", "still.json"),
 }
+
+
+@app.get("/api/traspaso/{token}")
+async def convertidor_traspaso(token: str):
+    """El paquete de una pieza, para que el Visor lo recoja.
+
+    Cuelga de /api/traspaso y no de /api/convertidor a proposito: ese prefijo
+    exige sesion iniciada (ver auth_guard) y aqui justamente no hay ninguna.
+    Quien manda es el token, que ya dice de que pieza se trata.
+    """
+    pieza_id = _leer_traspaso(token)
+    ruta = CONVERTIDOR_DIR / pieza_id / "paquete.json"
+    if not ruta.exists():
+        raise HTTPException(404, "Not found")
+    return FileResponse(ruta, media_type="application/json",
+                        filename=f"{pieza_id}.still.json")
 
 
 @app.get("/api/convertidor/descargar/{pieza_id}/{formato}")

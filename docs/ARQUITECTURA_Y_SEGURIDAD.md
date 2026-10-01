@@ -116,12 +116,43 @@ limiting devuelve `429` tras 8 intentos):
 | Escaneo de dependencias (pip-audit) | CVEs en librerías | ⏳ **Pendiente** (CI) |
 | Base de datos (vs archivos) | integridad/escala de cuentas | ⏳ **Pendiente** (Fase B) |
 | Rotación de secretos | claves de dev expuestas | 🔴 **Acción inmediata** (ver abajo) |
+| Traspaso al Visor sin cookie | CSRF si se abriera `SameSite=None` | ✅ Hecho (permiso firmado, `VISOR_URL`) |
 
 ### 🔑 Acción inmediata
 - **Rotar las API keys** de Groq/Anthropic que se usaron en desarrollo (se compartieron en texto
   durante la construcción). Generar nuevas y guardarlas solo en `.env`/gestor de secretos.
 - En producción: poner la app detrás de **HTTPS** (reverse proxy) y activar `COOKIE_SECURE=true`,
   `REGISTRATION_OPEN=false`, y `ALLOWED_ORIGINS` con el dominio real.
+
+### 🔁 Mandar una plantilla al Visor (`VISOR_URL`)
+
+El Visor —donde la plantilla convertida se edita— vive en **otro servidor y, en producción, otro
+dominio**. Para que el botón «Send to Viewer» aparezca en el Convertidor basta con decirle a Still
+dónde está:
+
+```
+VISOR_URL=https://visor.midominio.com
+```
+
+Con eso, Still añade solo ese origen a `ALLOWED_ORIGINS` (no hace falta repetirlo) y el botón abre
+`VISOR_URL?plantilla=<url firmada del paquete>`.
+
+**Por qué no viaja la cookie de sesión.** Lo natural sería que el Visor pidiera el paquete con la
+cookie de Still, pero esa cookie es `SameSite=lax` *a propósito*: entre dominios distintos el
+navegador no la manda, y ponerla en `SameSite=None` sería bajarle la guardia anti-CSRF a **toda** la
+aplicación a cambio de una sola función. Mal negocio.
+
+En su lugar, el enlace lleva un **permiso firmado** (HMAC con el secreto de la app) que:
+
+- sirve para **una sola pieza** —reusar la firma con otro id da 403—,
+- **caduca** a los 10 minutos (`TRASPASO_TTL_SEG`),
+- se sirve desde `/api/traspaso/{token}`, fuera de `/api/convertidor` (que sí exige sesión),
+- no abre ninguna otra cosa de Still.
+
+Si el enlace se filtra, lo que se filtró es una plantilla durante diez minutos, no una cuenta.
+
+Sin `VISOR_URL` configurada no hay botón ni endpoint útil, y el camino manual sigue existiendo:
+descargar el `.still.json` desde el Convertidor y subirlo en el Visor.
 
 ---
 

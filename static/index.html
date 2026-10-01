@@ -666,6 +666,10 @@
         <a id="cv-pdf"  class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all" title="Flattened at the PSD resolution. Image, not vector">PDF</a>
         <a id="cv-pack" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all" title="The whole piece in one file, ready to upload elsewhere">Package</a>
         <span style="width:1px;height:20px;background:rgba(148,163,184,.25)"></span>
+        <a id="cv-visor" target="_blank" rel="noopener" hidden
+           class="px-3 py-1.5 text-xs font-semibold rounded-lg text-white transition-all"
+           style="background:linear-gradient(135deg,#6366f1,#8b5cf6)"
+           title="Opens this template in the Viewer, ready to edit">Send to Viewer</a>
         <a id="cv-open" target="_blank" rel="noopener" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">Open full size</a>
         <button onclick="cvReset()" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-indigo-300 transition-all">Convert another</button>
       </div>
@@ -1487,6 +1491,11 @@ function cvPintar(d) {
   marco.style.height = alto + 'px';
   document.getElementById('cv-frame').src = `/api/convertidor/plantilla/${d.id}#solo-lienzo`;
   document.getElementById('cv-open').href = `/api/convertidor/plantilla/${d.id}`;
+  // El Visor es opcional: solo aparece si el servidor sabe donde vive (VISOR_URL).
+  // Sin el, el camino sigue siendo descargar el paquete y subirlo alla a mano.
+  const visor = document.getElementById('cv-visor');
+  visor.hidden = !d.visor;
+  if (d.visor) visor.href = d.visor;
   // PSD y PDF se generan la primera vez que se piden: vuelven a leer el PSD a
   // resolucion real. El navegador muestra la descarga pendiente mientras tanto.
   [['cv-html','html'], ['cv-psd','psd'], ['cv-pdf','pdf'], ['cv-pack','paquete']]
