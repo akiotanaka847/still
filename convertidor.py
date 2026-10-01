@@ -115,6 +115,26 @@ def _limpiar_nombre(s: str) -> str:
 
 
 # ─── Paso 1: analizar (determinista) ─────────────────────────────────────────
+def _dpi(psd) -> Optional[float]:
+    """Resolucion del documento, o None si el PSD no la trae.
+
+    Sin esto, quien exporte a PDF tiene que ADIVINAR a que tamaño fisico se
+    imprime la pieza: los pixeles solos no lo dicen. Un archivo a 150 dpi
+    tratado como 300 sale al doble de tamaño en la imprenta.
+
+    Photoshop la guarda como punto fijo de 16 bits (el valor crudo viene
+    multiplicado por 65536), asi que hay que deshacer esa escala.
+    """
+    try:
+        info = psd._record.image_resources.get_data(1005)   # ResolutionInfo
+        dpi = float(info.horizontal) / 65536.0
+    except Exception:
+        return None
+    # Un documento real anda entre 30 y 2400 ppp; fuera de ahi el dato esta
+    # corrupto o lo estamos leyendo mal, y vale mas no decir nada que mentir.
+    return round(dpi, 2) if 30 <= dpi <= 2400 else None
+
+
 def _caja_y_estilo_texto(capa) -> tuple[dict, Optional[str], Optional[float], Optional[str]]:
     """Caja real y tipografia de una capa de texto.
 
@@ -227,7 +247,7 @@ def analizar(ruta: str | Path) -> dict[str, Any]:
     return {
         "archivo": ruta.name,
         "lienzo": {"ancho": psd.width, "alto": psd.height,
-                   "modo": psd.color_mode.name},
+                   "modo": psd.color_mode.name, "dpi": _dpi(psd)},
         "capas": capas,
         "variantes": [v["ruta"] for v in variantes],
         "resumen": {k: sum(1 for c in capas if c["clase"] == k)
@@ -693,8 +713,11 @@ def paquete(estructura: dict, rasters: dict[str, str]) -> dict:
         "version": FORMATO_VERSION,
         "origen": {"archivo": estructura["archivo"],
                    "modo": estructura["lienzo"]["modo"]},
+        # El dpi va aqui porque es lo unico que convierte estos pixeles en un
+        # tamaño fisico: sin el, quien imprima tiene que adivinar.
         "lienzo": {"ancho": estructura["lienzo"]["ancho"],
-                   "alto": estructura["lienzo"]["alto"]},
+                   "alto": estructura["lienzo"]["alto"],
+                   "dpi": estructura["lienzo"].get("dpi")},
         # Los PNG vienen reducidos para que el paquete sea manejable. Quien lo
         # dibuje debe estirarlos a la caja, que SI va en pixeles del original.
         "escala_pixeles": estructura.get("escala_render", 1.0),
