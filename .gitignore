@@ -2,6 +2,9 @@ sessions/
 .venv/
 venv/
 users.json
+# Claves de API: guarda hashes de credenciales de maquina. Vive en DATA_DIR,
+# que en local es la raiz del repo.
+api_keys.json
 .secret
 __pycache__/
 *.pyc
@@ -26,4 +29,3 @@ node_modules/
 avatars/
 
 # Credenciales de maquinas (hashes): nunca al repo
-api_keys.json
