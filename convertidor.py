@@ -489,7 +489,8 @@ def a_html(estructura: dict, rasters: dict[str, str],
                f'width:{caja["w"]:.1f}px; height:{caja["h"]:.1f}px')
         editable = c.get("editable")
         clases = "capa" + (" hueco" if editable else "")
-        attrs = (f'data-rol="{c["rol"]}" data-nombre="{c["nombre_limpio"]}" '
+        attrs = (f'data-id="{c["id"]}" '
+                 f'data-rol="{c["rol"]}" data-nombre="{c["nombre_limpio"]}" '
                  f'data-capa="{_esc(c["nombre"])}" data-confianza="{c["confianza"]:.2f}"')
         if c.get("_variante"):
             attrs += ' data-variante="oculta"'
@@ -537,6 +538,18 @@ def a_html(estructura: dict, rasters: dict[str, str],
     aviso = ("" if estructura.get("asistido_por_ia") else
              '<p class="aviso">Roles asignados por heuristica, sin IA. '
              'Revisa antes de usar.</p>')
+
+    # La ficha de la plantilla, embebida en el propio documento: el mismo
+    # paquete de intercambio pero SIN los pixeles, porque ya estan arriba, una
+    # vez, en el src de cada <img>. Quien lea este HTML (el Visor) recompone la
+    # plantilla entera cruzando la ficha con esas imagenes por data-id.
+    #
+    # Asi el HTML deja de ser solo una vista y pasa a ser tambien un archivo
+    # que se puede volver a abrir y seguir trabajando, sin pesar el doble.
+    ficha = ('<script type="application/json" id="still-plantilla">'
+             + json.dumps(paquete(estructura, {}), ensure_ascii=False)
+                   .replace("</", "<\\/")   # que ningun texto corte el <script>
+             + "</script>")
 
     return f"""<!doctype html>
 <html lang="es"><head><meta charset="utf-8">
@@ -657,6 +670,7 @@ def a_html(estructura: dict, rasters: dict[str, str],
   [vh, vv, te, vi].forEach(x => x.addEventListener('change', pintar));
   pintar();
 </script>
+{ficha}
 </body></html>"""
 
 
