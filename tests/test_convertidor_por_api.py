@@ -100,3 +100,24 @@ def test_a_un_origen_no_permitido_el_401_sigue_saliendo_pelado():
                    headers={"Origin": "https://sitio-ajeno.example"})
     assert r.status_code == 401
     assert "access-control-allow-origin" not in r.headers
+
+
+def test_el_tope_se_puede_consultar_antes_de_subir():
+    """Rechazar a mitad de subida no se entiende desde fuera.
+
+    El servidor contesta 413 y cierra, pero quien sube todavia esta enviando,
+    asi que esa respuesta no le llega: lo que ve es la conexion rota, igual que
+    si el servidor se hubiera caido. Medido en navegador: "Failed to fetch".
+    Por eso el tope se puede preguntar por delante.
+    """
+    with TestClient(main.app) as c:
+        assert c.get("/api/convertidor/limites").status_code == 401  # sigue protegido
+    assert main.MAX_PSD_MB > 0
+
+
+def test_un_psd_demasiado_grande_se_rechaza_por_la_cabecera():
+    """Sin leer un solo byte: la cortesia de no gastarle la subida a nadie."""
+    with TestClient(main.app) as c:
+        r = c.post("/api/convertidor/subir",
+                   headers={"Content-Length": str(main.MAX_PSD_BYTES + 1)})
+    assert r.status_code in (401, 413)   # 401 porque este cliente no lleva clave

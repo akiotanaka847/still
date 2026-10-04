@@ -15,12 +15,14 @@ import pytest
 
 import convertidor
 
-PSD = (pathlib.Path(__file__).resolve().parents[1]
-       / "sessions" / "_convertidor" / "0281ae81-c8bc-4b73-bf88-a463f0d3e99f"
-       / "origen.psd")
+# Un PSD de verdad del cliente, no una conversion guardada: `sessions/` es
+# material de paso que la retencion limpia, asi que apuntar ahi dejaba estos
+# tests saltandose solos sin que nadie se enterara.
+PSD = (pathlib.Path(__file__).resolve().parents[2]
+       / "PSDs Ejemplos" / "Cabecera 5 Central B.psd")
 
-pytestmark = pytest.mark.skipif(
-    not PSD.exists(), reason="hace falta un PSD convertido de ejemplo")
+necesita_psd = pytest.mark.skipif(
+    not PSD.exists(), reason=f"no esta {PSD.name}")
 
 
 class _SinResolucion:
@@ -49,6 +51,7 @@ class _Absurda:
         self._record = _record
 
 
+@necesita_psd
 def test_lee_la_resolucion_deshaciendo_el_punto_fijo():
     from psd_tools import PSDImage
     assert convertidor._dpi(PSDImage.open(PSD)) == 300.0
@@ -69,6 +72,7 @@ def test_una_resolucion_creible_se_acepta():
     assert convertidor._dpi(_Absurda(72 * 65536)) == 72.0
 
 
+@necesita_psd
 def test_el_analisis_la_lleva_en_el_lienzo():
     assert convertidor.analizar(PSD)["lienzo"]["dpi"] == 300.0
 
@@ -93,6 +97,7 @@ def test_el_paquete_no_se_rompe_si_el_psd_no_la_traia():
     assert "dpi" in paq["lienzo"] and paq["lienzo"]["dpi"] is None
 
 
+@necesita_psd
 def test_el_tamano_fisico_que_resulta_es_el_de_una_cenefa_real():
     """Control de cordura: 6850 px a 300 dpi son 58 cm, no 58 metros."""
     lienzo = convertidor.analizar(PSD)["lienzo"]

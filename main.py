@@ -358,6 +358,42 @@ def _cleanup_old_sessions() -> None:
                     borradas += 1
             continue
 
+        if d.name == "_convertidor":
+            # No es una sesion: es la carpeta que CONTIENE las conversiones.
+            # Sin este caso se la trataba como una sesion anonima —busca un
+            # bodegon.json que aqui no existe, no le encuentra dueño— y se
+            # borraba ENTERA a las 24 h, llevandose por delante todas las
+            # plantillas convertidas de todo el mundo. Visto pasar: las
+            # conversiones de una tarde desaparecieron solas.
+            #
+            # Una pieza convertida es trabajo del usuario, igual que una sesion
+            # de bodegon, asi que se le aplica la misma regla: entra en el
+            # reparto por usuario de mas abajo (cuota -> presupuesto -> TTL
+            # largo) y la mas nueva no se borra nunca. Lo que no tiene dueño si
+            # caduca pronto, porque no hay a quien mostrarselo.
+            for pd in d.iterdir():
+                if not pd.is_dir():
+                    continue
+                meta = {}
+                meta_file = pd / "meta.json"
+                if meta_file.exists():
+                    try:
+                        meta = json.loads(meta_file.read_text(encoding="utf-8"))
+                    except (json.JSONDecodeError, OSError):
+                        meta = {}
+                duenyo = meta.get("owner")
+                if not duenyo:
+                    if pd.stat().st_mtime < session_cutoff:
+                        shutil.rmtree(pd, ignore_errors=True)
+                        borradas += 1
+                    continue
+                try:
+                    creada = float(meta.get("created") or pd.stat().st_mtime)
+                except (TypeError, ValueError):
+                    creada = pd.stat().st_mtime
+                por_usuario.setdefault(duenyo, []).append((creada, pd))
+            continue
+
         info_file = d / "bodegon.json"
         info = {}
         if info_file.exists():
@@ -409,7 +445,8 @@ def _cleanup_old_sessions() -> None:
                       and not any(d == x[1] for x in sobran))
 
         for _creada, d in sobran:
-            _logger.info("Retention: deleting session %s of %s", d.name, owner)
+            _logger.info("Retention: deleting %s/%s of %s",
+                         d.parent.name, d.name, owner)
             shutil.rmtree(d, ignore_errors=True)
             borradas += 1
 
@@ -1906,6 +1943,19 @@ def _convertir_psd(ruta_psd: Path, destino: Path, nombre: str) -> dict:
     return estructura
 
 
+@app.get("/api/convertidor/limites")
+async def convertidor_limites():
+    """Lo que este Still acepta, para que el cliente lo sepa ANTES de mandarlo.
+
+    Rechazar una subida a mitad de camino es un mal trato: el servidor contesta
+    413 y cierra, pero quien sube todavia esta enviando, asi que la respuesta no
+    le llega nunca y lo que ve es la conexion rota —indistinguible de que el
+    servidor se haya caido—. Con el tope por delante, quien manda un archivo
+    demasiado grande lo sabe al instante y sin gastar la subida.
+    """
+    return {"max_psd_mb": MAX_PSD_MB}
+
+
 @app.post("/api/convertidor/subir")
 async def convertidor_subir(request: Request, archivo: UploadFile = File(...)):
     """Recibe un PSD y devuelve el resumen de la plantilla extraida."""
@@ -1914,17 +1964,52 @@ async def convertidor_subir(request: Request, archivo: UploadFile = File(...)):
     if Path(archivo.filename or "").suffix.lower() not in (".psd", ".psb"):
         raise HTTPException(400, "Only .psd and .psb files are supported")
 
-    datos = await archivo.read()
-    if not datos:
-        raise HTTPException(400, "Empty file")
-    if len(datos) > MAX_PSD_BYTES:
+    # Primero lo que dice la cabecera, antes de leer un solo byte: asi quien
+    # manda algo demasiado grande recibe un 413 limpio y entendible en vez de
+    # que se le corte la conexion a mitad de la subida —que es lo que pasa si
+    # se rechaza cuando ya esta enviando, y desde fuera no se distingue de que
+    # el servidor se haya caido—.
+    #
+    # Es una cortesia, no una defensa: la cabecera la pone quien sube y puede
+    # mentir. La comprobacion de verdad es la de mas abajo, mientras se escribe.
+    anunciado = request.headers.get("content-length")
+    if anunciado and anunciado.isdigit() and int(anunciado) > MAX_PSD_BYTES:
         raise HTTPException(413, f"Over the {MAX_PSD_MB} MB limit")
 
     pieza_id = str(uuid.uuid4())
     destino = CONVERTIDOR_DIR / pieza_id
     destino.mkdir(parents=True)
     ruta_psd = destino / "origen.psd"
-    ruta_psd.write_bytes(datos)
+
+    # A disco por trozos, no de un bocado. Un PSD de punto de venta pesa lo que
+    # pesa —el del cliente, 68 MB; el tope son 300— y leerlo entero en memoria
+    # antes de escribirlo pone esa cantidad en RAM de golpe, ENCIMA de lo que
+    # luego cuesta abrirlo y rasterizarlo. En un contenedor con memoria
+    # ajustada eso no da un error entendible: mata el proceso entero, y se
+    # lleva por delante a quien estuviera usando la app en ese momento.
+    #
+    # El tope se comprueba mientras se escribe y no al final, porque esperar al
+    # final significa haber aceptado ya el archivo completo: quien quiera tumbar
+    # el disco solo tendria que mandar algo enorme.
+    escrito = 0
+    try:
+        with ruta_psd.open("wb") as destino_psd:
+            while True:
+                trozo = await archivo.read(4 * 1024 * 1024)
+                if not trozo:
+                    break
+                escrito += len(trozo)
+                if escrito > MAX_PSD_BYTES:
+                    raise HTTPException(413, f"Over the {MAX_PSD_MB} MB limit")
+                destino_psd.write(trozo)
+        if not escrito:
+            raise HTTPException(400, "Empty file")
+    except HTTPException:
+        shutil.rmtree(destino, ignore_errors=True)
+        raise
+    except OSError as e:
+        shutil.rmtree(destino, ignore_errors=True)
+        raise HTTPException(507, "Could not store the file") from e
     (destino / "meta.json").write_text(json.dumps({
         "owner": _usuario(request), "created": time.time(),
         "filename": archivo.filename,

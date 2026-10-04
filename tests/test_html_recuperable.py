@@ -101,12 +101,24 @@ def test_el_texto_de_una_capa_no_puede_cortar_el_script():
     assert _ficha(html)["capas"][0]["texto"] == "cierra </script> aqui"
 
 
-def test_el_html_real_del_cliente_se_puede_releer():
-    """Control sobre el archivo de verdad, no solo sobre uno de laboratorio."""
-    d = (pathlib.Path(__file__).resolve().parents[1] / "sessions" / "_convertidor")
-    reales = [p for p in d.glob("*/estructura.json")] if d.exists() else []
-    if not reales:
-        pytest.skip("no hay ninguna conversion guardada")
-    estructura = json.loads(reales[0].read_text(encoding="utf-8"))
-    f = _ficha(convertidor.a_html(estructura, {}, "real.psd"))
-    assert f["capas"] and all("rol" in c and "caja" in c for c in f["capas"])
+PSD = (pathlib.Path(__file__).resolve().parents[2]
+       / "PSDs Ejemplos" / "Cabecera 5 Central B.psd")
+
+
+@pytest.mark.skipif(not PSD.exists(), reason=f"no esta {PSD.name}")
+def test_el_html_del_psd_real_se_puede_releer():
+    """Control sobre el archivo del cliente, no solo sobre uno de laboratorio.
+
+    Se analiza el PSD en el momento en vez de leer una conversion guardada:
+    `sessions/` es material de paso que la retencion limpia, y apuntar ahi
+    dejaba este test saltandose solo sin que nadie se enterara.
+    """
+    estructura = convertidor.analizar(PSD)
+    for c in estructura["capas"]:
+        c.setdefault("nombre_limpio", c["nombre"])
+        c.setdefault("rol", "decorativo")
+        c.setdefault("confianza", 0.0)
+    f = _ficha(convertidor.a_html(estructura, {}, PSD.name))
+    assert f["lienzo"]["dpi"] == 300.0
+    assert len(f["capas"]) > 20
+    assert all("rol" in c and "caja" in c and "pixeles" not in c for c in f["capas"])
