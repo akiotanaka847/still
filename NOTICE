@@ -1,0 +1,15 @@
+# Codigo de terceros incluido en este repositorio
+
+## photocraft-psd
+
+`psd-nativo/vendor/photocraft-psd/` es una copia de `crates/psd` de
+https://github.com/storytold/photocraft (commit 47f9306, 2026-10-07),
+distribuido bajo **MIT OR Apache-2.0**. Copyright de sus autores.
+
+Still lo usa para devolver el PSD del cliente con los nombres de capa que
+decide el convertidor, en vez de reconstruir el archivo y perder por el camino
+el modo de color, los grupos, las capas de texto y los objetos inteligentes.
+
+El unico cambio respecto al original esta en su `Cargo.toml`, para poder
+compilarlo fuera del workspace de photocraft. El codigo de `src/` esta intacto.
+Ver `psd-nativo/vendor/PROCEDENCIA.md`.

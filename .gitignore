@@ -29,3 +29,6 @@ node_modules/
 avatars/
 
 # Credenciales de maquinas (hashes): nunca al repo
+
+# Compilacion del binario de PSD (se construye, no se versiona)
+psd-nativo/target/

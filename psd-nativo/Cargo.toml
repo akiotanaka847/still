@@ -1,0 +1,17 @@
+[package]
+name = "still-psd"
+version = "0.1.0"
+edition = "2024"
+description = "Reescribe un PSD conservandolo entero: solo cambia lo que se le pide"
+license = "MIT"
+
+[[bin]]
+name = "still-psd"
+path = "src/main.rs"
+
+[dependencies]
+photocraft-psd = { path = "vendor/photocraft-psd" }
+
+[profile.release]
+opt-level = 2
+strip = true

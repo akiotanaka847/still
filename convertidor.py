@@ -107,6 +107,20 @@ def _sin_tildes(s: str) -> str:
                    if unicodedata.category(c) != "Mn")
 
 
+def _lyid(capa) -> Optional[int]:
+    """El identificador de Photoshop de una capa, o None si no lo trae.
+
+    Casi todos los PSD modernos lo llevan —en el archivo del cliente, las 42
+    capas— pero un archivo viejo o generado por otra herramienta puede no
+    tenerlo, y entonces esa capa simplemente no se podra renombrar en sitio.
+    """
+    try:
+        v = capa.tagged_blocks.get_data(b"lyid")
+        return int(v) if v is not None else None
+    except Exception:
+        return None
+
+
 def _limpiar_nombre(s: str) -> str:
     """Un nombre de capa cualquiera -> identificador usable en codigo."""
     s = _sin_tildes(s or "").lower()
@@ -197,6 +211,13 @@ def analizar(ruta: str | Path) -> dict[str, Any]:
             clase = capa.kind                       # type / smartobject / pixel / shape / group
             d: dict[str, Any] = {
                 "id": ident,
+                # El identificador que Photoshop le da a cada capa. Es la unica
+                # llave estable para volver a encontrarla en el ARCHIVO: el
+                # nombre se repite (una plantilla tiene varios "Rectángulo 1")
+                # y la posicion cambia en cuanto se toca el documento. Es lo que
+                # permite devolver el PSD original con los nombres limpios
+                # puestos, en vez de reconstruirlo plano (ver psd-nativo/).
+                "lyid": _lyid(capa),
                 "nombre": nombre,
                 "ruta": " / ".join(camino + [nombre]),
                 "clase": clase,
@@ -779,14 +800,71 @@ def _capas_resolucion_real(ruta_psd: str | Path, estructura: dict) -> list[tuple
     return salida
 
 
-def a_psd(ruta_psd: str | Path, estructura: dict, salida: str | Path) -> None:
-    """Un PSD nuevo con una capa por elemento y el nombre ya limpio.
+# Binario propio que reescribe un PSD conservandolo entero (ver psd-nativo/).
+# Puede no estar: en una maquina sin el, o si fallara la compilacion, se usa el
+# camino de siempre. Peor resultado, pero resultado.
+_PSD_NATIVO = Path(__file__).resolve().parent / "psd-nativo" / "target" / "release" / "still-psd"
 
-    No es el PSD original: es el mismo contenido con la nomenclatura que
-    decidio el convertidor, que es lo que lo vuelve manejable despues. Las
-    capas van rasterizadas —ni texto editable ni vectores—, igual que hace el
-    export del Visor.
+
+def _renombrar_en_sitio(ruta_psd: Path, estructura: dict, salida: Path) -> bool:
+    """Devuelve el PSD ORIGINAL con los nombres que decidio el convertidor.
+
+    Es lo contrario de reconstruirlo: se abre el archivo del cliente y solo se
+    le cambian los nombres de las capas. Modo de color, perfil ICC, grupos,
+    mascaras, efectos, capas de texto y objetos inteligentes salen tal como
+    entraron —byte por byte en todo lo que no se toca—.
+
+    Devuelve False si no se puede hacer, para que quien llama use el camino
+    antiguo en vez de quedarse sin PSD.
     """
+    if not _PSD_NATIVO.exists():
+        return False
+
+    pares = [(c["lyid"], c.get("nombre_limpio") or _limpiar_nombre(c["nombre"]))
+             for c in estructura["capas"] if c.get("lyid")]
+    if not pares:
+        return False
+
+    import subprocess
+    import tempfile
+    with tempfile.NamedTemporaryFile("w", suffix=".tsv", delete=False,
+                                     encoding="utf-8") as f:
+        for lyid, nombre in pares:
+            f.write(f"{lyid}\t{nombre}\n")
+        mapa = f.name
+    try:
+        r = subprocess.run(
+            [str(_PSD_NATIVO), "renombrar", str(ruta_psd), mapa, str(salida)],
+            capture_output=True, text=True, timeout=300)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    finally:
+        os.unlink(mapa)
+
+    if r.returncode != 0:
+        # El binario comprueba su propia salida: si la estructura no sobrevivio,
+        # falla en vez de escribir un archivo roto. Se registra y se cae al
+        # camino de siempre.
+        print(f"[convertidor] psd nativo no pudo: {r.stderr.strip()[:200]}")
+        return False
+    return salida.exists()
+
+
+def a_psd(ruta_psd: str | Path, estructura: dict, salida: str | Path) -> None:
+    """El PSD de la pieza, con la nomenclatura que decidio el convertidor.
+
+    Se intenta primero devolver el ORIGINAL renombrado en sitio, que conserva
+    todo lo que hace util a un PSD: el CMYK, el perfil de color, los grupos, las
+    capas de texto todavia editables y los objetos inteligentes todavia
+    inteligentes. Una imprenta recibe asi su propio archivo.
+
+    Si eso no se puede, se reconstruye como antes: mismo contenido, pero plano
+    y en RGB —una capa de pixeles por elemento, sin grupos ni texto vivo—. Es
+    peor, y por eso es el segundo camino, no el primero.
+    """
+    if _renombrar_en_sitio(Path(ruta_psd), estructura, Path(salida)):
+        return
+
     from renderer import compose_psd
 
     capas = _capas_resolucion_real(ruta_psd, estructura)

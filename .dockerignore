@@ -12,3 +12,6 @@ dist/
 .git/
 docs/
 start.bat
+
+# La compilacion local es de otra arquitectura: la imagen construye la suya
+psd-nativo/target/
